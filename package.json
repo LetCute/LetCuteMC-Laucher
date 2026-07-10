@@ -1,0 +1,106 @@
+{
+  "name": "letcutemc",
+  "version": "1.0.0",
+  "description": "LetCuteMC Minecraft Launcher",
+  "author": "LetCuteMC",
+  "license": "UNLICENSED",
+  "main": "dist-electron/main/main.js",
+  "module": "dist/renderer/index.tsx",
+  "scripts": {
+    "clean": "node -e \"const fs=require('fs');const p=require('path');['dist','dist-electron','release'].forEach(d=>{try{fs.rmSync(p.resolve(d),{recursive:true,force:true})}catch{}})\"",
+    "dev": "npm run build:main && concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env NODE_ENV=development electron .\"",
+    "dev:main": "tsc -p tsconfig.main.json --watch",
+    "build:renderer": "vite build",
+    "build:main": "tsc -p tsconfig.main.json && node -e \"require('fs').copyFileSync('src/renderer/assets/avatarv2-modified.png','dist-electron/main/avatarv2-modified.png')\"",
+    "verify:main": "node scripts/verify-electron-build.mjs",
+    "build": "npm run build:renderer && npm run build:main && npm run verify:main",
+    "start": "cross-env NODE_ENV=production electron .",
+    "dist": "npm run build && electron-builder --win --x64",
+    "dist:portable": "npm run build && electron-builder --win portable --x64"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.6.0",
+    "@fontsource-variable/geist": "^5.2.9",
+    "@tailwindcss/postcss": "^4.3.2",
+    "@xmcl/core": "^2.15.1",
+    "@xmcl/installer": "^6.1.2",
+    "yauzl": "^2.10.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "electron-is-dev": "^2.0.0",
+    "lucide-react": "^1.23.0",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "shadcn": "^4.13.0",
+    "tailwind-merge": "^3.6.0",
+    "tw-animate-css": "^1.4.0",
+    "unzipper": "^0.12.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@types/unzipper": "^0.10.11",
+    "@vitejs/plugin-react": "^6.0.3",
+    "autoprefixer": "^10.4.20",
+    "concurrently": "^10.0.3",
+    "cross-env": "^10.1.0",
+    "electron": "^43.1.0",
+    "electron-builder": "^24.13.3",
+    "postcss": "^8.4.41",
+    "tailwindcss": "^4.0.0",
+    "tsx": "^4.23.0",
+    "typescript": "^5.6.2",
+    "vite": "^8.1.1",
+    "wait-on": "^8.0.2"
+  },
+  "build": {
+    "appId": "com.letcutemc.launcher",
+    "productName": "LetCuteMC",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**",
+      "dist-electron/**",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "dist-electron/main/**/*",
+      "node_modules/@xmcl/**/*",
+      "node_modules/yauzl/**/*",
+      "node_modules/fd-slicer/**/*",
+      "node_modules/pend/**/*",
+      "node_modules/buffer-crc32/**/*"
+    ],
+    "extraMetadata": {
+      "main": "dist-electron/main/main.js"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": false,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "LetCuteMC",
+      "deleteAppDataOnUninstall": false
+    }
+  }
+}
