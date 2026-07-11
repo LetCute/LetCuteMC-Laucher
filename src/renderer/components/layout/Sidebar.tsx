@@ -168,17 +168,13 @@ export function Sidebar({
               variant="sidebar"
               className={cn(
                 'group relative flex w-full items-center gap-3 transition-all duration-150',
-                isActive && 'bg-sidebar-accent text-primary hover:bg-sidebar-accent hover:text-primary'
+                isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
               )}
             >
-              {/* Active indicator bar */}
-              {isActive && (
-                <span className="absolute left-0 top-1/2 h-5 w-0.5 -translate-y-1/2 rounded-r-full bg-primary" />
-              )}
               <Icon
                 className={[
                   'h-4 w-4 shrink-0 transition-colors',
-                  isActive ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground',
+                  isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground',
                 ].join(' ')}
                 strokeWidth={isActive ? 2.5 : 2}
               />
