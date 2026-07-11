@@ -1,6 +1,17 @@
 import http from 'node:http'
 import { shell } from 'electron'
-import type { MicrosoftAccount } from '../../shared/types'
+
+export interface MicrosoftAccount {
+  id: string
+  username: string
+  uuid: string
+  avatarUrl?: string
+  accessToken: string
+  refreshToken?: string
+  expiresAt?: string
+  createdAt: string
+  updatedAt: string
+}
 
 const CLIENT_ID = 'c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb'
 

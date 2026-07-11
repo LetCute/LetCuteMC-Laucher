@@ -11,7 +11,7 @@
     "dev": "npm run build:main && concurrently -k \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env NODE_ENV=development electron .\"",
     "dev:main": "tsc -p tsconfig.main.json --watch",
     "build:renderer": "vite build",
-    "build:main": "tsc -p tsconfig.main.json && node -e \"require('fs').copyFileSync('src/renderer/assets/avatarv2-modified.png','dist-electron/main/avatarv2-modified.png')\"",
+    "build:main": "tsc -p tsconfig.main.json && node -e \"require('fs').copyFileSync('public/logo.png','dist-electron/main/logo.png')\"",
     "verify:main": "node scripts/verify-electron-build.mjs",
     "build": "npm run build:renderer && npm run build:main && npm run verify:main",
     "start": "cross-env NODE_ENV=production electron .",
@@ -57,6 +57,7 @@
   "build": {
     "appId": "com.letcutemc.launcher",
     "productName": "LetCuteMC",
+    "icon": "public/logo.png",
     "directories": {
       "output": "release"
     },
@@ -77,6 +78,7 @@
       "main": "dist-electron/main/main.js"
     },
     "win": {
+      "icon": "public/logo.png",
       "target": [
         {
           "target": "nsis",

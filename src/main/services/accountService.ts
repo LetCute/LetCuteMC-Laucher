@@ -1,7 +1,23 @@
 import fsPromises from 'node:fs/promises'
-import type { AccountState, AccountMode, MicrosoftAccount } from '../../shared/types'
+import crypto from 'node:crypto'
+import type { AccountState, AccountItem } from '../../shared/types'
 import { refreshMicrosoftToken } from './microsoftAuthService'
 import { getAccountConfigPath, ensureLauncherDataDirectory } from './storageService.js'
+
+export function generateOfflineUuid(username: string): string {
+  const input = `OfflinePlayer:${username}`
+  const hash = crypto.createHash('md5').update(input, 'utf8').digest()
+  hash[6] = (hash[6] & 0x0f) | 0x30
+  hash[8] = (hash[8] & 0x3f) | 0x80
+  const hex = hash.toString('hex')
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20)
+  ].join('-')
+}
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -12,54 +28,129 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-const defaultAccountState: AccountState = {
-  mode: 'local',
-  microsoftAccount: null,
-  localAccount: {
-    username: 'Player',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  },
-}
-
 export async function getAccountState(): Promise<AccountState> {
   const filePath = getAccountConfigPath()
   if (!(await pathExists(filePath))) {
-    return defaultAccountState
+    const defaultLocalUuid = generateOfflineUuid('Player')
+    return {
+      activeAccountId: 'local_Player',
+      accounts: [
+        {
+          id: 'local_Player',
+          type: 'local',
+          username: 'Player',
+          uuid: defaultLocalUuid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ]
+    }
   }
   try {
     const raw = await fsPromises.readFile(filePath, 'utf-8')
-    const parsed = JSON.parse(raw) as AccountState
+    const parsed = JSON.parse(raw) as any
 
-    if (parsed.microsoftAccount && parsed.microsoftAccount.refreshToken) {
-      const expiresAt = parsed.microsoftAccount.expiresAt ? new Date(parsed.microsoftAccount.expiresAt).getTime() : 0
-      const isExpired = expiresAt - Date.now() < 5 * 60 * 1000 // Less than 5 minutes remaining
+    // MIGRATION: Check if this is the old schema
+    if (parsed.accounts === undefined) {
+      const accounts: AccountItem[] = []
+      let activeAccountId: string | null = null
+
+      if (parsed.localAccount) {
+        const username = parsed.localAccount.username || 'Player'
+        const localId = `local_${username.toLowerCase()}`
+        accounts.push({
+          id: localId,
+          type: 'local',
+          username: username,
+          uuid: generateOfflineUuid(username),
+          createdAt: parsed.localAccount.createdAt || new Date().toISOString(),
+          updatedAt: parsed.localAccount.updatedAt || new Date().toISOString(),
+        })
+        if (parsed.mode === 'local') {
+          activeAccountId = localId
+        }
+      }
+
+      if (parsed.microsoftAccount) {
+        const msAccount = parsed.microsoftAccount
+        const msId = msAccount.id || msAccount.uuid
+        accounts.push({
+          id: msId,
+          type: 'microsoft',
+          username: msAccount.username,
+          uuid: msAccount.uuid,
+          avatarUrl: msAccount.avatarUrl,
+          accessToken: msAccount.accessToken,
+          refreshToken: msAccount.refreshToken,
+          expiresAt: msAccount.expiresAt,
+          createdAt: msAccount.createdAt || new Date().toISOString(),
+          updatedAt: msAccount.updatedAt || new Date().toISOString(),
+        })
+        if (parsed.mode === 'microsoft') {
+          activeAccountId = msId
+        }
+      }
+
+      if (accounts.length === 0) {
+        const username = 'Player'
+        const localId = `local_${username.toLowerCase()}`
+        accounts.push({
+          id: localId,
+          type: 'local',
+          username: username,
+          uuid: generateOfflineUuid(username),
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        activeAccountId = localId
+      }
+
+      const migratedState: AccountState = {
+        activeAccountId: activeAccountId || accounts[0].id,
+        accounts
+      }
+      await saveAccountState(migratedState)
+      return migratedState
+    }
+
+    const state = parsed as AccountState
+
+    // Auto refresh active microsoft account if expired
+    const activeAccount = state.accounts.find(a => a.id === state.activeAccountId)
+    if (activeAccount && activeAccount.type === 'microsoft' && activeAccount.refreshToken) {
+      const expiresAt = activeAccount.expiresAt ? new Date(activeAccount.expiresAt).getTime() : 0
+      const isExpired = expiresAt - Date.now() < 5 * 60 * 1000 // Less than 5 mins left
       if (isExpired) {
         try {
-          const refreshed = await refreshMicrosoftToken(parsed.microsoftAccount.refreshToken)
-          parsed.microsoftAccount = refreshed
-          await saveAccountState(parsed)
+          const refreshed = await refreshMicrosoftToken(activeAccount.refreshToken)
+          activeAccount.accessToken = refreshed.accessToken
+          activeAccount.refreshToken = refreshed.refreshToken
+          activeAccount.expiresAt = refreshed.expiresAt
+          activeAccount.avatarUrl = refreshed.avatarUrl
+          activeAccount.updatedAt = new Date().toISOString()
+          await saveAccountState(state)
         } catch (error) {
-          console.error('Failed to auto-refresh Microsoft token on load:', error)
-          // If refresh token is invalid or expired, reset to local account
-          parsed.microsoftAccount = null
-          parsed.mode = 'local'
-          await saveAccountState(parsed)
+          console.error('Failed to auto-refresh active Microsoft token on load:', error)
         }
       }
     }
 
-    return {
-      mode: parsed.mode ?? 'local',
-      microsoftAccount: parsed.microsoftAccount ?? null,
-      localAccount: {
-        username: parsed.localAccount?.username ?? 'Player',
-        createdAt: parsed.localAccount?.createdAt ?? new Date().toISOString(),
-        updatedAt: parsed.localAccount?.updatedAt ?? new Date().toISOString(),
-      },
-    }
+    return state
   } catch {
-    return defaultAccountState
+    const defaultLocalUuid = generateOfflineUuid('Player')
+    return {
+      activeAccountId: 'local_Player',
+      accounts: [
+        {
+          id: 'local_Player',
+          type: 'local',
+          username: 'Player',
+          uuid: defaultLocalUuid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+      ]
+    }
   }
 }
 
@@ -69,7 +160,7 @@ async function saveAccountState(state: AccountState): Promise<void> {
   await fsPromises.writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8')
 }
 
-export async function updateLocalAccount(
+export async function addLocalAccount(
   username: string
 ): Promise<AccountState> {
   if (!username || username.trim().length === 0) {
@@ -83,45 +174,109 @@ export async function updateLocalAccount(
     throw new Error('Local username chỉ được chứa chữ cái, số và dấu gạch dưới.')
   }
 
-  const current = await getAccountState()
-  current.localAccount = {
+  const state = await getAccountState()
+  const localId = `local_${cleanUsername.toLowerCase()}`
+
+  const existing = state.accounts.find(a => a.id === localId)
+  if (existing) {
+    state.activeAccountId = localId
+    await saveAccountState(state)
+    return state
+  }
+
+  const newAccount: AccountItem = {
+    id: localId,
+    type: 'local',
     username: cleanUsername,
-    createdAt: current.localAccount.createdAt || new Date().toISOString(),
+    uuid: generateOfflineUuid(cleanUsername),
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
-  await saveAccountState(current)
-  return current
+
+  state.accounts.push(newAccount)
+  state.activeAccountId = localId
+  await saveAccountState(state)
+  return state
 }
 
-export async function setAccountMode(
-  mode: AccountMode
+export async function selectAccount(
+  accountId: string
 ): Promise<AccountState> {
-  const current = await getAccountState()
-  current.mode = mode
-  await saveAccountState(current)
-  return current
+  const state = await getAccountState()
+  const account = state.accounts.find(a => a.id === accountId)
+  if (!account) {
+    throw new Error('Tài khoản không tồn tại.')
+  }
+  state.activeAccountId = accountId
+  await saveAccountState(state)
+  return state
+}
+
+export async function removeAccount(
+  accountId: string
+): Promise<AccountState> {
+  const state = await getAccountState()
+  const index = state.accounts.findIndex(a => a.id === accountId)
+  if (index === -1) {
+    throw new Error('Tài khoản không tồn tại.')
+  }
+
+  state.accounts.splice(index, 1)
+
+  if (state.activeAccountId === accountId) {
+    if (state.accounts.length > 0) {
+      state.activeAccountId = state.accounts[0].id
+    } else {
+      const defaultLocalUuid = generateOfflineUuid('Player')
+      state.accounts.push({
+        id: 'local_Player',
+        type: 'local',
+        username: 'Player',
+        uuid: defaultLocalUuid,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      })
+      state.activeAccountId = 'local_Player'
+    }
+  }
+
+  await saveAccountState(state)
+  return state
 }
 
 export async function saveMicrosoftAccount(
-  account: MicrosoftAccount
+  account: any
 ): Promise<AccountState> {
   if (!account.username || !account.uuid || !account.accessToken) {
     throw new Error('Thông tin tài khoản Microsoft thiếu các trường bắt buộc.')
   }
-  const current = await getAccountState()
-  current.microsoftAccount = {
-    ...account,
+  const state = await getAccountState()
+  const msId = account.id || account.uuid
+
+  const existingIndex = state.accounts.findIndex(a => a.id === msId)
+  const newAccount: AccountItem = {
+    id: msId,
+    type: 'microsoft',
+    username: account.username,
+    uuid: account.uuid,
+    avatarUrl: account.avatarUrl,
+    accessToken: account.accessToken,
+    refreshToken: account.refreshToken,
+    expiresAt: account.expiresAt,
     createdAt: account.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
-  await saveAccountState(current)
-  return current
-}
 
-export async function logoutMicrosoftAccount(): Promise<AccountState> {
-  const current = await getAccountState()
-  current.microsoftAccount = null
-  current.mode = 'local'
-  await saveAccountState(current)
-  return current
+  if (existingIndex !== -1) {
+    state.accounts[existingIndex] = {
+      ...state.accounts[existingIndex],
+      ...newAccount,
+    }
+  } else {
+    state.accounts.push(newAccount)
+  }
+
+  state.activeAccountId = msId
+  await saveAccountState(state)
+  return state
 }

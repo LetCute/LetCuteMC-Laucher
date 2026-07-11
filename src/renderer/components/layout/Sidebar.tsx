@@ -9,10 +9,13 @@ import {
   Zap,
   Play,
   Loader2,
-  Square
+  Square,
+  User,
+  Heart
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
-import logoImg from '../../assets/avatarv2-modified.png'
+import logoImg from '../../assets/logo.png'
+import steveImg from '../../assets/steve.png'
 import type {
   LauncherProfile,
   JavaRuntimeSelectionResult,
@@ -25,7 +28,7 @@ import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
 
-export type TabId = 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'settings' | 'logs'
+export type TabId = 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'logs' | 'about'
 
 interface SidebarProps {
   activeTab: TabId
@@ -41,11 +44,13 @@ interface SidebarProps {
 const MENU_ITEMS = [
   { id: 'profiles', label: 'Cấu hình game', icon: Layers },
   { id: 'versions', label: 'Phiên bản', icon: List },
+  { id: 'accounts', label: 'Tài khoản', icon: User },
   { id: 'mods', label: 'Mods', icon: Box },
   { id: 'resourcepacks', label: 'Resource Packs', icon: PackageOpen },
   { id: 'shaderpacks', label: 'Shader Packs', icon: Zap },
   { id: 'settings', label: 'Cài đặt', icon: Settings },
   { id: 'logs', label: 'Nhật ký', icon: TerminalSquare },
+  { id: 'about', label: 'Giới thiệu', icon: Heart },
 ] as const
 
 export function Sidebar({
@@ -56,41 +61,35 @@ export function Sidebar({
   javaSelection,
   settings,
   gameDir,
-  isWorking
 }: SidebarProps) {
   const { state, isBusy, isStarting, isRunning, isFailed, startLaunch, cancelLaunch } = useLauncherJob()
   const { prepareState, progress: prepareProgress, isPreparing, startPrepare } = usePrepareGame(activeProfile, settings)
   const [shouldLaunchAfterPrepare, setShouldLaunchAfterPrepare] = useState(false)
 
-  const isMicrosoft = accountState.mode === 'microsoft' && accountState.microsoftAccount
-  const displayUsername = isMicrosoft
-    ? accountState.microsoftAccount!.username
-    : accountState.localAccount.username
-
-  const isVirtual = accountState.mode === 'local'
-  const hasMicrosoftAccount = accountState.microsoftAccount !== null
+  const accounts = accountState?.accounts || []
+  const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
+  const isMicrosoft = activeAccount?.type === 'microsoft'
+  const displayUsername = activeAccount?.username || 'Player'
+  const isVirtual = !activeAccount || activeAccount.type === 'local'
+  const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
   const avatarChar = displayUsername.charAt(0).toUpperCase()
 
   const triggerLaunch = async () => {
     if (!activeProfile) return
 
-    const username = isVirtual
-      ? accountState.localAccount.username || 'Player'
-      : accountState.microsoftAccount!.username
-
     const auth: LaunchInput['auth'] = isVirtual
       ? {
         type: 'virtual',
-        username,
-        uuid: '00000000-0000-0000-0000-000000000000',
+        username: displayUsername,
+        uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
         accessToken: 'offline-token-placeholder',
       }
       : {
         type: 'microsoft',
-        username: accountState.microsoftAccount!.username,
-        uuid: accountState.microsoftAccount!.uuid,
-        accessToken: accountState.microsoftAccount!.accessToken,
-        expiresAt: accountState.microsoftAccount!.expiresAt,
+        username: activeAccount.username,
+        uuid: activeAccount.uuid,
+        accessToken: activeAccount.accessToken || '',
+        expiresAt: activeAccount.expiresAt,
       }
 
     console.log('[Sidebar] startLaunch with profile', activeProfile.id)
@@ -192,14 +191,23 @@ export function Sidebar({
       {/* Unified Play & Account Card */}
       <div className="">
         <div className="rounded-xl  p-3 space-y-3">
-          {/* Account Info Header (clickable to settings tab) */}
+          {/* Account Info Header (clickable to accounts tab) */}
           <div
-            onClick={() => onTabChange('settings')}
+            onClick={() => onTabChange('accounts')}
             className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/30 p-1.5 rounded-lg transition duration-150"
             title="Quản lý tài khoản"
           >
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-primary text-primary-foreground text-sm font-bold shadow-sm">
-              {avatarChar || 'P'}
+            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
+              <img
+                src={isMicrosoft && activeAccount
+                  ? `https://minotar.net/helm/${activeAccount.username}/64.png`
+                  : steveImg}
+                alt={displayUsername}
+                className="h-full w-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = steveImg
+                }}
+              />
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-center justify-between gap-1">

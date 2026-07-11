@@ -222,32 +222,24 @@ export interface MinecraftDirectoryResult {
   found: boolean
 }
 
-// ─── Account types ────────────────────────────────────────────────────────────
+export type AccountType = 'microsoft' | 'local'
 
-export type AccountMode = 'microsoft' | 'local'
-
-export interface MicrosoftAccount {
+export interface AccountItem {
   id: string
+  type: AccountType
   username: string
   uuid: string
   avatarUrl?: string
-  accessToken: string
+  accessToken?: string
   refreshToken?: string
   expiresAt?: string
   createdAt: string
   updatedAt: string
 }
 
-export interface LocalAccount {
-  username: string
-  createdAt: string
-  updatedAt: string
-}
-
 export interface AccountState {
-  mode: AccountMode
-  microsoftAccount: MicrosoftAccount | null
-  localAccount: LocalAccount
+  activeAccountId: string | null
+  accounts: AccountItem[]
 }
 
 // ─── Profile types ───────────────────────────────────────────────────────────

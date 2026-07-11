@@ -17,8 +17,8 @@ function getPreloadPath(): string {
 function createWindow(): void {
   // Icon: dev uses src/public, prod uses dist-electron/main (copied by build)
   const iconPath = isDev
-    ? path.join(__dirname, '../../public/avatarv2-modified.png')
-    : path.join(__dirname, 'avatarv2-modified.png')
+    ? path.join(__dirname, '../../public/logo.png')
+    : path.join(__dirname, 'logo.png')
 
   mainWindow = new BrowserWindow({
     width: 960,

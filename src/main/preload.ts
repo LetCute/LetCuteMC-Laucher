@@ -20,8 +20,6 @@ import type {
   ProfilesStore,
   UpdateProfileInput,
   AccountState,
-  AccountMode,
-  MicrosoftAccount,
   // New Worker-based launch types
   StartLaunchResult,
   CancelLaunchResult,
@@ -245,23 +243,23 @@ const launcherApi = {
     return ipcRenderer.invoke('account:get')
   },
 
-  setAccountMode(mode: AccountMode): Promise<AccountState> {
-    return ipcRenderer.invoke('account:set-mode', mode)
+  selectAccount(accountId: string): Promise<AccountState> {
+    return ipcRenderer.invoke('account:select', accountId)
   },
 
-  updateLocalAccount(username: string): Promise<AccountState> {
-    return ipcRenderer.invoke('account:update-local', username)
+  addLocalAccount(username: string): Promise<AccountState> {
+    return ipcRenderer.invoke('account:add-local', username)
   },
 
-  saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState> {
+  removeAccount(accountId: string): Promise<AccountState> {
+    return ipcRenderer.invoke('account:remove', accountId)
+  },
+
+  saveMicrosoftAccount(account: any): Promise<AccountState> {
     return ipcRenderer.invoke('account:save-microsoft', account)
   },
 
-  logoutMicrosoftAccount(): Promise<AccountState> {
-    return ipcRenderer.invoke('account:logout-microsoft')
-  },
-
-  loginMicrosoft(): Promise<MicrosoftAccount> {
+  loginMicrosoft(): Promise<any> {
     return ipcRenderer.invoke('account:login-microsoft')
   }
 }

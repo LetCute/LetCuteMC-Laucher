@@ -12,6 +12,7 @@ import type {
 } from '../../shared/types';
 import { selectBestJavaRuntime } from './javaScannerService.js';
 import { getSettings } from './settingsService.js';
+import { generateOfflineUuid } from './accountService.js';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -120,6 +121,9 @@ export async function launchMinecraft(
     }
 
     const effectiveAuth: AuthSession = input.auth!;
+    if (effectiveAuth && effectiveAuth.type === 'virtual') {
+      effectiveAuth.uuid = generateOfflineUuid(effectiveAuth.username);
+    }
 
     log('info', `Người chơi: ${effectiveAuth.username} (${effectiveAuth.type === 'virtual' ? 'Local Test Offline' : 'Microsoft'})`);
     log('info', `UUID: ${effectiveAuth.uuid}`);

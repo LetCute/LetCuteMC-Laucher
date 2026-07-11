@@ -60,9 +60,11 @@ export function LaunchPanel({
   const { prepareState, progress: prepareProgress, isPreparing, startPrepare } = usePrepareGame(activeProfile, settings)
   const [shouldLaunchAfterPrepare, setShouldLaunchAfterPrepare] = useState(false)
 
-  const isVirtual      = accountState.mode === 'local'
-  const isMicrosoft    = accountState.mode === 'microsoft'
-  const hasMicrosoftAccount = accountState.microsoftAccount !== null
+  const accounts = accountState?.accounts || []
+  const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
+  const isVirtual      = !activeAccount || activeAccount.type === 'local'
+  const isMicrosoft    = activeAccount?.type === 'microsoft'
+  const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
 
   // Java installer state (local UI only)
   type JavaInstallState = 'idle' | 'installing' | 'success' | 'error'
@@ -92,23 +94,21 @@ export function LaunchPanel({
   const triggerLaunch = async () => {
     if (!activeProfile) return
 
-    const username = isVirtual
-      ? accountState.localAccount.username || 'Player'
-      : accountState.microsoftAccount!.username
+    const username = activeAccount?.username || 'Player'
 
     const auth: LaunchInput['auth'] = isVirtual
       ? {
           type: 'virtual',
           username,
-          uuid: '00000000-0000-0000-0000-000000000000',
+          uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
           accessToken: 'offline-token-placeholder',
         }
       : {
           type: 'microsoft',
-          username: accountState.microsoftAccount!.username,
-          uuid: accountState.microsoftAccount!.uuid,
-          accessToken: accountState.microsoftAccount!.accessToken,
-          expiresAt: accountState.microsoftAccount!.expiresAt,
+          username: activeAccount.username,
+          uuid: activeAccount.uuid,
+          accessToken: activeAccount.accessToken || '',
+          expiresAt: activeAccount.expiresAt,
         }
 
     await startLaunch({

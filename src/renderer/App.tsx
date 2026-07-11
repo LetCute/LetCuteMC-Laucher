@@ -9,7 +9,9 @@ import { ModsScreen } from './screens/ModsScreen';
 import { ResourcePacksScreen } from './screens/ResourcePacksScreen';
 import { ShaderPacksScreen } from './screens/ShaderPacksScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
+import { AccountsScreen } from './screens/AccountsScreen';
 import { LogsScreen } from './screens/LogsScreen';
+import { AboutScreen } from './screens/AboutScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
 import { launcherClient } from './services/launcherClient';
 import { useLauncherJob } from './hooks/useLauncherJob';
@@ -30,13 +32,8 @@ function App() {
   const [gameDir, setGameDir] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabId>('profiles');
   const [accountState, setAccountState] = useState<AccountState>({
-    mode: 'local',
-    microsoftAccount: null,
-    localAccount: {
-      username: 'Player',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    }
+    activeAccountId: null,
+    accounts: []
   });
   const [profiles, setProfiles] = useState<LauncherProfile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
@@ -93,10 +90,9 @@ function App() {
     const target = profiles.find(p => p.id === profileId)
     if (!target) return
 
-    const isVirtual = accountState.mode === 'local'
-    const username = isVirtual
-      ? accountState.localAccount.username || 'Player'
-      : accountState.microsoftAccount?.username ?? 'Player'
+    const activeAccount = accountState.accounts.find(a => a.id === accountState.activeAccountId)
+    const isVirtual = !activeAccount || activeAccount.type === 'local'
+    const username = activeAccount?.username || 'Player'
 
     await startLaunch({
       profileId: target.id,
@@ -108,13 +104,13 @@ function App() {
       maxMemoryMb: target.maxMemoryMb || settings.defaultMaxMemoryMb,
       serverAddress: undefined,
       auth: isVirtual
-        ? { type: 'virtual', username, uuid: '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
+        ? { type: 'virtual', username, uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
         : {
             type: 'microsoft',
             username,
-            uuid: accountState.microsoftAccount!.uuid,
-            accessToken: accountState.microsoftAccount!.accessToken,
-            expiresAt: accountState.microsoftAccount!.expiresAt,
+            uuid: activeAccount.uuid,
+            accessToken: activeAccount.accessToken || '',
+            expiresAt: activeAccount.expiresAt,
           },
       performance: {
         enableLaunchBoost: settings.enableLaunchBoost,
@@ -348,6 +344,15 @@ function App() {
             />
           )}
 
+          {activeTab === 'accounts' && (
+            <AccountsScreen
+              accountState={accountState}
+              onAccountStateChange={setAccountState}
+              appendLog={() => {}}
+              isWorking={isWorking}
+            />
+          )}
+
           {activeTab === 'logs' && (
             <LogsScreen
               logs={launchJobState?.logs ?? []}
@@ -355,6 +360,10 @@ function App() {
               onCopy={() => {/* copy handled inside LogsScreen */}}
               onExport={() => {/* export handled inside LogsScreen */}}
             />
+          )}
+
+          {activeTab === 'about' && (
+            <AboutScreen />
           )}
         </div>
       </main>

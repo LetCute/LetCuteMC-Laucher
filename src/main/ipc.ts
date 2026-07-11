@@ -10,8 +10,6 @@ import type {
   LauncherProfile,
   GameContentType,
   LauncherSettings,
-  AccountMode,
-  MicrosoftAccount,
 } from '../shared/types'
 import { detectMinecraftDirectory } from './services/minecraftDirectoryService'
 import { getSettings, updateSettings } from './services/settingsService'
@@ -70,10 +68,10 @@ import {
 import { autoInstallJava, getDefaultJavaInstallDir } from './services/javaInstallerService'
 import {
   getAccountState,
-  setAccountMode,
-  updateLocalAccount,
-  saveMicrosoftAccount,
-  logoutMicrosoftAccount
+  selectAccount,
+  addLocalAccount,
+  removeAccount,
+  saveMicrosoftAccount
 } from './services/accountService'
 import { loginWithMicrosoft } from './services/microsoftAuthService'
 
@@ -299,10 +297,10 @@ export function registerIpcHandlers(): void {
   })
 
   handleIpc('account:get', getAccountState)
-  handleIpc('account:set-mode', (mode: AccountMode) => setAccountMode(mode))
-  handleIpc('account:update-local', (username: string) => updateLocalAccount(username))
-  handleIpc('account:save-microsoft', (account: MicrosoftAccount) => saveMicrosoftAccount(account))
-  handleIpc('account:logout-microsoft', logoutMicrosoftAccount)
+  handleIpc('account:select', (accountId: string) => selectAccount(accountId))
+  handleIpc('account:add-local', (username: string) => addLocalAccount(username))
+  handleIpc('account:remove', (accountId: string) => removeAccount(accountId))
+  handleIpc('account:save-microsoft', (account: any) => saveMicrosoftAccount(account))
   handleIpc('account:login-microsoft', async () => {
     return loginWithMicrosoft()
   })

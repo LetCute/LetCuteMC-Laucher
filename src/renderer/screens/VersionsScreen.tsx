@@ -136,26 +136,27 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
                   key={v.id}
                   className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
                 >
-                  <div className="flex flex-col gap-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-sm font-semibold text-foreground truncate">{v.name}</span>
-                      {!v.isInstalled ? (
-                        <span className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
-                          <Download size={10} />
-                          Sẽ tải khi chạy
-                        </span>
-                      ) : null}
+                    <div className="flex flex-col gap-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-sm font-semibold text-foreground truncate">{v.name}</span>
+                        {!v.isInstalled ? (
+                          <span className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                            <Download size={10} />
+                            Sẽ tải khi chạy
+                          </span>
+                        ) : (
+                          <Badge variant="success">Đã cài đặt</Badge>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <SourceBadge source={v.source} />
+                        {v.releaseTime && (
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(v.releaseTime).toLocaleDateString('vi-VN')}
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <SourceBadge source={v.source} />
-                      {v.isInstalled && <Badge variant="success">Đã cài đặt</Badge>}
-                      {v.releaseTime && (
-                        <span className="text-xs text-muted-foreground">
-                          {new Date(v.releaseTime).toLocaleDateString('vi-VN')}
-                        </span>
-                      )}
-                    </div>
-                  </div>
 
                   <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                     {v.isInstalled && v.path && (

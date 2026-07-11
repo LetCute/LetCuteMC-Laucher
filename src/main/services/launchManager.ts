@@ -21,7 +21,7 @@ import {
   StartLaunchResult,
   WorkerOutputMessage,
 } from '../../shared/types'
-import { getAccountState } from './accountService'
+import { getAccountState, generateOfflineUuid } from './accountService'
 import { writeErrorLog } from './errorLogService'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -357,15 +357,18 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   if (input.auth && input.auth.type === 'microsoft') {
     try {
       const accountState = await getAccountState()
-      if (accountState.microsoftAccount) {
-        input.auth.accessToken = accountState.microsoftAccount.accessToken
-        input.auth.uuid = accountState.microsoftAccount.uuid
-        input.auth.username = accountState.microsoftAccount.username
-        input.auth.expiresAt = accountState.microsoftAccount.expiresAt
+      const activeAccount = accountState.accounts.find(a => a.id === accountState.activeAccountId && a.type === 'microsoft')
+      if (activeAccount) {
+        input.auth.accessToken = activeAccount.accessToken || ''
+        input.auth.uuid = activeAccount.uuid
+        input.auth.username = activeAccount.username
+        input.auth.expiresAt = activeAccount.expiresAt
       }
     } catch (error) {
       console.error('Failed to pre-refresh Microsoft token for launch:', error)
     }
+  } else if (input.auth && input.auth.type === 'virtual') {
+    input.auth.uuid = generateOfflineUuid(input.auth.username)
   }
 
   // Send start message to worker

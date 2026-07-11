@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import type {
   LauncherProfile,
   CreateProfileInput,
@@ -9,6 +9,7 @@ import { Modal } from '../ui/Modal'
 import { Input } from '../ui/Input'
 import { AlertCircle } from 'lucide-react'
 import { Button } from '../ui/button'
+import { Select } from '../ui/Select'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -141,17 +142,23 @@ export function ProfileModal({
         <div className="col-span-2 flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">Phiên bản</label>
           {hasVersions ? (
-            <select
-              className={selectClass}
+            <Select
               value={formData.minecraftVersion}
-              onChange={(e) => setFormData(p => ({ ...p, minecraftVersion: e.target.value }))}
-            >
-              {(versionCatalog?.all ?? []).map(v => (
-                <option key={v.id} value={v.id}>
-                  {v.id}{v.isInstalled ? ' ✓' : ''}
-                </option>
-              ))}
-            </select>
+              onChange={(val) => setFormData(p => ({ ...p, minecraftVersion: val }))}
+              options={(versionCatalog?.all ?? []).map(v => ({
+                value: v.id,
+                label: (
+                  <span className="flex items-center justify-between w-full">
+                    <span>{v.id}</span>
+                    {v.isInstalled && (
+                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-normal">
+                        Đã tải
+                      </span>
+                    )}
+                  </span>
+                )
+              }))}
+            />
           ) : (
             <input
               type="text"
@@ -188,6 +195,9 @@ export function ProfileModal({
           label="RAM Tối Thiểu (MB)"
           type="number"
           value={formData.minMemoryMb}
+          min={512}
+          max={32768}
+          step={512}
           onChange={(e) => setFormData({ ...formData, minMemoryMb: parseInt(e.target.value) || 0 })}
           error={errors.minMemoryMb}
         />
@@ -195,6 +205,9 @@ export function ProfileModal({
           label="RAM Tối Đa (MB)"
           type="number"
           value={formData.maxMemoryMb}
+          min={512}
+          max={32768}
+          step={512}
           onChange={(e) => setFormData({ ...formData, maxMemoryMb: parseInt(e.target.value) || 0 })}
           error={errors.maxMemoryMb}
         />
