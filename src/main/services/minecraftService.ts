@@ -134,9 +134,11 @@ export async function launchMinecraft(
     log('info', 'Đang tìm Java runtime...');
     const settings = await getSettings();
     const scanDirs = [...settings.customJavaScanDirs];
-    if (input.javaPath) scanDirs.unshift(input.javaPath);
 
-    const javaSelection = await selectBestJavaRuntime(input.version, scanDirs);
+    const javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
+      gameDir: input.gameDir,
+      preferredJavaPath: input.javaPath,
+    });
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
       log('error', javaSelection.message);

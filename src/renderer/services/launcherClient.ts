@@ -6,6 +6,7 @@ import type {
   ImportGameContentInput,
   JavaRuntimeSelectionResult,
   JavaScanResult,
+  JavaPathVerification,
   LaunchInput,
   LauncherLog,
   LauncherProgress,
@@ -19,7 +20,6 @@ import type {
   ProfilesStore,
   UpdateProfileInput,
   AccountState,
-  AccountMode,
   MicrosoftAccount,
   StartLaunchResult,
   CancelLaunchResult,
@@ -94,15 +94,28 @@ export const launcherClient = {
     return getApi().scanMinecraftDirectory(gameDir)
   },
 
-  scanJavaRuntimes(customScanDirs?: string[]): Promise<JavaScanResult> {
-    return getApi().scanJavaRuntimes(customScanDirs)
+  scanJavaRuntimes(customScanDirs?: string[], forceRefresh?: boolean): Promise<JavaScanResult> {
+    return getApi().scanJavaRuntimes(customScanDirs, forceRefresh)
   },
 
   selectBestJavaRuntime(
     minecraftVersion: string,
-    customScanDirs?: string[]
+    customScanDirs?: string[],
+    options?: {
+      gameDir?: string
+      allowNewer?: boolean
+      preferredJavaPath?: string | null
+      forceRefresh?: boolean
+    }
   ): Promise<JavaRuntimeSelectionResult> {
-    return getApi().selectBestJavaRuntime(minecraftVersion, customScanDirs)
+    return getApi().selectBestJavaRuntime(minecraftVersion, customScanDirs, options)
+  },
+
+  verifyJavaPath(
+    javaPath: string,
+    requiredMajor: number
+  ): Promise<JavaPathVerification> {
+    return getApi().verifyJavaPath(javaPath, requiredMajor)
   },
 
   scanGameContent(gameDir: string): Promise<GameContentScanResult> {
@@ -185,24 +198,28 @@ export const launcherClient = {
     return getApi().getAccountState()
   },
 
-  setAccountMode(mode: AccountMode): Promise<AccountState> {
-    return getApi().setAccountMode(mode)
+  selectAccount(accountId: string): Promise<AccountState> {
+    return getApi().selectAccount(accountId)
   },
 
-  updateLocalAccount(username: string): Promise<AccountState> {
-    return getApi().updateLocalAccount(username)
+  addLocalAccount(username: string): Promise<AccountState> {
+    return getApi().addLocalAccount(username)
+  },
+
+  removeAccount(accountId: string): Promise<AccountState> {
+    return getApi().removeAccount(accountId)
   },
 
   saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState> {
     return getApi().saveMicrosoftAccount(account)
   },
 
-  logoutMicrosoftAccount(): Promise<AccountState> {
-    return getApi().logoutMicrosoftAccount()
-  },
-
   loginMicrosoft(): Promise<MicrosoftAccount> {
     return getApi().loginMicrosoft()
+  },
+
+  refreshMicrosoftAccount(accountId?: string): Promise<AccountState> {
+    return getApi().refreshMicrosoftAccount(accountId)
   },
 
   // ── New non-blocking launch API ────────────────────────────────────────────

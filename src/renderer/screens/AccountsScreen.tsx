@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { AccountState } from '@/shared/types.ts'
 import { Input } from '../components/ui/Input'
+import { useToast } from '../components/ui/Toast'
 import { Key, FlaskConical, Trash2, PlusCircle, Check } from 'lucide-react'
 import { Button } from '../components/ui/button'
 
@@ -17,6 +18,7 @@ export const AccountsScreen = ({
   appendLog,
   isWorking,
 }: AccountsScreenProps) => {
+  const { showToast } = useToast()
   const [newLocalUsername, setNewLocalUsername] = useState('')
 
   const handleMicrosoftLogin = async () => {
@@ -25,15 +27,17 @@ export const AccountsScreen = ({
       const updated = await window.launcherApi.saveMicrosoftAccount(account)
       onAccountStateChange(updated)
       appendLog('success', `Đã đăng nhập tài khoản Microsoft: ${account.username}`)
+      showToast('success', `Đã đăng nhập: ${account.username}`)
     } catch (e) {
-      appendLog('error', e instanceof Error ? e.message : 'Lỗi đăng nhập')
-      alert(e instanceof Error ? e.message : 'Lỗi đăng nhập')
+      const msg = e instanceof Error ? e.message : 'Lỗi đăng nhập'
+      appendLog('error', msg)
+      showToast('error', msg)
     }
   }
 
   const handleAddLocalAccount = async () => {
     if (!newLocalUsername || newLocalUsername.trim().length === 0) {
-      alert('Vui lòng nhập tên tài khoản.')
+      showToast('error', 'Vui lòng nhập tên tài khoản.')
       return
     }
     try {
@@ -41,9 +45,11 @@ export const AccountsScreen = ({
       onAccountStateChange(updated)
       setNewLocalUsername('')
       appendLog('success', `Đã tạo tài khoản Local mới: ${newLocalUsername}`)
+      showToast('success', `Đã tạo tài khoản: ${newLocalUsername}`)
     } catch (e) {
-      appendLog('error', e instanceof Error ? e.message : 'Lỗi tạo tài khoản')
-      alert(e instanceof Error ? e.message : 'Lỗi tạo tài khoản')
+      const msg = e instanceof Error ? e.message : 'Lỗi tạo tài khoản'
+      appendLog('error', msg)
+      showToast('error', msg)
     }
   }
 

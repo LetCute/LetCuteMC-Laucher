@@ -1,8 +1,10 @@
 import fsPromises from 'node:fs/promises'
 import crypto from 'node:crypto'
 import type { AccountState, AccountItem } from '../../shared/types'
-import { refreshMicrosoftToken } from './microsoftAuthService'
 import { getAccountConfigPath, ensureLauncherDataDirectory } from './storageService.js'
+
+/** Single-flight MS token refresh — avoids TOO_MANY_REQUESTS on spam load */
+let refreshInFlight: Promise<void> | null = null
 
 export function generateOfflineUuid(username: string): string {
   const input = `OfflinePlayer:${username}`
@@ -114,27 +116,7 @@ export async function getAccountState(): Promise<AccountState> {
     }
 
     const state = parsed as AccountState
-
-    // Auto refresh active microsoft account if expired
-    const activeAccount = state.accounts.find(a => a.id === state.activeAccountId)
-    if (activeAccount && activeAccount.type === 'microsoft' && activeAccount.refreshToken) {
-      const expiresAt = activeAccount.expiresAt ? new Date(activeAccount.expiresAt).getTime() : 0
-      const isExpired = expiresAt - Date.now() < 5 * 60 * 1000 // Less than 5 mins left
-      if (isExpired) {
-        try {
-          const refreshed = await refreshMicrosoftToken(activeAccount.refreshToken)
-          activeAccount.accessToken = refreshed.accessToken
-          activeAccount.refreshToken = refreshed.refreshToken
-          activeAccount.expiresAt = refreshed.expiresAt
-          activeAccount.avatarUrl = refreshed.avatarUrl
-          activeAccount.updatedAt = new Date().toISOString()
-          await saveAccountState(state)
-        } catch (error) {
-          console.error('Failed to auto-refresh active Microsoft token on load:', error)
-        }
-      }
-    }
-
+    // Fast path: never block UI load on network auth refresh
     return state
   } catch {
     const defaultLocalUuid = generateOfflineUuid('Player')
@@ -279,4 +261,44 @@ export async function saveMicrosoftAccount(
   state.activeAccountId = msId
   await saveAccountState(state)
   return state
+}
+
+/** Refresh MS token only when needed (launch / explicit). Single-flight. */
+export async function refreshMicrosoftAccountToken(accountId?: string): Promise<AccountState> {
+  const state = await getAccountState()
+  const id = accountId || state.activeAccountId
+  const account = state.accounts.find(a => a.id === id)
+  if (!account || account.type !== 'microsoft' || !account.refreshToken) {
+    return state
+  }
+
+  const expiresAt = account.expiresAt ? new Date(account.expiresAt).getTime() : 0
+  const needsRefresh = expiresAt - Date.now() < 5 * 60 * 1000
+  if (!needsRefresh) return state
+
+  if (refreshInFlight) {
+    await refreshInFlight
+    return getAccountState()
+  }
+
+  refreshInFlight = (async () => {
+    try {
+      const { refreshMicrosoftToken } = await import('./microsoftAuthService')
+      const refreshed = await refreshMicrosoftToken(account.refreshToken!)
+      account.accessToken = refreshed.accessToken
+      account.refreshToken = refreshed.refreshToken
+      account.expiresAt = refreshed.expiresAt
+      account.avatarUrl = refreshed.avatarUrl
+      account.updatedAt = new Date().toISOString()
+      await saveAccountState(state)
+    } catch (error) {
+      console.error('Failed to refresh Microsoft token:', error)
+      throw error
+    } finally {
+      refreshInFlight = null
+    }
+  })()
+
+  await refreshInFlight
+  return getAccountState()
 }

@@ -1,10 +1,10 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'node:path'
 import isDev from 'electron-is-dev'
-import { registerIpcHandlers } from './ipc'
-import { isGameRunning, isLauncherHiddenForGame } from './services/launchManager'
 
 let mainWindow: BrowserWindow | null = null
+let isGameRunningFn: (() => boolean) | null = null
+let isLauncherHiddenForGameFn: (() => boolean) | null = null
 
 // Hide default menu bar (File / Edit / View / Help)
 Menu.setApplicationMenu(null)
@@ -12,6 +12,10 @@ Menu.setApplicationMenu(null)
 function getPreloadPath(): string {
   // Conforms to outDir: "dist-electron"
   return path.join(__dirname, 'preload.js')
+}
+
+function shouldKeepAliveForGame(): boolean {
+  return Boolean(isGameRunningFn?.() || isLauncherHiddenForGameFn?.())
 }
 
 function createWindow(): void {
@@ -30,7 +34,7 @@ function createWindow(): void {
     backgroundColor: '#1c2127',
     frame: false,
     titleBarStyle: 'hidden',
-    show: false,
+    show: true,
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
@@ -39,17 +43,12 @@ function createWindow(): void {
     }
   })
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow?.show()
-  })
-
   // While MC runs: X / close → hide to background (keep process alive to detect MC exit)
   mainWindow.on('close', (e) => {
-    if (isGameRunning() || isLauncherHiddenForGame()) {
-      e.preventDefault()
-      mainWindow?.hide()
-      mainWindow?.setSkipTaskbar(true)
-    }
+    if (!shouldKeepAliveForGame()) return
+    e.preventDefault()
+    mainWindow?.hide()
+    mainWindow?.setSkipTaskbar(true)
   })
 
   mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
@@ -68,22 +67,32 @@ function createWindow(): void {
 }
 
 app.whenReady().then(() => {
-  registerIpcHandlers()
+  // Paint window first — register heavy IPC after
   createWindow()
+
+  void Promise.all([
+    import('./ipc'),
+    import('./services/launchManager'),
+  ]).then(([{ registerIpcHandlers }, launchManager]) => {
+    registerIpcHandlers()
+    isGameRunningFn = launchManager.isGameRunning
+    isLauncherHiddenForGameFn = launchManager.isLauncherHiddenForGame
+  })
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
-    } else if (mainWindow && !mainWindow.isDestroyed() && !isGameRunning()) {
-      mainWindow.setSkipTaskbar(false)
-      mainWindow.show()
+      return
     }
+    if (!mainWindow || mainWindow.isDestroyed() || isGameRunningFn?.()) return
+    mainWindow.setSkipTaskbar(false)
+    mainWindow.show()
   })
 })
 
 app.on('window-all-closed', () => {
   // Don't quit while MC is running (window only hidden)
-  if (isGameRunning() || isLauncherHiddenForGame()) return
+  if (shouldKeepAliveForGame()) return
   if (process.platform !== 'darwin') {
     app.quit()
   }

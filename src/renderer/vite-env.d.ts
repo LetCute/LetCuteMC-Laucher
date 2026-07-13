@@ -9,6 +9,7 @@ import type {
   ImportGameContentInput,
   JavaRuntimeSelectionResult,
   JavaScanResult,
+  JavaPathVerification,
   LaunchInput,
   LauncherLog,
   LauncherProgress,
@@ -22,12 +23,14 @@ import type {
   ProfilesStore,
   UpdateProfileInput,
   AccountState,
-  AccountMode,
   MicrosoftAccount,
   StartLaunchResult,
   CancelLaunchResult,
   LaunchJobState,
   LauncherEvent,
+  PrepareGameResult,
+  PreparedProfileState,
+  PrepareGameProgress,
 } from '../shared/types'
 
 declare global {
@@ -56,14 +59,24 @@ declare global {
       getMinecraftVersionCatalog(gameDir: string): Promise<MinecraftVersionCatalog>
       scanMinecraftDirectory(gameDir: string): Promise<MinecraftScanResult>
 
-      scanJavaRuntimes(customScanDirs?: string[]): Promise<JavaScanResult>
+      scanJavaRuntimes(customScanDirs?: string[], forceRefresh?: boolean): Promise<JavaScanResult>
       selectBestJavaRuntime(
         minecraftVersion: string,
-        customScanDirs?: string[]
+        customScanDirs?: string[],
+        options?: {
+          gameDir?: string
+          allowNewer?: boolean
+          preferredJavaPath?: string | null
+          forceRefresh?: boolean
+        }
       ): Promise<JavaRuntimeSelectionResult>
       autoInstallJava(
         javaVersion: number
       ): Promise<{ success: boolean; javaPath: string; message: string }>
+      verifyJavaPath(
+        javaPath: string,
+        requiredMajor: number
+      ): Promise<JavaPathVerification>
 
       scanGameContent(gameDir: string): Promise<GameContentScanResult>
       scanMods(gameDir: string): Promise<GameContentItem[]>
@@ -100,11 +113,12 @@ declare global {
       clearLauncherLogs(): Promise<boolean>
 
       getAccountState(): Promise<AccountState>
-      setAccountMode(mode: AccountMode): Promise<AccountState>
-      updateLocalAccount(username: string): Promise<AccountState>
+      selectAccount(accountId: string): Promise<AccountState>
+      addLocalAccount(username: string): Promise<AccountState>
+      removeAccount(accountId: string): Promise<AccountState>
       saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState>
-      logoutMicrosoftAccount(): Promise<AccountState>
       loginMicrosoft(): Promise<MicrosoftAccount>
+      refreshMicrosoftAccount(accountId?: string): Promise<AccountState>
 
       // New non-blocking launch API
       startLaunch(input: LaunchInput): Promise<StartLaunchResult>
@@ -114,7 +128,7 @@ declare global {
       onLauncherEvent(callback: (events: LauncherEvent[]) => void): () => void
 
       // New prepare game and caching API
-      prepareGame(profile: LauncherProfile, settings: LauncherSettings): Promise<PrepareGameResult>
+      prepareGame(profile: LauncherProfile, settings: LauncherSettings, forceRepair?: boolean): Promise<PrepareGameResult>
       checkPreparedProfile(profile: LauncherProfile, settings: LauncherSettings): Promise<PreparedProfileState>
       cancelPrepareGame(): Promise<boolean>
       clearVersionManifestCache(): Promise<boolean>

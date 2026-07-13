@@ -3,13 +3,75 @@ import path from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type {
-  JavaScanResult,
   DetectedJavaRuntime,
   JavaRuntimeSelectionResult,
-  RequiredJavaVersion
+  JavaRuntimeSource,
+  JavaScanResult,
+  JavaCompatibility,
 } from '../../shared/types'
+import { getDefaultJavaInstallDir } from './javaInstallerService'
+import { getDefaultMinecraftDirectory, getJavaCacheFilePath } from './storageService'
 
 const execFileAsync = promisify(execFile)
+
+const JAVA_EXE = process.platform === 'win32' ? 'java.exe' : 'java'
+const INSPECT_TIMEOUT_MS = 8000
+const INSPECT_MAX_BUFFER = 1024 * 1024
+const SCAN_MAX_DEPTH = 3
+const INSPECT_CONCURRENCY = 4
+const CACHE_TTL_MS = 10 * 60 * 1000
+
+const SKIP_DIR_NAMES = new Set([
+  'node_modules',
+  'library',
+  'appdata',
+  'system32',
+  'windows',
+  'winsxs',
+  'temp',
+  'tmp',
+  '$recycle.bin',
+])
+
+// ─── pure helpers ────────────────────────────────────────────────────────────
+
+/** Parse major from a Java version string. Returns null on failure — never defaults. */
+export function parseJavaMajor(version: string | null | undefined): number | null {
+  if (!version) return null
+  const cleaned = String(version).trim()
+  if (!cleaned) return null
+
+  // Java 8 legacy: 1.8 / 1.8.0_431
+  const legacy = cleaned.match(/^1\.(\d+)/)
+  if (legacy) {
+    const major = Number(legacy[1])
+    return Number.isFinite(major) && major > 0 ? major : null
+  }
+
+  // Modern: 17, 17.0.12, 21.0.10, 25-ea, 25.0.1+10-LTS
+  const modern = cleaned.match(/^(\d+)/)
+  if (!modern) return null
+  const major = Number(modern[1])
+  return Number.isFinite(major) && major > 0 ? major : null
+}
+
+/** Read a single `key = value` property from -XshowSettings output. */
+export function readJavaProperty(output: string, key: string): string | null {
+  if (!output || !key) return null
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  const re = new RegExp(`^\\s*${escaped}\\s*=\\s*(.+?)\\s*$`, 'mi')
+  const match = output.match(re)
+  const value = match?.[1]?.trim()
+  return value ? value : null
+}
+
+function logScanner(message: string): void {
+  console.log(`[JavaScanner] ${message}`)
+}
+
+function logSelector(message: string): void {
+  console.log(`[JavaSelector] ${message}`)
+}
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {
@@ -20,231 +82,733 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
-function getJavaExecutableName(): string {
-  return process.platform === 'win32' ? 'java.exe' : 'java'
-}
-
-function parseJavaMajorVersion(rawOutput: string): number | null {
-  const match = rawOutput.match(/version "([^"]+)"/i)
-  if (!match) {
-    return null
-  }
-
-  const rawVersion = match[1]
-  if (rawVersion.startsWith('1.8')) {
-    return 8
-  }
-
-  const major = Number(rawVersion.split('.')[0])
-  return Number.isFinite(major) ? major : null
-}
-
-async function getJavaDetails(javaPath: string): Promise<{ majorVersion: number; rawVersion: string } | null> {
+async function safeRealpath(targetPath: string): Promise<string> {
   try {
-    const { stdout, stderr } = await execFileAsync(javaPath, ['-version'], {
-      timeout: 5000
-    })
-    const rawOutput = `${stdout}\n${stderr}`.trim()
-    const majorVersion = parseJavaMajorVersion(rawOutput)
-    const rawVersion = rawOutput.match(/version "([^"]+)"/i)?.[1] ?? 'unknown'
-
-    if (majorVersion) {
-      return { majorVersion, rawVersion }
-    }
-    return null
+    return await fs.realpath(targetPath)
   } catch {
-    return null
+    return path.resolve(targetPath)
   }
 }
 
-// Find java files under a directory (recursive up to depth 3)
-async function findJavaExecutablesInDir(dirPath: string, depth = 0): Promise<string[]> {
-  const executables: string[] = []
-  if (depth > 3) return executables
+function makeRuntimeId(javaPath: string, major: number): string {
+  const normalized = path.resolve(javaPath).toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  return `java-${major}-${normalized.slice(-48)}`
+}
+
+function sourcePriority(source: JavaRuntimeSource): number {
+  switch (source) {
+    case 'managed':
+      return 0
+    case 'manual':
+      return 1
+    case 'custom':
+      return 2
+    case 'java_home':
+      return 3
+    case 'minecraft':
+      return 4
+    case 'system':
+      return 5
+    case 'path':
+      return 6
+    default:
+      return 9
+  }
+}
+
+// ─── inspect ─────────────────────────────────────────────────────────────────
+
+export async function inspectJavaExecutable(
+  javaPath: string
+): Promise<Omit<DetectedJavaRuntime, 'source' | 'id'> | null> {
+  const resolvedPath = path.resolve(javaPath)
+  let output = ''
 
   try {
-    const entries = await fs.readdir(dirPath, { withFileTypes: true })
-    const exeName = getJavaExecutableName()
-
-    // Check if bin/java exists directly in this directory
-    const directJavaPath = path.join(dirPath, 'bin', exeName)
-    if (await pathExists(directJavaPath)) {
-      executables.push(directJavaPath)
-    }
-
-    for (const entry of entries) {
-      if (entry.isDirectory()) {
-        const subDirPath = path.join(dirPath, entry.name)
-        // Skip common non-Java folders to save scan time
-        if (entry.name.startsWith('.') || ['node_modules', 'Library', 'AppData', 'System32', 'Windows'].includes(entry.name)) {
-          continue
-        }
-        const nested = await findJavaExecutablesInDir(subDirPath, depth + 1)
-        executables.push(...nested)
-      } else if (entry.name === exeName) {
-        executables.push(path.join(dirPath, entry.name))
+    const result = await execFileAsync(
+      resolvedPath,
+      ['-XshowSettings:properties', '-version'],
+      {
+        timeout: INSPECT_TIMEOUT_MS,
+        maxBuffer: INSPECT_MAX_BUFFER,
+        windowsHide: true,
       }
+    )
+    output = `${result.stdout ?? ''}\n${result.stderr ?? ''}`
+  } catch (err) {
+    // java often exits non-zero for -XshowSettings; still parse stdout/stderr
+    const e = err as { stdout?: string; stderr?: string; message?: string }
+    output = `${e.stdout ?? ''}\n${e.stderr ?? ''}`
+    if (!output.trim()) {
+      logScanner(`Skipped invalid runtime: ${resolvedPath} (${e.message ?? 'no output'})`)
+      return null
     }
-  } catch {
-    // ignore directory read errors
   }
 
+  const specVersion = readJavaProperty(output, 'java.specification.version')
+  const runtimeVersion = readJavaProperty(output, 'java.runtime.version')
+  const javaVersion = readJavaProperty(output, 'java.version')
+  const javaHomeProp = readJavaProperty(output, 'java.home')
+  const vendor = readJavaProperty(output, 'java.vendor') ?? undefined
+  const architecture = readJavaProperty(output, 'os.arch') ?? undefined
+
+  let version = specVersion || runtimeVersion || javaVersion || ''
+  if (!version) {
+    const quoted = output.match(/version\s+"([^"]+)"/i)
+    version = quoted?.[1] ?? ''
+  }
+
+  const majorVersion = parseJavaMajor(specVersion)
+    ?? parseJavaMajor(javaVersion)
+    ?? parseJavaMajor(runtimeVersion)
+    ?? parseJavaMajor(version)
+
+  if (majorVersion == null) {
+    logScanner(`Skipped invalid runtime: ${resolvedPath} (unparseable version)`)
+    return null
+  }
+
+  const displayVersion = javaVersion || runtimeVersion || version || String(majorVersion)
+  const javaHome = javaHomeProp
+    ? path.resolve(javaHomeProp)
+    : path.resolve(path.dirname(resolvedPath), '..')
+
+  logScanner(
+    `Detected Java ${displayVersion}, major=${majorVersion}, vendor=${vendor ?? 'unknown'}`
+  )
+
+  return {
+    javaPath: resolvedPath,
+    javaHome,
+    version: displayVersion,
+    majorVersion,
+    vendor,
+    architecture,
+    valid: true,
+    rawVersion: displayVersion,
+    isValid: true,
+  }
+}
+
+/**
+ * Verify a custom Java path and check if it's compatible with the required version.
+ */
+export async function verifyJavaPath(
+  javaPath: string,
+  requiredMajor: number
+): Promise<import('../../shared/types').JavaPathVerification> {
+  const resolved = path.resolve(javaPath)
+
+  if (!(await pathExists(resolved))) {
+    return {
+      valid: false,
+      majorVersion: null,
+      version: null,
+      compatible: false,
+      requiredMajor,
+      message: 'Đường dẫn không tồn tại.',
+    }
+  }
+
+  const details = await inspectJavaExecutable(resolved)
+  if (!details) {
+    return {
+      valid: false,
+      majorVersion: null,
+      version: null,
+      compatible: false,
+      requiredMajor,
+      message: 'Không thể đọc thông tin Java từ đường dẫn này.',
+    }
+  }
+
+  const compatible = details.majorVersion === requiredMajor
+  return {
+    valid: true,
+    majorVersion: details.majorVersion,
+    version: details.version,
+    compatible,
+    requiredMajor,
+    message: compatible
+      ? `Java ${details.version} tương thích với Minecraft (cần Java ${requiredMajor}).`
+      : `Java ${details.version} (major ${details.majorVersion}) không đúng phiên bản yêu cầu (Java ${requiredMajor}).`,
+  }
+}
+
+// ─── filesystem scan ─────────────────────────────────────────────────────────
+
+/** Find bin/java(.exe) under a root, max depth 3 (supports nested jdk folders). */
+export async function findJavaExecutables(
+  rootDir: string,
+  depth = 0
+): Promise<string[]> {
+  const found: string[] = []
+  if (depth > SCAN_MAX_DEPTH) return found
+
+  let dirPath: string
+  try {
+    dirPath = path.resolve(rootDir)
+  } catch {
+    return found
+  }
+
+  try {
+    const direct = path.join(dirPath, 'bin', JAVA_EXE)
+    if (await pathExists(direct)) {
+      found.push(path.resolve(direct))
+    }
+
+    // Root is already a bin/ folder
+    const asBin = path.join(dirPath, JAVA_EXE)
+    if (path.basename(dirPath).toLowerCase() === 'bin' && (await pathExists(asBin))) {
+      found.push(path.resolve(asBin))
+      return [...new Set(found)]
+    }
+
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
+    for (const entry of entries) {
+      if (!entry.isDirectory() && !entry.isSymbolicLink()) continue
+      const name = entry.name
+      if (name.startsWith('.') || SKIP_DIR_NAMES.has(name.toLowerCase())) continue
+      // Already captured via bin/java.exe above — avoid duplicate
+      if (name.toLowerCase() === 'bin') continue
+      const nested = await findJavaExecutables(path.join(dirPath, name), depth + 1)
+      found.push(...nested)
+    }
+  } catch {
+    // missing dir / permission — not fatal
+  }
+
+  return [...new Set(found)]
+}
+
+export async function scanJavaRoot(rootDir: string): Promise<string[]> {
+  const resolved = path.resolve(rootDir)
+  if (!(await pathExists(resolved))) return []
+  logScanner(`Scan root: ${resolved}`)
+  const executables = await findJavaExecutables(resolved)
+  for (const exe of executables) {
+    logScanner(`Found executable: ${exe}`)
+  }
   return executables
 }
 
-export function extractMinecraftVersion(version: string): string | null {
-  // New format: 2025, 2026, 26.1, etc.
-  const yearMatch = version.match(/\b(20\d{2}|2[5-9]\.\d+)\b/)
-  if (yearMatch) {
-    return yearMatch[1]
+function looksLikeJavaRoot(dirPath: string): boolean {
+  const lower = dirPath.toLowerCase().replace(/\//g, '\\')
+  return (
+    lower.includes('\\java') ||
+    lower.includes('\\jdk') ||
+    lower.includes('\\jre') ||
+    lower.includes('adoptium') ||
+    lower.includes('temurin') ||
+    lower.includes('zulu') ||
+    lower.includes('corretto') ||
+    lower.includes('bellsoft') ||
+    lower.includes('semeru') ||
+    lower.includes('microsoft\\jdk') ||
+    lower.includes('.jdks') ||
+    lower.includes('.minecraft\\runtime') ||
+    lower.includes('letcutemc\\java') ||
+    lower.includes('javapath')
+  )
+}
+
+/** Deep-scan roots only (known vendor dirs). PATH is handled separately. */
+export function getKnownJavaRoots(customScanDirs: string[] = []): string[] {
+  const roots = new Set<string>()
+  const add = (p?: string | null) => {
+    if (p && p.trim()) roots.add(path.resolve(p.trim()))
   }
-  
-  // Legacy format: 1.x.x
+
+  for (const dir of customScanDirs) add(dir)
+  if (process.env.JAVA_HOME) add(process.env.JAVA_HOME)
+
+  try {
+    add(getDefaultJavaInstallDir())
+  } catch {
+    /* ignore */
+  }
+
+  if (process.platform === 'win32') {
+    const pf = process.env.ProgramFiles || 'C:\\Program Files'
+    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+    const localAppData = process.env.LOCALAPPDATA || ''
+    const userProfile = process.env.USERPROFILE || process.env.HOME || ''
+    const appData = process.env.APPDATA || ''
+
+    add(path.join(pf, 'Java'))
+    add(path.join(pf86, 'Java'))
+    add(path.join(pf, 'Eclipse Adoptium'))
+    add(path.join(pf, 'Microsoft'))
+    add(path.join(pf, 'Zulu'))
+    add(path.join(pf, 'Amazon Corretto'))
+    add(path.join(pf, 'BellSoft'))
+    add(path.join(pf, 'Semeru'))
+    add(path.join(pf, 'AdoptOpenJDK'))
+    add(path.join(pf86, 'Common Files', 'Oracle', 'Java', 'javapath'))
+
+    if (localAppData) {
+      add(path.join(localAppData, 'Programs', 'Eclipse Adoptium'))
+      add(path.join(localAppData, 'Programs', 'Java'))
+      add(path.join(localAppData, 'Programs', 'Microsoft'))
+    }
+    if (userProfile) {
+      add(path.join(userProfile, '.jdks'))
+      add(path.join(userProfile, '.gradle', 'jdks'))
+    }
+    if (appData) {
+      add(path.join(appData, '.minecraft', 'runtime'))
+      add(path.join(appData, 'LetCuteMC', 'java'))
+    }
+  } else if (process.platform === 'darwin') {
+    add('/Library/Java/JavaVirtualMachines')
+    add(path.join(process.env.HOME || '', '.jdks'))
+    add(path.join(process.env.HOME || '', 'Library/Java/JavaVirtualMachines'))
+  } else {
+    add('/usr/lib/jvm')
+    add('/usr/java')
+    add(path.join(process.env.HOME || '', '.jdks'))
+  }
+
+  try {
+    add(path.join(getDefaultMinecraftDirectory(), 'runtime'))
+  } catch {
+    /* ignore */
+  }
+
+  // PATH: only deep-scan entries that look like Java installs (never C:\Windows etc.)
+  const pathEnv = process.env.PATH || process.env.Path || ''
+  for (const entry of pathEnv.split(path.delimiter)) {
+    if (!entry || !looksLikeJavaRoot(entry)) continue
+    add(entry)
+    if (path.basename(entry).toLowerCase() === 'bin') add(path.dirname(entry))
+  }
+
+  return [...roots]
+}
+
+/** Direct java.exe candidates from PATH entries (no recursive walk). */
+async function collectPathJavaExecutables(): Promise<string[]> {
+  const found: string[] = []
+  const pathEnv = process.env.PATH || process.env.Path || ''
+  for (const entry of pathEnv.split(path.delimiter)) {
+    if (!entry) continue
+    try {
+      const resolved = path.resolve(entry)
+      const direct = path.join(resolved, JAVA_EXE)
+      if (await pathExists(direct)) found.push(direct)
+      const nested = path.join(resolved, 'bin', JAVA_EXE)
+      if (await pathExists(nested)) found.push(nested)
+    } catch {
+      /* ignore */
+    }
+  }
+  return found
+}
+
+async function collectWhereJava(): Promise<string[]> {
+  if (process.platform !== 'win32') {
+    try {
+      const { stdout } = await execFileAsync('which', ['-a', 'java'], {
+        timeout: 5000,
+        windowsHide: true,
+        maxBuffer: 256 * 1024,
+      })
+      return stdout
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter(Boolean)
+        .map((p) => path.resolve(p))
+    } catch {
+      return []
+    }
+  }
+
+  try {
+    const { stdout } = await execFileAsync('where.exe', ['java'], {
+      timeout: 5000,
+      windowsHide: true,
+      maxBuffer: 256 * 1024,
+    })
+    return stdout
+      .split(/\r?\n/)
+      .map((l) => l.trim())
+      .filter(Boolean)
+      .map((p) => path.resolve(p))
+  } catch {
+    return []
+  }
+}
+
+function classifySource(
+  javaPath: string,
+  javaHome: string,
+  customScanDirs: string[],
+  managedRoot: string
+): JavaRuntimeSource {
+  const p = javaPath.toLowerCase()
+  const home = javaHome.toLowerCase()
+  const managed = managedRoot.toLowerCase()
+
+  if (managed && (p.startsWith(managed) || home.startsWith(managed))) {
+    return 'managed'
+  }
+
+  for (const dir of customScanDirs) {
+    const d = path.resolve(dir).toLowerCase()
+    if (p.startsWith(d) || home.startsWith(d) || d === p || d === home) {
+      return 'manual'
+    }
+  }
+
+  if (process.env.JAVA_HOME) {
+    const jh = path.resolve(process.env.JAVA_HOME).toLowerCase()
+    if (p.startsWith(jh) || home.startsWith(jh)) return 'java_home'
+  }
+
+  if (
+    p.includes(`${path.sep}.minecraft${path.sep}runtime`) ||
+    home.includes(`${path.sep}.minecraft${path.sep}runtime`)
+  ) {
+    return 'minecraft'
+  }
+
+  // bare name from PATH resolution
+  if (
+    path.basename(javaPath).toLowerCase() === JAVA_EXE.toLowerCase() &&
+    !path.isAbsolute(javaPath)
+  ) {
+    return 'path'
+  }
+
+  return 'system'
+}
+
+export function deduplicateJavaRuntimes(runtimes: DetectedJavaRuntime[]): DetectedJavaRuntime[] {
+  const byKey = new Map<string, DetectedJavaRuntime>()
+
+  for (const runtime of runtimes) {
+    if (!runtime.valid && !runtime.isValid) continue
+    const key = (runtime.javaHome || path.dirname(path.dirname(runtime.javaPath)))
+      .toLowerCase()
+      .replace(/\\/g, '/')
+
+    const existing = byKey.get(key)
+    if (!existing) {
+      byKey.set(key, runtime)
+      continue
+    }
+
+    // Prefer higher-priority source, then more complete metadata
+    const preferNew =
+      sourcePriority(runtime.source) < sourcePriority(existing.source) ||
+      ((runtime.vendor ? 1 : 0) + (runtime.architecture ? 1 : 0) >
+        (existing.vendor ? 1 : 0) + (existing.architecture ? 1 : 0))
+
+    if (preferNew) byKey.set(key, runtime)
+  }
+
+  return [...byKey.values()].sort((a, b) => {
+    const src = sourcePriority(a.source) - sourcePriority(b.source)
+    if (src !== 0) return src
+    return a.majorVersion - b.majorVersion
+  })
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  worker: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = new Array(items.length)
+  let next = 0
+
+  async function run(): Promise<void> {
+    while (next < items.length) {
+      const i = next++
+      try {
+        results[i] = { status: 'fulfilled', value: await worker(items[i]) }
+      } catch (reason) {
+        results[i] = { status: 'rejected', reason }
+      }
+    }
+  }
+
+  const agents = Array.from(
+    { length: Math.min(concurrency, Math.max(items.length, 1)) },
+    () => run()
+  )
+  await Promise.all(agents)
+  return results
+}
+
+// ─── required major ──────────────────────────────────────────────────────────
+
+/**
+ * Fallback ONLY when version metadata has no javaVersion.majorVersion.
+ * Official Mojang/loader metadata always wins over this table.
+ *
+ *   <= 1.16.5  → 8
+ *   1.17       → 16
+ *   1.18–1.20.4 → 17
+ *   >= 1.20.5  → 21
+ */
+export function fallbackRequiredJavaFromMinecraftVersion(version: string): number {
+  const clean = extractMinecraftVersion(version) ?? version
+
+  // Year-based snapshot-ish ids (2025 / 26.1)
+  const yearMatch = clean.match(/^(20)?(\d{2,4})(?:\.(\d+))?$/)
+  if (yearMatch && !clean.startsWith('1.')) {
+    const year = yearMatch[1]
+      ? Number(yearMatch[1] + yearMatch[2])
+      : Number(yearMatch[2].length <= 2 ? `20${yearMatch[2]}` : yearMatch[2])
+    if (Number.isFinite(year)) {
+      if (year <= 2024) return 8
+      if (year === 2025) return 17
+      return 21
+    }
+  }
+
+  const parts = clean.split('.').map((p) => Number(p))
+  const minor = parts[1] ?? 0
+  const patch = parts[2] ?? 0
+
+  if (minor >= 21) return 21
+  if (minor === 20 && patch >= 5) return 21
+  if (minor >= 18) return 17
+  if (minor === 17) return 16
+  if (minor <= 16) return 8
+  return 17
+}
+
+export function extractMinecraftVersion(version: string): string | null {
+  const yearMatch = version.match(/\b(20\d{2}|2[5-9]\.\d+)\b/)
+  if (yearMatch) return yearMatch[1]
   const legacyMatch = version.match(/1\.\d+(?:\.\d+)?/)
   return legacyMatch?.[0] ?? null
 }
 
-export function resolveRequiredJavaVersion(version: string): RequiredJavaVersion {
-  const cleanVersion = extractMinecraftVersion(version) ?? version
-
-  // New year-based versions (2025, 2026, etc. or 25.1, 26.1, etc.)
-  const yearMatch = cleanVersion.match(/^(20)?(\d{2,4})(?:\.(\d+))?$/)
-  if (yearMatch) {
-    const year = yearMatch[1] ? Number(yearMatch[1] + yearMatch[2]) : Number('20' + yearMatch[2])
-    // 2024 and earlier → Java 8, 2025 → Java 17, 2026+ → Java 21
-    if (year <= 2024) return 8
-    if (year === 2025) return 17
-    if (year >= 2026) return 21
-  }
-
-  // Legacy 1.x.x format
-  const [, minor = 0, patch = 0] = cleanVersion
-    .split('.')
-    .map((part) => Number(part))
-
-  // Minecraft 1.20.5+ requires Java 21
-  if (minor >= 21) return 21
-  if (minor === 20 && patch >= 5) return 21
-  
-  // Minecraft 1.17-1.20.4 requires Java 17
-  if (minor >= 17) return 17
-  
-  // Minecraft <= 1.16.5 requires Java 8
-  if (minor <= 16) return 8
-
-  // Default fallback
-  return 17
+/** @deprecated use resolveRequiredJavaMajor — kept for call-site compat */
+export function resolveRequiredJavaVersion(version: string): number {
+  return fallbackRequiredJavaFromMinecraftVersion(version)
 }
 
+async function readVersionJsonMajor(
+  gameDir: string,
+  versionId: string,
+  depth = 0
+): Promise<number | null> {
+  if (!gameDir || !versionId || depth > 4) return null
+  const jsonPath = path.join(gameDir, 'versions', versionId, `${versionId}.json`)
+  try {
+    const raw = await fs.readFile(jsonPath, 'utf8')
+    const json = JSON.parse(raw) as {
+      javaVersion?: { majorVersion?: number }
+      inheritsFrom?: string
+    }
+    const major = json.javaVersion?.majorVersion
+    if (typeof major === 'number' && Number.isFinite(major) && major > 0) {
+      return major
+    }
+    if (json.inheritsFrom) {
+      return readVersionJsonMajor(gameDir, json.inheritsFrom, depth + 1)
+    }
+  } catch {
+    // missing / unreadable metadata
+  }
+  return null
+}
+
+export async function resolveRequiredJavaMajor(
+  minecraftVersion: string,
+  gameDir?: string
+): Promise<number> {
+  if (gameDir) {
+    const fromMeta = await readVersionJsonMajor(gameDir, minecraftVersion)
+    if (fromMeta != null) {
+      logSelector(`Required major from metadata=${fromMeta} (version=${minecraftVersion})`)
+      return fromMeta
+    }
+  }
+  const fallback = fallbackRequiredJavaFromMinecraftVersion(minecraftVersion)
+  logSelector(`Required major from fallback=${fallback} (version=${minecraftVersion})`)
+  return fallback
+}
+
+// ─── compatibility / selection ───────────────────────────────────────────────
+
+export function evaluateJavaCompatibility(
+  runtime: DetectedJavaRuntime,
+  requiredMajor: number
+): JavaCompatibility {
+  const actualMajor = runtime.majorVersion
+  const exactMatch = actualMajor === requiredMajor
+  const compatible = exactMatch
+  let reason: string | undefined
+  if (!compatible) {
+    if (actualMajor > requiredMajor) {
+      reason = `Java ${actualMajor} mới hơn Java ${requiredMajor} khuyến nghị — không tự chọn`
+    } else {
+      reason = `Java ${actualMajor} cũ hơn Java ${requiredMajor} yêu cầu`
+    }
+  }
+  return { runtime, requiredMajor, actualMajor, compatible, exactMatch, reason }
+}
+
+/**
+ * Auto-select only exact major match.
+ * Priority: managed → manual/custom → java_home → minecraft → system → path.
+ * Never auto-picks a newer major (e.g. 25 when 21 required).
+ */
+export function selectCompatibleJava(
+  runtimes: DetectedJavaRuntime[],
+  requiredMajor: number,
+  options?: { allowNewer?: boolean; preferredJavaPath?: string | null }
+): DetectedJavaRuntime | null {
+  const valid = runtimes.filter((r) => r.valid || r.isValid)
+
+  if (options?.preferredJavaPath) {
+    const preferred = path.resolve(options.preferredJavaPath)
+    const match = valid.find(
+      (r) =>
+        path.resolve(r.javaPath).toLowerCase() === preferred.toLowerCase() ||
+        path.resolve(r.javaHome).toLowerCase() === preferred.toLowerCase()
+    )
+    if (match) {
+      // Manual pick: allow even if major differs
+      return match
+    }
+  }
+
+  const exact = valid
+    .filter((r) => r.majorVersion === requiredMajor)
+    .sort((a, b) => sourcePriority(a.source) - sourcePriority(b.source))
+
+  if (exact[0]) return exact[0]
+
+  if (options?.allowNewer) {
+    const newer = valid
+      .filter((r) => r.majorVersion >= requiredMajor)
+      .sort((a, b) => {
+        const src = sourcePriority(a.source) - sourcePriority(b.source)
+        if (src !== 0) return src
+        return a.majorVersion - b.majorVersion
+      })
+    return newer[0] ?? null
+  }
+
+  return null
+}
+
+// ─── public scan / select API ────────────────────────────────────────────────
+
 export async function scanJavaRuntimes(
-  customScanDirs: string[] = []
+  customScanDirs: string[] = [],
+  forceRefresh = false
 ): Promise<JavaScanResult> {
-  // Try caching
-  const { getJavaCacheFilePath } = await import('./storageService.js')
   const cachePath = getJavaCacheFilePath()
 
-  try {
-    if (await pathExists(cachePath)) {
-      const cacheStat = await fs.stat(cachePath)
-      const age = Date.now() - cacheStat.mtimeMs
-      if (age < 600000) { // 10 minutes cache TTL
-        const cacheContent = await fs.readFile(cachePath, 'utf8')
-        return JSON.parse(cacheContent) as JavaScanResult
+  if (!forceRefresh) {
+    try {
+      if (await pathExists(cachePath)) {
+        const cacheStat = await fs.stat(cachePath)
+        if (Date.now() - cacheStat.mtimeMs < CACHE_TTL_MS) {
+          const cacheContent = await fs.readFile(cachePath, 'utf8')
+          return JSON.parse(cacheContent) as JavaScanResult
+        }
       }
+    } catch {
+      // ignore bad cache
     }
-  } catch (e) {
-    console.warn('[Java Cache] Failed to read cache:', e)
   }
 
   const candidatePaths = new Set<string>()
+  const roots = getKnownJavaRoots(customScanDirs)
 
-  // 1. Check custom scanner directories
-  for (const dir of customScanDirs) {
-    if (!dir) continue
-    if (await pathExists(dir)) {
-      const stats = await fs.stat(dir)
-      if (stats.isDirectory()) {
-        const found = await findJavaExecutablesInDir(dir)
-        found.forEach(p => candidatePaths.add(p))
-      } else if (path.basename(dir) === getJavaExecutableName()) {
-        candidatePaths.add(dir)
-      }
+  for (const root of roots) {
+    // root may itself be java.exe
+    if (
+      path.basename(root).toLowerCase() === JAVA_EXE.toLowerCase() &&
+      (await pathExists(root))
+    ) {
+      candidatePaths.add(path.resolve(root))
+      continue
+    }
+    const found = await scanJavaRoot(root)
+    for (const p of found) candidatePaths.add(p)
+  }
+
+  for (const fromPath of await collectPathJavaExecutables()) {
+    candidatePaths.add(fromPath)
+  }
+
+  for (const fromWhere of await collectWhereJava()) {
+    candidatePaths.add(fromWhere)
+  }
+
+  // Resolve realpaths early for dedupe of candidates
+  const uniqueCandidates: string[] = []
+  const seenReal = new Set<string>()
+  for (const candidate of candidatePaths) {
+    try {
+      const real = (await safeRealpath(candidate)).toLowerCase()
+      if (seenReal.has(real)) continue
+      seenReal.add(real)
+      uniqueCandidates.push(path.resolve(candidate))
+    } catch {
+      uniqueCandidates.push(path.resolve(candidate))
     }
   }
 
-  // 2. Check JAVA_HOME
-  const javaHome = process.env.JAVA_HOME
-  if (javaHome) {
-    const javaHomePath = path.join(javaHome, 'bin', getJavaExecutableName())
-    if (await pathExists(javaHomePath)) {
-      candidatePaths.add(javaHomePath)
+  let managedRoot = ''
+  try {
+    managedRoot = path.resolve(getDefaultJavaInstallDir())
+  } catch {
+    managedRoot = ''
+  }
+
+  const settled = await mapPool(uniqueCandidates, INSPECT_CONCURRENCY, async (javaPath) => {
+    const details = await inspectJavaExecutable(javaPath)
+    if (!details) return null
+    const source = classifySource(
+      details.javaPath,
+      details.javaHome,
+      customScanDirs,
+      managedRoot
+    )
+    const runtime: DetectedJavaRuntime = {
+      id: makeRuntimeId(details.javaPath, details.majorVersion),
+      ...details,
+      source,
+      valid: true,
+      isValid: true,
+      rawVersion: details.version,
     }
-  }
+    return runtime
+  })
 
-  // 3. Check PATH java
-  candidatePaths.add(getJavaExecutableName())
-
-  // 4. Common system installation folders
-  const commonDirs: string[] = []
-  if (process.platform === 'win32') {
-    const programFiles = process.env.ProgramFiles || 'C:\\Program Files'
-    const programFilesX86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-    
-    commonDirs.push(path.join(programFiles, 'Java'))
-    commonDirs.push(path.join(programFiles, 'Eclipse Adoptium'))
-    commonDirs.push(path.join(programFiles, 'BellSoft'))
-    commonDirs.push(path.join(programFiles, 'Semeru'))
-    commonDirs.push(path.join(programFilesX86, 'Java'))
-  } else if (process.platform === 'darwin') {
-    commonDirs.push('/Library/Java/JavaVirtualMachines')
-  } else {
-    commonDirs.push('/usr/lib/jvm')
-  }
-
-  for (const dir of commonDirs) {
-    if (await pathExists(dir)) {
-      const found = await findJavaExecutablesInDir(dir)
-      found.forEach(p => candidatePaths.add(p))
-    }
-  }
-
-  // Build result list
   const runtimes: DetectedJavaRuntime[] = []
-  for (const javaPath of candidatePaths) {
-    const details = await getJavaDetails(javaPath)
-    if (details) {
-      // Determine source
-      let source: DetectedJavaRuntime['source'] = 'path'
-      if (javaPath === getJavaExecutableName()) {
-        source = 'path'
-      } else if (javaHome && javaPath.startsWith(javaHome)) {
-        source = 'java_home'
-      } else if (customScanDirs.some(dir => javaPath.startsWith(dir))) {
-        source = 'custom'
-      }
-
-      runtimes.push({
-        javaPath,
-        majorVersion: details.majorVersion,
-        rawVersion: details.rawVersion,
-        source,
-        isValid: true
-      })
+  for (const item of settled) {
+    if (item.status === 'fulfilled' && item.value) {
+      runtimes.push(item.value)
     }
   }
+
+  const deduped = deduplicateJavaRuntimes(runtimes)
 
   const result: JavaScanResult = {
-    runtimes,
-    message: runtimes.length > 0
-      ? `Scan thành công, tìm thấy ${runtimes.length} bản cài đặt Java.`
-      : 'Không tìm thấy Java nào trên máy.'
+    runtimes: deduped,
+    message:
+      deduped.length > 0
+        ? `Scan thành công, tìm thấy ${deduped.length} bản cài đặt Java.`
+        : 'Không tìm thấy Java nào trên máy.',
   }
 
   try {
     await fs.mkdir(path.dirname(cachePath), { recursive: true })
     await fs.writeFile(cachePath, JSON.stringify(result, null, 2), 'utf8')
-  } catch (e) {
-    console.warn('[Java Cache] Failed to write cache:', e)
+  } catch {
+    // cache write is best-effort
   }
 
   return result
@@ -252,85 +816,77 @@ export async function scanJavaRuntimes(
 
 export async function selectBestJavaRuntime(
   minecraftVersion: string,
-  customScanDirs: string[] = []
+  customScanDirs: string[] = [],
+  options?: {
+    gameDir?: string
+    allowNewer?: boolean
+    preferredJavaPath?: string | null
+    forceRefresh?: boolean
+  }
 ): Promise<JavaRuntimeSelectionResult> {
-  const requiredVersion = resolveRequiredJavaVersion(minecraftVersion)
-  const scanResult = await scanJavaRuntimes(customScanDirs)
-  const runtimes = scanResult.runtimes
-    .filter((runtime) => runtime.isValid)
-    .sort((a, b) => a.majorVersion - b.majorVersion)
+  const gameDir = options?.gameDir
+  const requiredMajor = await resolveRequiredJavaMajor(minecraftVersion, gameDir)
+  const scanResult = await scanJavaRuntimes(customScanDirs, options?.forceRefresh === true)
+  const candidates = scanResult.runtimes.filter((r) => r.valid || r.isValid)
 
-  if (runtimes.length === 0) {
+  if (candidates.length === 0) {
     return {
       found: false,
-      requiredVersion,
+      requiredVersion: requiredMajor,
+      requiredMajor,
       selectedRuntime: null,
       candidates: [],
       isExactMatch: false,
       isFallback: false,
       warning: null,
-      message: `❌ Không tìm thấy Java Runtime. Minecraft ${minecraftVersion} cần Java ${requiredVersion}+. Vui lòng cài đặt Java từ java.com hoặc adoptium.net`
+      message: `❌ Không tìm thấy Java Runtime. Minecraft ${minecraftVersion} cần Java ${requiredMajor}. Vui lòng cài đặt Java ${requiredMajor} (Adoptium/Oracle/Microsoft).`,
     }
   }
 
-  const exactRuntime = runtimes.find(
-    (runtime) => runtime.majorVersion === requiredVersion
-  )
+  const selected = selectCompatibleJava(candidates, requiredMajor, {
+    allowNewer: options?.allowNewer === true,
+    preferredJavaPath: options?.preferredJavaPath,
+  })
 
-  if (exactRuntime) {
-    return {
-      found: true,
-      requiredVersion,
-      selectedRuntime: exactRuntime,
-      candidates: runtimes,
-      isExactMatch: true,
-      isFallback: false,
-      warning: null,
-      message: `Selected Java ${exactRuntime.majorVersion}: ${exactRuntime.javaPath}`
-    }
-  }
-
-  const latestRuntime = runtimes[runtimes.length - 1]
-
-  if (!latestRuntime) {
+  if (!selected) {
+    const available = candidates.map((c) => c.majorVersion).join(', ')
+    logSelector(`Required major=${requiredMajor}, no exact match (available: ${available})`)
     return {
       found: false,
-      requiredVersion,
+      requiredVersion: requiredMajor,
+      requiredMajor,
       selectedRuntime: null,
-      candidates: runtimes,
+      candidates,
       isExactMatch: false,
       isFallback: false,
-      warning: null,
-      message: 'Không tìm thấy Java runtime hợp lệ.'
+      warning: `Cần Java ${requiredMajor}. Có trên máy: ${available || 'không có'}. Không tự chọn bản mới hơn.`,
+      message: `❌ Không có Java ${requiredMajor}. Minecraft ${minecraftVersion} yêu cầu đúng major ${requiredMajor}. Các runtime phát hiện: ${available || 'không có'}.`,
     }
   }
 
-  if (latestRuntime.majorVersion < requiredVersion) {
-    return {
-      found: false,
-      requiredVersion,
-      selectedRuntime: null,
-      candidates: runtimes,
-      isExactMatch: false,
-      isFallback: false,
-      warning: null,
-      message: `❌ Java version quá cũ. Minecraft ${minecraftVersion} cần Java ${requiredVersion}+, máy bạn chỉ có Java ${latestRuntime.majorVersion}. Vui lòng nâng cấp Java.`
-    }
-  }
+  const compat = evaluateJavaCompatibility(selected, requiredMajor)
+  const isManualOverride =
+    Boolean(options?.preferredJavaPath) &&
+    path.resolve(selected.javaPath).toLowerCase() ===
+      path.resolve(options!.preferredJavaPath!).toLowerCase()
 
-  const isLegacyVersion = requiredVersion === 8
-  const warning = isLegacyVersion
-    ? `⚠️ Java 8 không tìm thấy. Đang dùng Java ${latestRuntime.majorVersion}. Một số bản Minecraft cũ có thể không chạy được.`
-    : `⚠️ Java ${requiredVersion} không tìm thấy. Đang dùng Java ${latestRuntime.majorVersion}. Kiểm tra tương thích với phiên bản này.`
+  const isExactMatch = compat.exactMatch
+  const warning =
+    !isExactMatch && isManualOverride
+      ? `Đang dùng Java ${compat.actualMajor} (chọn thủ công). Khuyến nghị: Java ${requiredMajor}.`
+      : null
+
+  logSelector(`Required major=${requiredMajor}, selected major=${selected.majorVersion}`)
 
   return {
     found: true,
-    requiredVersion,
-    selectedRuntime: latestRuntime,
-    candidates: runtimes,
-    isExactMatch: false,
-    isFallback: true,
+    requiredVersion: requiredMajor,
+    requiredMajor,
+    selectedRuntime: selected,
+    candidates,
+    isExactMatch,
+    isFallback: !isExactMatch,
     warning,
-    message: `Selected latest Java ${latestRuntime.majorVersion}: ${latestRuntime.javaPath}`
+    message: `Selected Java ${selected.majorVersion} (${selected.version}): ${selected.javaPath}`,
   }
 }

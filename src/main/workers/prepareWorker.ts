@@ -413,7 +413,9 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     postLog('info', ` - Tổng số thư viện (libraries): ${versionJson.libraries?.length || 0}`)
 
     // Check Java Selection status
-    const javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs)
+    const javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {
+      gameDir,
+    })
 
     const finalState: PreparedProfileState = {
       profileId,

@@ -72,7 +72,6 @@ export function Sidebar({
   const displayUsername = activeAccount?.username || 'Player'
   const isVirtual = !activeAccount || activeAccount.type === 'local'
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
-  const avatarChar = displayUsername.charAt(0).toUpperCase()
 
   const triggerLaunch = async () => {
     if (!activeProfile) return

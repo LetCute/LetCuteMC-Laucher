@@ -166,9 +166,11 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
     const settings = await getSettings()
     const scanDirs = [...settings.customJavaScanDirs]
-    if (input.javaPath) scanDirs.unshift(input.javaPath)
 
-    const javaSelection = await selectBestJavaRuntime(input.version, scanDirs)
+    const javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
+      gameDir: input.gameDir,
+      preferredJavaPath: input.javaPath,
+    })
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
       throw new Error(javaSelection.message)

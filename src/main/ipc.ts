@@ -24,7 +24,8 @@ import { getMinecraftVersionCatalog } from './services/versionService'
 import { scanMinecraftDirectory } from './services/minecraftScannerService'
 import {
   scanJavaRuntimes,
-  selectBestJavaRuntime
+  selectBestJavaRuntime,
+  verifyJavaPath
 } from './services/javaScannerService'
 import {
   deleteGameContent,
@@ -152,10 +153,27 @@ export function registerIpcHandlers(): void {
   handleIpc('versions:get-catalog', getMinecraftVersionCatalog)
   handleIpc('minecraft:scan-directory', scanMinecraftDirectory)
 
-  handleIpc('java:scan', scanJavaRuntimes)
-  handleIpc('java:select-best', selectBestJavaRuntime)
+  handleIpc('java:scan', (customScanDirs?: string[], forceRefresh?: boolean) =>
+    scanJavaRuntimes(customScanDirs ?? [], forceRefresh === true)
+  )
+  handleIpc(
+    'java:select-best',
+    (
+      minecraftVersion: string,
+      customScanDirs?: string[],
+      options?: {
+        gameDir?: string
+        allowNewer?: boolean
+        preferredJavaPath?: string | null
+        forceRefresh?: boolean
+      }
+    ) => selectBestJavaRuntime(minecraftVersion, customScanDirs ?? [], options)
+  )
   handleIpc('java:auto-install', async (javaVersion: number) => {
     return autoInstallJava(javaVersion, getDefaultJavaInstallDir())
+  })
+  handleIpc('java:verify-path', async (javaPath: string, requiredMajor: number) => {
+    return verifyJavaPath(javaPath, requiredMajor)
   })
 
 
@@ -303,5 +321,11 @@ export function registerIpcHandlers(): void {
   handleIpc('account:save-microsoft', (account: any) => saveMicrosoftAccount(account))
   handleIpc('account:login-microsoft', async () => {
     return loginWithMicrosoft()
+  })
+
+  // Non-blocking refresh for MS token — called on demand (launch / explicit)
+  handleIpc('account:refresh-microsoft', async (accountId: string) => {
+    const { refreshMicrosoftAccountToken } = await import('./services/accountService')
+    return refreshMicrosoftAccountToken(accountId)
   })
 }

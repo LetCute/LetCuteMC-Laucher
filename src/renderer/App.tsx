@@ -13,6 +13,7 @@ import { AccountsScreen } from './screens/AccountsScreen';
 import { LogsScreen } from './screens/LogsScreen';
 import { AboutScreen } from './screens/AboutScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
+import { ToastProvider, useToast } from './components/ui/Toast';
 import { launcherClient } from './services/launcherClient';
 import { useLauncherJob } from './hooks/useLauncherJob';
 import { usePrepareGame } from './hooks/usePrepareGame';
@@ -27,7 +28,23 @@ import type {
   AccountState,
 } from '../shared/types';
 
+// ── Bootstrap phases ────────────────────────────────────────────────────────
+type BootstrapPhase =
+  | 'idle'
+  | 'detecting'
+  | 'loading-critical'
+  | 'loading-heavy'
+  | 'ready'
+  | 'error';
+
+interface BootstrapProgress {
+  phase: BootstrapPhase;
+  message: string;
+}
+
 function App() {
+  const { showToast } = useToast()
+
   // ── Core state ───────────────────────────────────────────────────────────
   const [gameDir, setGameDir] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabId>('profiles');
@@ -64,8 +81,12 @@ function App() {
   const [versionCatalog, setVersionCatalog] = useState<MinecraftVersionCatalog | null>(null);
   const [javaSelection, setJavaSelection] = useState<JavaRuntimeSelectionResult | null>(null);
 
-  const [isLoadingAppData, setIsLoadingAppData] = useState(true);
+  const [bootstrap, setBootstrap] = useState<BootstrapProgress>({
+    phase: 'idle',
+    message: 'Đang khởi động...',
+  });
   const [appError, setAppError] = useState<string | null>(null);
+  const [criticalReady, setCriticalReady] = useState(false);
   const [contentVisited, setContentVisited] = useState({
     mods: false,
     resourcepacks: false,
@@ -83,10 +104,12 @@ function App() {
   const { state: launchJobState, clearLogs: clearLaunchLogs, startLaunch, isBusy, isStarting } = useLauncherJob();
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? null;
-  const { prepareState, isPreparing } = usePrepareGame(activeProfile, settings);
-  const isWorking = isBusy || isPreparing || isStarting;
+  const { isPreparing } = usePrepareGame(activeProfile, settings);
+  const isBootstrapping = bootstrap.phase !== 'ready' && bootstrap.phase !== 'error';
+  const isWorking = isBusy || isPreparing || isStarting || isBootstrapping;
 
   const handleLaunchProfileDirectly = async (profileId: string) => {
+    if (isBootstrapping) return
     const target = profiles.find(p => p.id === profileId)
     if (!target) return
 
@@ -120,65 +143,103 @@ function App() {
     })
   }
 
-  // ── App Initialization ────────────────────────────────────────────────────
+  // ── Progressive bootstrap: shell first, heavy later ───────────────────────
   const initializeAppData = async () => {
-    setIsLoadingAppData(true);
     setAppError(null);
+    setCriticalReady(false);
+    setBootstrap({ phase: 'detecting', message: 'Đang kiểm tra Minecraft...' });
+
     try {
+      // Wait briefly if main IPC still registering (deferred load)
+      for (let i = 0; i < 40; i++) {
+        if (window.launcherApi) break
+        await new Promise(r => setTimeout(r, 25))
+      }
+
       const dirResult = await launcherClient.detectMinecraftDirectory();
       if (!dirResult.found || !dirResult.path) {
         setAppError('Không tìm thấy thư mục .minecraft. Hãy cài Minecraft trước.');
+        setBootstrap({ phase: 'error', message: 'Lỗi thư mục game' });
         return;
       }
 
       const resolvedGameDir = dirResult.path;
       setGameDir(resolvedGameDir);
 
-      const [loadedSettings, profileStore, catalog, initialAccountState] = await Promise.all([
+      // Phase 1 — critical local data only (disk, no network)
+      setBootstrap({ phase: 'loading-critical', message: 'Đang tải cài đặt...' });
+      const [loadedSettings, profileStore, initialAccountState] = await Promise.all([
         launcherClient.getSettings(),
         launcherClient.getProfiles(),
-        launcherClient.getMinecraftVersionCatalog(resolvedGameDir),
         launcherClient.getAccountState(),
       ]);
 
       setSettings(loadedSettings);
       setProfiles(profileStore.profiles);
       setActiveProfileId(profileStore.activeProfileId);
-      setVersionCatalog(catalog);
       setAccountState(initialAccountState);
+      setCriticalReady(true);
+      setBootstrap({ phase: 'loading-heavy', message: 'Đang tải phiên bản...' });
 
-      await launcherClient.scanJavaRuntimes(loadedSettings.customJavaScanDirs);
+      // Phase 2 — heavy: version catalog (network) + java scan (disk walk)
+      // Yield a frame so shell paints before heavy work
+      await new Promise(r => requestAnimationFrame(() => r(undefined)));
+
+      const [catalog] = await Promise.all([
+        launcherClient.getMinecraftVersionCatalog(resolvedGameDir).catch((e) => {
+          console.error('Version catalog failed:', e);
+          return null;
+        }),
+        launcherClient.scanJavaRuntimes(loadedSettings.customJavaScanDirs).catch((e) => {
+          console.error('Java scan failed:', e);
+          return null;
+        }),
+      ]);
+
+      if (catalog) setVersionCatalog(catalog);
+      setBootstrap({ phase: 'ready', message: 'Sẵn sàng' });
     } catch (err) {
       console.error(err);
       setAppError(err instanceof Error ? err.message : 'Không thể tải dữ liệu launcher.');
-    } finally {
-      setIsLoadingAppData(false);
+      setBootstrap({ phase: 'error', message: 'Lỗi khởi động' });
     }
   };
 
   useEffect(() => {
-    initializeAppData();
+    void initializeAppData();
   }, []);
 
-  // ── Java selection (updates when active profile or settings changes) ───────
+  // ── Java selection (after critical ready + profile known) ─────────────────
   useEffect(() => {
     async function updateJavaSelection() {
-      if (!activeProfile) {
+      if (!criticalReady || !activeProfile) {
         setJavaSelection(null);
         return;
       }
       try {
         const res = await launcherClient.selectBestJavaRuntime(
           activeProfile.minecraftVersion,
-          settings.customJavaScanDirs
+          settings.customJavaScanDirs,
+          {
+            gameDir: activeProfile.gameDir || gameDir,
+            preferredJavaPath: activeProfile.javaPath,
+          }
         );
         setJavaSelection(res);
       } catch (e) {
         console.error(e);
       }
     }
-    updateJavaSelection();
-  }, [activeProfile?.id, activeProfile?.minecraftVersion, settings.customJavaScanDirs]);
+    void updateJavaSelection();
+  }, [
+    criticalReady,
+    activeProfile?.id,
+    activeProfile?.minecraftVersion,
+    activeProfile?.gameDir,
+    activeProfile?.javaPath,
+    settings.customJavaScanDirs,
+    gameDir,
+  ]);
 
 
 
@@ -222,7 +283,7 @@ function App() {
       setEditingProfile(null);
       setPreselectedVersion(null);
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Lỗi khi lưu profile');
+      showToast('error', e instanceof Error ? e.message : 'Lỗi khi lưu profile');
     }
   };
 
@@ -240,35 +301,27 @@ function App() {
     setIsProfileModalOpen(true);
   };
 
-  // ── Loading / Error screens ───────────────────────────────────────────────
-  if (isLoadingAppData) {
+  // Hard error only when critical path failed before shell usable
+  if (appError && !criticalReady) {
     return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground font-sans">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mb-4" />
-        <p className="text-sm text-muted-foreground">Đang tải cấu hình launcher...</p>
-      </div>
+      <ToastProvider>
+        <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground font-sans p-6 text-center">
+          <h2 className="text-xl font-bold text-destructive mb-2">Không thể tải dữ liệu launcher.</h2>
+          <p className="text-sm text-muted-foreground mb-6 max-w-md">{appError}</p>
+          <button
+            onClick={() => void initializeAppData()}
+            className="px-6 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_15%,transparent)]"
+          >
+            Thử lại
+          </button>
+        </div>
+      </ToastProvider>
     );
   }
-
-  if (appError) {
-    return (
-      <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground font-sans p-6 text-center">
-        <h2 className="text-xl font-bold text-destructive mb-2">Không thể tải dữ liệu launcher.</h2>
-        <p className="text-sm text-muted-foreground mb-6 max-w-md">{appError}</p>
-        <button
-          onClick={initializeAppData}
-          className="px-6 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_15%,transparent)]"
-        >
-          Thử lại
-        </button>
-      </div>
-    );
-  }
-
-  // tabInfo removed (unused)
 
   return (
-    <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans">
+    <ToastProvider>
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans">
       <div className="flex min-h-0 flex-1 overflow-hidden">
       <Sidebar
         activeTab={activeTab}
@@ -284,7 +337,23 @@ function App() {
       <main className="flex min-w-0 flex-1 flex-col">
        <TopBar />
 
+        {isBootstrapping && (
+          <div className="flex items-center gap-2 border-b border-border/60 bg-card/40 px-4 py-1.5 text-xs text-muted-foreground">
+            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span>{bootstrap.message}</span>
+          </div>
+        )}
+
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {!criticalReady ? (
+            <div className="flex h-full flex-col gap-3 p-6">
+              <div className="h-8 w-48 animate-pulse rounded-lg bg-muted/40" />
+              <div className="h-28 animate-pulse rounded-xl bg-muted/30" />
+              <div className="h-28 animate-pulse rounded-xl bg-muted/25" />
+              <div className="h-28 animate-pulse rounded-xl bg-muted/20" />
+            </div>
+          ) : (
+            <>
           {activeTab === 'profiles' && (
             <ProfilesScreen
               profiles={profiles}
@@ -336,6 +405,11 @@ function App() {
                 const updated = await launcherClient.updateSettings(s);
                 setSettings(updated);
               }}
+              onSaveJavaPath={async (javaPath) => {
+                if (!activeProfile) return;
+                const updated = await launcherClient.updateProfile(activeProfile.id, { javaPath });
+                setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+              }}
               accountState={accountState}
               gameDir={gameDir}
               onAccountStateChange={setAccountState}
@@ -365,6 +439,8 @@ function App() {
           {activeTab === 'about' && (
             <AboutScreen />
           )}
+            </>
+          )}
         </div>
       </main>
       </div>
@@ -383,6 +459,7 @@ function App() {
         defaultGameDir={gameDir}
       />
     </div>
+    </ToastProvider>
   );
 }
 

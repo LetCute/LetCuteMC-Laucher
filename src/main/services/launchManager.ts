@@ -353,10 +353,11 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     currentWorker = null
   })
 
-  // Refresh token on launch if using microsoft auth
+  // Refresh token on launch if using microsoft auth (not on app load)
   if (input.auth && input.auth.type === 'microsoft') {
     try {
-      const accountState = await getAccountState()
+      const { refreshMicrosoftAccountToken } = await import('./accountService')
+      const accountState = await refreshMicrosoftAccountToken()
       const activeAccount = accountState.accounts.find(a => a.id === accountState.activeAccountId && a.type === 'microsoft')
       if (activeAccount) {
         input.auth.accessToken = activeAccount.accessToken || ''

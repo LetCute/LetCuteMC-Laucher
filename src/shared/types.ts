@@ -223,6 +223,8 @@ export interface MinecraftDirectoryResult {
 }
 
 export type AccountType = 'microsoft' | 'local'
+/** @deprecated use AccountType */
+export type AccountMode = AccountType
 
 export interface AccountItem {
   id: string
@@ -236,6 +238,9 @@ export interface AccountItem {
   createdAt: string
   updatedAt: string
 }
+
+/** Microsoft login payload (same shape as AccountItem fields used by auth) */
+export type MicrosoftAccount = AccountItem
 
 export interface AccountState {
   activeAccountId: string | null
@@ -454,11 +459,31 @@ export interface MinecraftScanResult {
 
 // ─── Java types ───────────────────────────────────────────────────────────────
 
+export type JavaRuntimeSource =
+  | 'managed'
+  | 'manual'
+  | 'custom'
+  | 'java_home'
+  | 'minecraft'
+  | 'system'
+  | 'path'
+
+/** Detected Java installation. majorVersion is always the actual runtime major. */
 export interface DetectedJavaRuntime {
+  id: string
   javaPath: string
+  javaHome: string
+  /** Display version string from the runtime (e.g. 21.0.10). */
+  version: string
+  /** Actual major of this runtime — never the Minecraft-required major. */
   majorVersion: number
+  vendor?: string
+  architecture?: string
+  source: JavaRuntimeSource
+  valid: boolean
+  /** @deprecated use version */
   rawVersion: string
-  source: 'custom' | 'java_home' | 'path'
+  /** @deprecated use valid */
   isValid: boolean
 }
 
@@ -467,16 +492,37 @@ export interface JavaScanResult {
   message: string
 }
 
-export type RequiredJavaVersion = 8 | 17 | 21
+/** Required major may be any positive int from metadata (8, 16, 17, 21, …). */
+export type RequiredJavaVersion = number
+
+export interface JavaCompatibility {
+  runtime: DetectedJavaRuntime
+  requiredMajor: number
+  actualMajor: number
+  compatible: boolean
+  exactMatch: boolean
+  reason?: string
+}
 
 export interface JavaRuntimeSelectionResult {
   found: boolean
+  /** @deprecated use requiredMajor */
   requiredVersion: RequiredJavaVersion
+  requiredMajor: number
   selectedRuntime: DetectedJavaRuntime | null
   candidates: DetectedJavaRuntime[]
   isExactMatch: boolean
   isFallback: boolean
   warning: string | null
+  message: string
+}
+
+export interface JavaPathVerification {
+  valid: boolean
+  majorVersion: number | null
+  version: string | null
+  compatible: boolean
+  requiredMajor: number
   message: string
 }
 

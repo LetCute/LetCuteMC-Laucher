@@ -7,6 +7,7 @@ import type {
   ImportGameContentInput,
   JavaRuntimeSelectionResult,
   JavaScanResult,
+  JavaPathVerification,
   LaunchInput,
   LauncherLog,
   LauncherProgress,
@@ -86,19 +87,25 @@ const launcherApi = {
     return ipcRenderer.invoke('minecraft:scan-directory', gameDir)
   },
 
-  scanJavaRuntimes(customScanDirs?: string[]): Promise<JavaScanResult> {
-    return ipcRenderer.invoke('java:scan', customScanDirs)
+  scanJavaRuntimes(customScanDirs?: string[], forceRefresh?: boolean): Promise<JavaScanResult> {
+    return ipcRenderer.invoke('java:scan', customScanDirs, forceRefresh === true)
   },
 
   selectBestJavaRuntime(
     minecraftVersion: string,
-    customScanDirs?: string[]
+    customScanDirs?: string[],
+    options?: {
+      gameDir?: string
+      allowNewer?: boolean
+      preferredJavaPath?: string | null
+      forceRefresh?: boolean
+    }
   ): Promise<JavaRuntimeSelectionResult> {
-    return ipcRenderer.invoke('java:select-best', minecraftVersion, customScanDirs)
+    return ipcRenderer.invoke('java:select-best', minecraftVersion, customScanDirs, options)
   },
 
-  autoInstallJava(javaVersion: number): Promise<{ success: boolean; javaPath: string; message: string }> {
-    return ipcRenderer.invoke('java:auto-install', javaVersion)
+  verifyJavaPath(javaPath: string, requiredMajor: number): Promise<JavaPathVerification> {
+    return ipcRenderer.invoke('java:verify-path', javaPath, requiredMajor)
   },
 
 
@@ -261,6 +268,10 @@ const launcherApi = {
 
   loginMicrosoft(): Promise<any> {
     return ipcRenderer.invoke('account:login-microsoft')
+  },
+
+  refreshMicrosoftAccount(accountId?: string): Promise<AccountState> {
+    return ipcRenderer.invoke('account:refresh-microsoft', accountId)
   }
 }
 

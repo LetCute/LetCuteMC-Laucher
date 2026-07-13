@@ -1,21 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import type {
   LauncherSettings,
   LauncherProfile,
   AccountState,
   SystemPerformanceInfo,
   AutoPerformanceRecommendation,
+  JavaRuntimeSelectionResult,
+  DetectedJavaRuntime,
 } from '@/shared/types.ts'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
-import { Input } from '../components/ui/Input'
-import { CheckCircle2, AlertTriangle, Save, Key, ShieldAlert, Sparkles, FlaskConical, Cpu, Trash2, PlusCircle, Check } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Save, ShieldAlert, Sparkles, Cpu, RefreshCw } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
+import { Input } from '@/components/ui/Input'
+
+function sourceLabel(source: DetectedJavaRuntime['source']): string {
+  switch (source) {
+    case 'managed':
+      return 'Managed (LetCuteMC)'
+    case 'manual':
+    case 'custom':
+      return 'Manual'
+    case 'java_home':
+      return 'JAVA_HOME'
+    case 'minecraft':
+      return 'Minecraft runtime'
+    case 'path':
+      return 'PATH'
+    default:
+      return 'System'
+  }
+}
 
 interface SettingsScreenProps {
   settings: LauncherSettings
   activeProfile: LauncherProfile | null
   onSave: (settings: LauncherSettings) => void
+  onSaveJavaPath?: (javaPath: string) => Promise<void> | void
   accountState: AccountState
   gameDir: string
   onAccountStateChange: (state: AccountState) => void
@@ -27,22 +48,71 @@ export const SettingsScreen = ({
   settings,
   activeProfile,
   onSave,
-  accountState,
+  onSaveJavaPath,
+  accountState: _accountState,
   gameDir,
-  onAccountStateChange,
-  appendLog,
+  onAccountStateChange: _onAccountStateChange,
+  appendLog: _appendLog,
   isWorking,
 }: SettingsScreenProps) => {
   const [formData, setFormData] = useState<LauncherSettings>({
     ...settings,
     performanceMode: settings.performanceMode ?? 'auto',
   })
-  const [javaSelection, setJavaSelection] = useState<any>(null)
+  const [javaSelection, setJavaSelection] = useState<JavaRuntimeSelectionResult | null>(null)
+  const [javaScanning, setJavaScanning] = useState(false)
   const [saved, setSaved] = useState(false)
   const [sysInfo, setSysInfo] = useState<SystemPerformanceInfo | null>(null)
   const [recommendation, setRecommendation] = useState<AutoPerformanceRecommendation | null>(null)
 
+  // Manual Java selection
+  const [selectedJavaPath, setSelectedJavaPath] = useState<string>('')
+
   const isAuto = (formData.performanceMode ?? 'auto') === 'auto'
+  const requiredMajor = javaSelection?.requiredMajor ?? javaSelection?.requiredVersion
+
+  // Prefer profile-saved path, then auto-selected runtime
+  useEffect(() => {
+    const preferred = activeProfile?.javaPath || javaSelection?.selectedRuntime?.javaPath || ''
+    setSelectedJavaPath(preferred)
+  }, [activeProfile?.id, activeProfile?.javaPath, javaSelection?.selectedRuntime?.javaPath])
+
+  const handleSelectRuntime = (javaPath: string) => {
+    setSelectedJavaPath(javaPath)
+  }
+
+  const refreshJava = useCallback(
+    async (forceRefresh = false) => {
+      if (!window.launcherApi || !activeProfile) return
+      setJavaScanning(true)
+      try {
+        if (forceRefresh) {
+          await window.launcherApi.scanJavaRuntimes(formData.customJavaScanDirs, true)
+        }
+        const res = await window.launcherApi.selectBestJavaRuntime(
+          activeProfile.minecraftVersion,
+          formData.customJavaScanDirs,
+          {
+            gameDir: activeProfile.gameDir || gameDir,
+            preferredJavaPath: activeProfile.javaPath,
+            forceRefresh,
+          }
+        )
+        setJavaSelection(res)
+      } catch (e) {
+        console.error(e)
+      } finally {
+        setJavaScanning(false)
+      }
+    },
+    [
+      activeProfile?.minecraftVersion,
+      activeProfile?.gameDir,
+      activeProfile?.javaPath,
+      formData.customJavaScanDirs,
+      gameDir,
+    ]
+  )
 
   useEffect(() => {
     async function loadPerf() {
@@ -60,24 +130,30 @@ export const SettingsScreen = ({
   }, [gameDir])
 
   useEffect(() => {
-    async function checkJava() {
-      if (window.launcherApi && activeProfile) {
-        const res = await window.launcherApi.selectBestJavaRuntime(
-          activeProfile.minecraftVersion,
-          formData.customJavaScanDirs
-        )
-        setJavaSelection(res)
-      }
-    }
-    void checkJava()
-  }, [activeProfile?.minecraftVersion, formData.customJavaScanDirs])
+    void refreshJava(false)
+  }, [refreshJava])
 
   const handleChange = (key: keyof LauncherSettings, value: any) => {
     setFormData(prev => ({ ...prev, [key]: value }))
   }
 
-  const handleSave = () => {
-    onSave(formData)
+  const handleSave = async () => {
+    // Save global settings
+    await Promise.resolve(onSave(formData))
+
+    // Persist selected Java path to the active profile
+    if (activeProfile && selectedJavaPath && selectedJavaPath !== (activeProfile.javaPath ?? '')) {
+      try {
+        if (onSaveJavaPath) {
+          await onSaveJavaPath(selectedJavaPath)
+        } else {
+          await window.launcherApi.updateProfile(activeProfile.id, { javaPath: selectedJavaPath })
+        }
+      } catch (e) {
+        console.error('Failed to update profile javaPath:', e)
+      }
+    }
+
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
   }
@@ -105,42 +181,101 @@ export const SettingsScreen = ({
       <div className="space-y-4">
 
         <Card>
-          <CardHeader>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Java Runtime</CardTitle>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={javaScanning || !activeProfile}
+              onClick={() => void refreshJava(true)}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${javaScanning ? 'animate-spin' : ''}`} />
+              Quét lại Java
+            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="rounded-xl border border-border bg-background/40 overflow-hidden divide-y divide-border/60 text-xs">
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-muted-foreground">Phiên bản yêu cầu</span>
-                  <span className="font-semibold text-foreground">
-                    {javaSelection ? `Java ${javaSelection.requiredVersion}` : 'Chưa xác định'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-muted-foreground">Phiên bản đã chọn</span>
-                  <span className="font-semibold text-foreground">
-                    {javaSelection?.selectedRuntime
-                      ? `Java ${javaSelection.selectedRuntime.majorVersion}`
-                      : 'Không có'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between px-4 py-2.5">
-                  <span className="text-muted-foreground">Chế độ</span>
-                  <span className="font-medium text-foreground">
-                    {javaSelection?.found
-                      ? javaSelection.isExactMatch
-                        ? 'Trùng khớp hoàn toàn'
-                        : 'Dùng bản mới nhất'
-                      : 'Không tương thích'}
-                  </span>
-                </div>
+              {/* Chọn Java Runtime */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">Chọn Java Runtime</p>
+                <Select
+                  value={selectedJavaPath}
+                  onChange={(val) => handleSelectRuntime(String(val))}
+                  disabled={!javaSelection?.candidates || javaSelection.candidates.length === 0}
+                  placeholder="Chọn một runtime..."
+                  options={[
+                    ...(javaSelection?.candidates ?? []).map((rt) => ({
+                      value: rt.javaPath,
+                      label: `Java ${rt.version} (major ${rt.majorVersion}) — ${sourceLabel(rt.source)}`,
+                    })),
+                  ]}
+                />
               </div>
+
+
+
+              {javaSelection?.candidates && javaSelection.candidates.length > 0 && (
+                <div className="space-y-2">
+                  <p className="text-xs font-semibold text-muted-foreground">
+                    Runtimes phát hiện ({javaSelection.candidates.length})
+                  </p>
+                  <div className="max-h-56 overflow-y-auto space-y-2">
+                    {javaSelection.candidates.map((rt) => {
+                      const actual = rt.majorVersion
+                      const req = requiredMajor
+                      const ok = req != null && actual === req
+                      return (
+                        <div
+                          key={rt.id || rt.javaPath}
+                          className="rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs space-y-1"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-foreground">
+                              Java {rt.version}
+                            </span>
+                            <span className={ok ? 'text-emerald-400' : 'text-amber-300'}>
+                              {ok
+                                ? 'Compatible'
+                                : req != null
+                                  ? `Required: Java ${req}`
+                                  : 'Detected'}
+                            </span>
+                          </div>
+                          <p className="text-muted-foreground">
+                            Major: {actual}
+                            {rt.vendor ? ` · ${rt.vendor}` : ''}
+                            {rt.architecture ? ` · ${rt.architecture}` : ''}
+                            {` · ${sourceLabel(rt.source)}`}
+                          </p>
+                          <p className="font-mono text-[10px] text-muted-foreground break-all">
+                            {rt.javaPath}
+                          </p>
+                          {!ok && req != null && actual !== req && (
+                            <p className="text-amber-200/90">
+                              {actual > req
+                                ? 'Không đúng phiên bản khuyến nghị (mới hơn)'
+                                : 'Không đúng phiên bản khuyến nghị (cũ hơn)'}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
 
               {javaSelection?.warning && (
                 <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
                   <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>{javaSelection.warning}</span>
+                </div>
+              )}
+
+              {!javaSelection?.found && javaSelection?.message && (
+                <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{javaSelection.message}</span>
                 </div>
               )}
             </div>
