@@ -692,7 +692,7 @@ export function selectCompatibleJava(
       .sort((a, b) => {
         const src = sourcePriority(a.source) - sourcePriority(b.source)
         if (src !== 0) return src
-        return a.majorVersion - b.majorVersion
+        return b.majorVersion - a.majorVersion // prefer highest (newest) instead of lowest
       })
     return newer[0] ?? null
   }
