@@ -146,7 +146,20 @@ export function registerIpcHandlers(): void {
   handleIpc('minecraft:detect-directory', detectMinecraftDirectory)
 
   handleIpc('settings:get', getSettings)
-  handleIpc('settings:update', updateSettings)
+  handleIpc('settings:update', async (_event, input) => {
+    const oldSettings = await getSettings()
+    const newSettings = await updateSettings(input as Partial<LauncherSettings>)
+    
+    if (oldSettings.enableDiscordRpc !== newSettings.enableDiscordRpc) {
+      if (newSettings.enableDiscordRpc) {
+        import('./services/discordRpcService.js').then(m => m.initDiscordRpc().catch(console.error))
+      } else {
+        import('./services/discordRpcService.js').then(m => m.stopDiscordRpc().catch(console.error))
+      }
+    }
+    
+    return newSettings
+  })
   handleIpc('system:performance-info', () => getSystemPerformanceInfo())
   handleIpc('settings:effective-performance', () => getEffectivePerformanceSettings())
 

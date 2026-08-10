@@ -79,6 +79,8 @@ app.whenReady().then(() => {
     isLauncherHiddenForGameFn = launchManager.isLauncherHiddenForGame
   })
 
+  import('./services/discordRpcService').then(m => m.initDiscordRpc().catch(console.error))
+
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
       createWindow()
@@ -96,4 +98,8 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  import('./services/discordRpcService').then(m => m.stopDiscordRpc().catch(console.error))
 })

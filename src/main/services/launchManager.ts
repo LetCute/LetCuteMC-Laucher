@@ -38,6 +38,12 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null
 /** True while launcher is hidden because Minecraft is running */
 let hiddenForGame = false
 
+let currentProfileName = 'Unknown Profile'
+let currentVersion = 'Unknown Version'
+
+import { getProfiles } from './profileService.js'
+import { setPlaying, setIdle } from './discordRpcService.js'
+
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function now(): string {
@@ -185,9 +191,13 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
     case 'status': {
       currentState.status = msg.status
       enqueueEvent({ type: 'status', jobId: msg.jobId, status: msg.status })
-      if (msg.status === 'running') hideLauncherForGame()
+      if (msg.status === 'running') {
+        hideLauncherForGame()
+        setPlaying(currentVersion, currentProfileName)
+      }
       if (msg.status === 'closed' || msg.status === 'failed' || msg.status === 'cancelled') {
         showLauncherAfterGame()
+        setIdle()
       }
       break
     }
@@ -253,6 +263,17 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     javaPath: input.javaPath,
     authType: input.auth?.type,
   })
+
+  try {
+    const store = await getProfiles()
+    const p = store.profiles.find(p => p.id === input.profileId)
+    if (p) {
+      currentProfileName = p.name
+    }
+  } catch (err) {
+    console.error('Failed to get profile name for RPC:', err)
+  }
+  currentVersion = input.version
 
   // Deduplicate and block if prepare worker is running for the same profile
   const { isPrepareActiveForProfile } = await import('./prepareGameService.js')

@@ -9,7 +9,7 @@ import type {
   DetectedJavaRuntime,
 } from '@/shared/types.ts'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
-import { CheckCircle2, AlertTriangle, Save, ShieldAlert, Sparkles, Cpu, RefreshCw } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Save, ShieldAlert, Sparkles, Cpu, RefreshCw, MessageSquare } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
 import { Input } from '@/components/ui/Input'
@@ -361,6 +361,36 @@ export const SettingsScreen = ({
                 </div>
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-indigo-400" />
+              Tiện ích tích hợp
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <label className="flex items-start gap-3 cursor-pointer group p-3 rounded-xl hover:bg-accent/30 transition-colors">
+              <div className="relative mt-0.5">
+                <input
+                  type="checkbox"
+                  className="peer sr-only"
+                  checked={Boolean(formData.enableDiscordRpc)}
+                  onChange={(e) => handleChange('enableDiscordRpc', e.target.checked)}
+                />
+                <div className="h-5 w-5 rounded-md border-2 border-border bg-input transition-all peer-checked:bg-indigo-500 peer-checked:border-indigo-500 flex items-center justify-center">
+                  <CheckCircle2 className="h-3 w-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" />
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Discord Rich Presence</p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  Hiển thị trạng thái "Đang chơi LetCuteMC" trên Discord của bạn.
+                </p>
+              </div>
+            </label>
           </CardContent>
         </Card>
       </div>

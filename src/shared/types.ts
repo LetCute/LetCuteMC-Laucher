@@ -350,6 +350,8 @@ export interface LauncherSettings {
   enableOptimizedJvmArgs: boolean
   // Auto Performance
   performanceMode: PerformanceMode
+  // Integrations
+  enableDiscordRpc: boolean
 }
 
 // ─── Minecraft Version Catalog ────────────────────────────────────────────────
