@@ -20,15 +20,13 @@ export async function initDiscordRpc(): Promise<void> {
   rpcClient.on('ready', () => {
     isConnected = true
     console.log('[Discord RPC] Đã kết nối với Discord')
-    setIdle() // Mặc định khi mới vào launcher là Idle
+    setIdle()
   })
 
-  // 'disconnected' event isn't formally exposed in the typings for all versions, but we can try to listen or just handle errors.
   rpcClient.on('disconnected', () => {
     isConnected = false
     console.log('[Discord RPC] Bị ngắt kết nối')
     rpcClient = null
-    // Tự động kết nối lại sau 15 giây nếu bị mất kết nối
     reconnectTimer = setTimeout(initDiscordRpc, 15000)
   })
 

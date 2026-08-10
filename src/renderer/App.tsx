@@ -336,6 +336,7 @@ function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         accountState={accountState}
+        onAccountStateChange={setAccountState}
         activeProfile={activeProfile}
         javaSelection={javaSelection}
         settings={settings}

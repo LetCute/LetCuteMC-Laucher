@@ -22,6 +22,7 @@
   "dependencies": {
     "@base-ui/react": "^1.6.0",
     "@fontsource-variable/geist": "^5.2.9",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
     "@tailwindcss/postcss": "^4.3.2",
     "@xmcl/core": "^2.15.1",
     "@xmcl/installer": "^6.1.2",

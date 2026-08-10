@@ -11,7 +11,10 @@ import {
   Loader2,
   Square,
   User,
-  Heart
+  Heart,
+  ChevronDown,
+  LogOut,
+  Settings2,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import logoImg from '../../assets/logo.png'
@@ -27,6 +30,14 @@ import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { cn } from '@/lib/utils'
 import { Button } from '../ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/DropdownMenu'
 
 export type TabId = 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'logs' | 'about'
 
@@ -34,6 +45,7 @@ interface SidebarProps {
   activeTab: TabId
   onTabChange: (tab: TabId) => void
   accountState: AccountState
+  onAccountStateChange: (state: AccountState) => void
   activeProfile: LauncherProfile | null
   javaSelection: JavaRuntimeSelectionResult | null
   settings: LauncherSettings
@@ -57,6 +69,7 @@ export function Sidebar({
   activeTab,
   onTabChange,
   accountState,
+  onAccountStateChange,
   activeProfile,
   javaSelection,
   settings,
@@ -186,44 +199,83 @@ export function Sidebar({
       {/* Unified Play & Account Card */}
       <div className="">
         <div className="rounded-xl  p-3 space-y-3">
-          {/* Account Info Header (clickable to accounts tab) */}
-          <div
-            onClick={() => onTabChange('accounts')}
-            className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/30 p-1.5 rounded-lg transition duration-150"
-            title="Quản lý tài khoản"
-          >
-            <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
-              <img
-                src={isMicrosoft && activeAccount
-                  ? `https://minotar.net/helm/${activeAccount.username}/64.png`
-                  : steveImg}
-                alt={displayUsername}
-                className="h-full w-full object-cover"
-                onError={(e) => {
-                  e.currentTarget.src = steveImg
-                }}
-              />
-            </div>
-            <div className="min-w-0 flex-1">
-              <div className="flex items-center justify-between gap-1">
-                <span className="truncate text-xs font-bold text-sidebar-foreground">
-                  {displayUsername}
-                </span>
-                {isMicrosoft ? (
-                  <Badge variant="success" className="text-[8px] px-1 py-0 h-3.5 shrink-0">Microsoft</Badge>
-                ) : (
-                  <Badge variant="warning" className="text-[8px] px-1 py-0 h-3.5 bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">Local</Badge>
-                )}
+          {/* Account Info Header */}
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <div
+                className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/30 p-1.5 rounded-lg transition duration-150"
+                title="Đổi tài khoản"
+              >
+                <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
+                  <img
+                    src={isMicrosoft && activeAccount
+                      ? `https://minotar.net/helm/${activeAccount.username}/64.png`
+                      : steveImg}
+                    alt={displayUsername}
+                    className="h-full w-full object-cover"
+                    onError={(e) => {
+                      e.currentTarget.src = steveImg
+                    }}
+                  />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-1">
+                    <span className="truncate text-xs font-bold text-sidebar-foreground">
+                      {displayUsername}
+                    </span>
+                    <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
+                  </div>
+                  {activeProfile ? (
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={`${activeProfile.name} (${activeProfile.minecraftVersion})`}>
+                      {activeProfile.name} ({activeProfile.minecraftVersion})
+                    </p>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Chưa chọn cấu hình</p>
+                  )}
+                </div>
               </div>
-              {activeProfile ? (
-                <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={`${activeProfile.name} (${activeProfile.minecraftVersion})`}>
-                  {activeProfile.name} ({activeProfile.minecraftVersion})
-                </p>
-              ) : (
-                <p className="text-[10px] text-muted-foreground mt-0.5">Chưa chọn cấu hình</p>
-              )}
-            </div>
-          </div>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
+              <DropdownMenuSeparator />
+              <div className="max-h-48 overflow-y-auto">
+                {accounts.map(acc => {
+                  const isActive = acc.id === activeAccount?.id
+                  return (
+                    <DropdownMenuItem
+                      key={acc.id}
+                      onClick={async () => {
+                        if (!isActive) {
+                          try {
+                            const updated = await window.launcherApi.selectAccount(acc.id)
+                            onAccountStateChange(updated)
+                          } catch(err) {
+                            console.error(err)
+                          }
+                        }
+                      }}
+                      className="cursor-pointer"
+                    >
+                      <img
+                        src={acc.type === 'microsoft' ? `https://minotar.net/helm/${acc.username}/64.png` : steveImg}
+                        className="h-5 w-5 rounded-sm mr-2 object-cover border border-border"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-medium truncate">{acc.username}</p>
+                        <p className="text-[9px] text-muted-foreground uppercase">{acc.type}</p>
+                      </div>
+                      {isActive && <div className="h-2 w-2 rounded-full bg-emerald-500 shrink-0 ml-2 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />}
+                    </DropdownMenuItem>
+                  )
+                })}
+              </div>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => onTabChange('accounts')} className="cursor-pointer">
+                <Settings2 className="h-4 w-4 mr-2" />
+                <span className="text-xs">Quản lý tài khoản</span>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {/* Selected Profile and Play Controls */}
           {activeProfile ? (
