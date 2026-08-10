@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Box, Trash2, Power, PowerOff, RefreshCw, Search, Loader2 } from 'lucide-react'
 import type { GameContentItem, GameContentMetadata } from '../../shared/types'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -10,11 +10,12 @@ import { DropZone } from '../components/ui/DropZone'
 
 interface ModsScreenProps {
   gameDir: string
+  profileName?: string
 }
 
 const META_CONCURRENCY = 4
 
-export const ModsScreen = ({ gameDir }: ModsScreenProps) => {
+export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
   const [mods, setMods] = useState<GameContentItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'disabled'>('all')
@@ -158,7 +159,9 @@ export const ModsScreen = ({ gameDir }: ModsScreenProps) => {
     <div className="px-6 pt-2 pb-6 flex flex-col h-full gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Quản lý Mods</h2>
+          <h2 className="text-xl font-bold text-foreground">
+            Quản lý Mods {profileName && <span className="text-sm font-normal text-muted-foreground ml-2 px-2 py-0.5 bg-accent/30 rounded-md">Cấu hình: {profileName}</span>}
+          </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Tổng: {mods.length} · <span className="text-emerald-400">{enabledCount} bật</span> ·{' '}
             <span className="text-amber-400">{disabledCount} tắt</span>

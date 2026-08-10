@@ -162,10 +162,12 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
     const settings = await getSettings()
     const scanDirs = [...settings.customJavaScanDirs]
+    const mcRoot = settings.minecraftDirectory
 
     const javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
-      gameDir: input.gameDir,
+      gameDir: mcRoot,
       preferredJavaPath: input.javaPath,
+      allowNewer: true,
     })
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
@@ -190,7 +192,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
     assertNotCancelled()
 
-    const checkDir = path.join(input.gameDir, 'versions', input.version)
+    const checkDir = path.join(mcRoot, 'versions', input.version)
     const versionJson = path.join(checkDir, `${input.version}.json`)
     const isInstalled = await pathExists(versionJson)
 
@@ -211,7 +213,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     assertNotCancelled()
 
     // XMCL: parse version (auto-resolves inheritsFrom, guarantees downloads.client)
-    const resolved: ResolvedVersion = await Version.parse(input.gameDir, input.version)
+    const resolved: ResolvedVersion = await Version.parse(mcRoot, input.version)
 
     // ── Launch ────────────────────────────────────────────────────────────
     assertNotCancelled()
@@ -231,6 +233,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     // XMCL launch (auto inheritance, no downloads.client crash)
     const child = await xmclLaunch({
       gamePath: input.gameDir,
+      resourcePath: mcRoot,
       javaPath,
       version: resolved,
       accessToken: auth.accessToken,

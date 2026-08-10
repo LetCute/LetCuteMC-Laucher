@@ -12,6 +12,7 @@ import { SettingsScreen } from './screens/SettingsScreen';
 import { AccountsScreen } from './screens/AccountsScreen';
 import { LogsScreen } from './screens/LogsScreen';
 import { AboutScreen } from './screens/AboutScreen';
+import { StoreScreen } from './screens/StoreScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { launcherClient } from './services/launcherClient';
@@ -247,9 +248,14 @@ function App() {
   const handleSetActiveProfile = async (id: string) => {
     try {
       const ok = await launcherClient.setActiveProfile(id);
-      if (ok) setActiveProfileId(id);
+      if (ok) {
+        setActiveProfileId(id);
+      } else {
+        alert('Failed to set active profile in backend');
+      }
     } catch (e) {
       console.error('Set active profile error:', e);
+      alert('Error: ' + e);
     }
   };
 
@@ -338,6 +344,8 @@ function App() {
         accountState={accountState}
         onAccountStateChange={setAccountState}
         activeProfile={activeProfile}
+        profiles={profiles}
+        onSetActiveProfile={handleSetActiveProfile}
         javaSelection={javaSelection}
         settings={settings}
         gameDir={gameDir}
@@ -355,6 +363,16 @@ function App() {
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
+          {activeTab === 'store' && (
+            <StoreScreen 
+              onInstallSuccess={async (newProfileId) => {
+                await initializeAppData();
+                await handleSetActiveProfile(newProfileId);
+                setActiveTab('mods');
+              }}
+            />
+          )}
+
           {activeTab === 'profiles' && (
             <ProfilesScreen
               profiles={profiles}
@@ -384,17 +402,19 @@ function App() {
           {/* Keep mounted after first open — avoid re-scan every tab switch */}
           {(activeTab === 'mods' || contentVisited.mods) && (
             <div className={activeTab === 'mods' ? 'h-full' : 'hidden'}>
-              <ModsScreen gameDir={gameDir} />
+              <ModsScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
             </div>
           )}
+
           {(activeTab === 'resourcepacks' || contentVisited.resourcepacks) && (
             <div className={activeTab === 'resourcepacks' ? 'h-full' : 'hidden'}>
-              <ResourcePacksScreen gameDir={gameDir} />
+              <ResourcePacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
             </div>
           )}
+
           {(activeTab === 'shaderpacks' || contentVisited.shaderpacks) && (
             <div className={activeTab === 'shaderpacks' ? 'h-full' : 'hidden'}>
-              <ShaderPacksScreen gameDir={gameDir} />
+              <ShaderPacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
             </div>
           )}
 

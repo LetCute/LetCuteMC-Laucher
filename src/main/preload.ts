@@ -289,6 +289,18 @@ const launcherApi = {
 
   refreshMicrosoftAccount(accountId?: string): Promise<AccountState> {
     return ipcRenderer.invoke('account:refresh-microsoft', accountId)
+  },
+
+  searchModrinth(query: string, projectType: string, offset?: number): Promise<any> {
+    return ipcRenderer.invoke('modrinth:search', { query, projectType, offset })
+  },
+
+  getModrinthVersions(projectId: string): Promise<any[]> {
+    return ipcRenderer.invoke('modrinth:get-versions', { projectId })
+  },
+
+  installModrinthModpack(versionId: string, profileName: string): Promise<string> {
+    return ipcRenderer.invoke('modrinth:install-modpack', { versionId, profileName })
   }
 }
 

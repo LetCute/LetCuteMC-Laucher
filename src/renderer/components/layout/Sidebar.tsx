@@ -15,6 +15,8 @@ import {
   ChevronDown,
   LogOut,
   Settings2,
+  PlusCircle,
+  RefreshCw,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import logoImg from '../../assets/logo.png'
@@ -39,7 +41,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/DropdownMenu'
 
-export type TabId = 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'logs' | 'about'
+export type TabId = 'store' | 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'logs' | 'about'
 
 interface SidebarProps {
   activeTab: TabId
@@ -47,13 +49,18 @@ interface SidebarProps {
   accountState: AccountState
   onAccountStateChange: (state: AccountState) => void
   activeProfile: LauncherProfile | null
+  profiles: LauncherProfile[]
+  onSetActiveProfile: (id: string) => void
   javaSelection: JavaRuntimeSelectionResult | null
   settings: LauncherSettings
   gameDir: string
   isWorking?: boolean
 }
 
+import { ShoppingBag } from 'lucide-react'
+
 const MENU_ITEMS = [
+  { id: 'store', label: 'Cửa hàng', icon: ShoppingBag },
   { id: 'profiles', label: 'Cấu hình game', icon: Layers },
   { id: 'versions', label: 'Phiên bản', icon: List },
   { id: 'accounts', label: 'Tài khoản', icon: User },
@@ -71,9 +78,12 @@ export function Sidebar({
   accountState,
   onAccountStateChange,
   activeProfile,
+  profiles,
+  onSetActiveProfile,
   javaSelection,
   settings,
   gameDir,
+  isWorking
 }: SidebarProps) {
   const { state, isBusy, isStarting, isRunning, isFailed, startLaunch, cancelLaunch } = useLauncherJob()
   const { prepareState, progress: prepareProgress, isPreparing, startPrepare } = usePrepareGame(activeProfile, settings)
@@ -168,8 +178,55 @@ export function Sidebar({
         </div>
       </div>
 
+      {/* Profile Selector */}
+      <div className="px-3 pb-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-card/30 p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
+              <div className="flex flex-col gap-0.5 overflow-hidden">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
+                <span className="truncate text-sm font-semibold text-sidebar-foreground">
+                  {activeProfile ? activeProfile.name : 'Chưa có cấu hình'}
+                </span>
+              </div>
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="center" className="w-[220px]">
+            <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {profiles.length > 0 ? profiles.map((p) => (
+              <DropdownMenuItem 
+                key={p.id}
+                onSelect={() => onSetActiveProfile(p.id)}
+                className="flex items-center gap-2 py-2 cursor-pointer"
+              >
+                <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", activeProfile?.id === p.id ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-transparent")} />
+                <span className="truncate flex-1 font-medium">{p.name}</span>
+              </DropdownMenuItem>
+            )) : (
+              <div className="p-2 text-center text-xs text-muted-foreground">Không có cấu hình nào.</div>
+            )}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => onTabChange('profiles')} className="text-primary focus:text-primary cursor-pointer">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Tạo Cấu hình mới
+            </DropdownMenuItem>
+            <DropdownMenuItem onSelect={() => onTabChange('profiles')} className="cursor-pointer">
+              <Layers className="mr-2 h-4 w-4" />
+              Quản lý Cấu hình
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => window.location.reload()} className="text-emerald-500 focus:text-emerald-500 cursor-pointer">
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Tải lại Launcher
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
       {/* Navigation */}
-      <nav className="flex-1 px-3 py-3 space-y-0.5 overflow-y-auto">
+      <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
         {MENU_ITEMS.map((item) => {
           const Icon = item.icon
           const isActive = activeTab === item.id

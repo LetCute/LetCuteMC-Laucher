@@ -148,9 +148,10 @@ function postFinished(profileId: string, state: PreparedProfileState | null, ok:
 async function startPrepare(profile: LauncherProfile, settings: LauncherSettings, forceRepair?: boolean): Promise<void> {
   const profileId = profile.id
   const version = profile.minecraftVersion
-  const gameDir = profile.gameDir || settings.minecraftDirectory
+  const mcRoot = settings.minecraftDirectory
+  const gameDir = profile.gameDir || mcRoot
 
-  postLog('info', `[PrepareWorker] START prepare profile=${profileId} version=${version} gameDir=${gameDir}`)
+  postLog('info', `[PrepareWorker] START prepare profile=${profileId} version=${version} gameDir=${gameDir} mcRoot=${mcRoot}`)
 
   try {
     postProgress(profileId, version, {
@@ -161,7 +162,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     })
 
     // 1. Check version folder and metadata json
-    const versionDir = path.join(gameDir, 'versions', version)
+    const versionDir = path.join(mcRoot, 'versions', version)
     const versionJsonPath = path.join(versionDir, `${version}.json`)
 
     postLog('info', `[PrepareWorker] Checking paths: versionDir=${versionDir}`)
@@ -197,7 +198,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     // Resolve inheritsFrom if present
     if (versionJson.inheritsFrom) {
       inheritedVersion = versionJson.inheritsFrom
-      const parentDir = path.join(gameDir, 'versions', inheritedVersion)
+      const parentDir = path.join(mcRoot, 'versions', inheritedVersion)
       const parentJsonPath = path.join(parentDir, `${inheritedVersion}.json`)
       clientJarPath = path.join(parentDir, `${inheritedVersion}.jar`)
 
@@ -223,7 +224,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
 
     // Use XMCL Core to parse and resolve the entire version correctly (including inheritsFrom and libraries)
     const { Version } = await import('@xmcl/core')
-    const resolvedVersion = await Version.parse(gameDir, version)
+    const resolvedVersion = await Version.parse(mcRoot, version)
 
     let clientJarReady = await pathExists(clientJarPath)
     postLog('info', `[PrepareWorker] Client Jar path: ${clientJarPath} (Ready: ${clientJarReady})`)
@@ -245,7 +246,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     // 2b. Check libraries (XMCL already handles OS rules and Fabric/Quilt maven URLs)
     for (const lib of resolvedVersion.libraries) {
       if (lib.download) {
-        const libPath = path.join(gameDir, 'libraries', lib.download.path)
+        const libPath = path.join(mcRoot, 'libraries', lib.download.path)
         if (!(await pathExists(libPath))) {
           downloadQueue.push({
             id: lib.name,
@@ -261,7 +262,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
 
     // 2c. Check assetIndex and assets
     if (resolvedVersion.assetIndex) {
-      const assetIndexDir = path.join(gameDir, 'assets', 'indexes')
+      const assetIndexDir = path.join(mcRoot, 'assets', 'indexes')
       const assetIndexPath = path.join(assetIndexDir, `${resolvedVersion.assetIndex.id}.json`)
       await fs.mkdir(assetIndexDir, { recursive: true })
 
@@ -290,7 +291,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
         for (const key of Object.keys(objects)) {
           const obj = objects[key]
           const first2 = obj.hash.substring(0, 2)
-          const assetDest = path.join(gameDir, 'assets', 'objects', first2, obj.hash)
+          const assetDest = path.join(mcRoot, 'assets', 'objects', first2, obj.hash)
           
           let needsDownload = false
           if (!(await pathExists(assetDest))) {

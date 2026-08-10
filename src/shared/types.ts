@@ -600,3 +600,58 @@ export interface UserSession {
   username: string | null
   accountType: 'Premium' | 'Guest'
 }
+
+// ─── Modrinth Store ─────────────────────────────────────────────────────────
+
+export interface ModrinthProject {
+  project_id: string
+  slug: string
+  title: string
+  description: string
+  categories: string[]
+  client_side: string
+  server_side: string
+  project_type: string
+  downloads: number
+  icon_url: string
+  author: string
+  versions: string[]
+}
+
+export interface ModrinthSearchResult {
+  hits: ModrinthProject[]
+  offset: number
+  limit: number
+  total_hits: number
+}
+
+export interface ModrinthVersion {
+  id: string
+  project_id: string
+  author_id: string
+  featured: boolean
+  name: string
+  version_number: string
+  changelog: string
+  date_published: string
+  downloads: number
+  version_type: 'release' | 'beta' | 'alpha'
+  loaders: string[]
+  game_versions: string[]
+  files: {
+    hashes: {
+      sha1: string
+      sha512: string
+    }
+    url: string
+    filename: string
+    primary: boolean
+    size: number
+  }[]
+  dependencies: {
+    version_id: string | null
+    project_id: string | null
+    file_name: string | null
+    dependency_type: 'required' | 'optional' | 'incompatible' | 'embedded'
+  }[]
+}

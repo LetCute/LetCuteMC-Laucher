@@ -122,7 +122,6 @@ export function ProfileModal({
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = 'Tên profile không được rỗng'
     if (!formData.minecraftVersion.trim()) newErrors.minecraftVersion = 'Phiên bản không được rỗng'
-    if (!formData.gameDir.trim()) newErrors.gameDir = 'Thư mục game không được rỗng'
     if (formData.minMemoryMb < 512) newErrors.minMemoryMb = 'RAM tối thiểu >= 512 MB'
     if (formData.maxMemoryMb < formData.minMemoryMb)
       newErrors.maxMemoryMb = 'RAM tối đa phải >= RAM tối thiểu'
@@ -284,7 +283,7 @@ export function ProfileModal({
         <div className="col-span-2">
           <Input
             label="Thư Mục Game"
-            placeholder="Đường dẫn đến thư mục .minecraft"
+            placeholder="Để trống để Launcher tự tạo thư mục riêng biệt"
             value={formData.gameDir}
             onChange={(e) => setFormData({ ...formData, gameDir: e.target.value })}
             error={errors.gameDir}

@@ -172,6 +172,27 @@ export function registerIpcHandlers(): void {
   handleIpc('versions:get-catalog', getMinecraftVersionCatalog)
   handleIpc('minecraft:scan-directory', scanMinecraftDirectory)
 
+  // Modrinth API
+  handleIpc('modrinth:search', async ({ query, projectType, offset }: { query: string, projectType: string, offset: number }) => {
+    const { searchModrinth } = await import('./services/modrinthService.js')
+    return searchModrinth(query, projectType, offset)
+  })
+  handleIpc('modrinth:get-versions', async ({ projectId }: { projectId: string }) => {
+    const { getModrinthVersions } = await import('./services/modrinthService.js')
+    return getModrinthVersions(projectId)
+  })
+  handleIpc('modrinth:install-modpack', async ({ versionId, profileName }: { versionId: string, profileName: string }) => {
+    const { installModrinthModpack } = await import('./services/modrinthService.js')
+    const { getDefaultMinecraftDirectory } = await import('./services/storageService.js')
+    
+    // Send logs to frontend via the same channel as launch job, or just standard log
+    const appendLog = (level: string, msg: string) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
+    }
+    
+    return await installModrinthModpack(versionId, profileName, getDefaultMinecraftDirectory(), appendLog)
+  })
+
   handleIpc('modloader:get-fabric-versions', getFabricVersions)
   handleIpc('modloader:get-quilt-versions', getQuiltVersions)
   handleIpc('modloader:install-fabric', installFabric)
