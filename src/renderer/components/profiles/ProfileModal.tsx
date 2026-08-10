@@ -7,9 +7,10 @@ import type {
 } from '@/shared/types'
 import { Modal } from '../ui/Modal'
 import { Input } from '../ui/Input'
-import { AlertCircle } from 'lucide-react'
+import { AlertCircle, Info } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Select } from '../ui/Select'
+import type { ModLoaderType, ModLoaderVersion } from '@/shared/types'
 
 interface ProfileModalProps {
   isOpen: boolean
@@ -51,6 +52,12 @@ export function ProfileModal({
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [selectedVersionItem, setSelectedVersionItem] = useState<MinecraftVersionItem | null>(null)
 
+  const [modLoader, setModLoader] = useState<ModLoaderType>('vanilla')
+  const [loaderVersions, setLoaderVersions] = useState<ModLoaderVersion[]>([])
+  const [selectedLoaderVersion, setSelectedLoaderVersion] = useState<string>('')
+  const [isFetchingLoaders, setIsFetchingLoaders] = useState(false)
+  const [isInstalling, setIsInstalling] = useState(false)
+
   useEffect(() => {
     if (!versionCatalog || !formData.minecraftVersion) {
       setSelectedVersionItem(null)
@@ -81,7 +88,35 @@ export function ProfileModal({
       })
     }
     setErrors({})
+    setModLoader('vanilla')
+    setSelectedLoaderVersion('')
   }, [isOpen, profile, preselectedVersion, versionCatalog, defaultGameDir])
+
+  useEffect(() => {
+    async function fetchLoaders() {
+      if (modLoader === 'vanilla') {
+        setLoaderVersions([])
+        setSelectedLoaderVersion('')
+        return
+      }
+      setIsFetchingLoaders(true)
+      try {
+        let versions: ModLoaderVersion[] = []
+        if (modLoader === 'fabric') versions = await window.launcherApi.getFabricVersions()
+        if (modLoader === 'quilt') versions = await window.launcherApi.getQuiltVersions()
+
+        setLoaderVersions(versions)
+        if (versions.length > 0) {
+          setSelectedLoaderVersion(versions[0].version)
+        }
+      } catch (e) {
+        console.error('Failed to fetch loaders', e)
+      } finally {
+        setIsFetchingLoaders(false)
+      }
+    }
+    fetchLoaders()
+  }, [modLoader])
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
@@ -95,11 +130,38 @@ export function ProfileModal({
     return Object.keys(newErrors).length === 0
   }
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     if (!validate()) return
+
+    let finalMinecraftVersion = formData.minecraftVersion
+
+    if (modLoader !== 'vanilla' && selectedLoaderVersion) {
+      setIsInstalling(true)
+      try {
+        if (modLoader === 'fabric') {
+          finalMinecraftVersion = await window.launcherApi.installFabric(
+            formData.minecraftVersion,
+            selectedLoaderVersion,
+            formData.gameDir
+          )
+        } else if (modLoader === 'quilt') {
+          finalMinecraftVersion = await window.launcherApi.installQuilt(
+            formData.minecraftVersion,
+            selectedLoaderVersion,
+            formData.gameDir
+          )
+        }
+      } catch (err) {
+        alert(err instanceof Error ? err.message : 'Lỗi cài đặt Mod Loader')
+        setIsInstalling(false)
+        return
+      }
+      setIsInstalling(false)
+    }
+
     onSave({
       name: formData.name,
-      minecraftVersion: formData.minecraftVersion,
+      minecraftVersion: finalMinecraftVersion,
       gameDir: formData.gameDir,
       minMemoryMb: formData.minMemoryMb,
       maxMemoryMb: formData.maxMemoryMb,
@@ -119,11 +181,16 @@ export function ProfileModal({
       maxWidth="max-w-sm"
       footer={
         <>
-          <Button onClick={onClose} variant="ghost" size="sm">
+          <Button onClick={onClose} variant="ghost" size="sm" disabled={isInstalling}>
             Hủy
           </Button>
-          <Button onClick={handleSubmit} variant="primary" size="sm">
-            {btnText}
+          <Button onClick={handleSubmit} variant="primary" size="sm" disabled={isInstalling}>
+            {isInstalling ? (
+              <span className="flex items-center gap-2">
+                <span className="inline-block h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/80 border-t-transparent" />
+                Đang cài đặt...
+              </span>
+            ) : btnText}
           </Button>
         </>
       }
@@ -168,10 +235,7 @@ export function ProfileModal({
               onChange={(e) => setFormData({ ...formData, minecraftVersion: e.target.value })}
             />
           )}
-          {errors.minecraftVersion && (
-            <span className="text-xs text-destructive">{errors.minecraftVersion}</span>
-          )}
-          {isVersionNotInstalled && (
+          {isVersionNotInstalled && modLoader === 'vanilla' && (
             <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/8 border border-amber-500/20 rounded-lg p-2.5">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>
@@ -180,6 +244,42 @@ export function ProfileModal({
             </div>
           )}
         </div>
+
+        <div className={modLoader === 'vanilla' ? 'col-span-2 flex flex-col gap-1.5' : 'flex flex-col gap-1.5'}>
+          <label className="text-sm font-medium text-foreground">Cài đặt Mod Loader</label>
+          <Select
+            value={modLoader}
+            onChange={(val) => setModLoader(val as ModLoaderType)}
+            options={[
+              { value: 'vanilla', label: 'Không cài' },
+              { value: 'fabric', label: 'Fabric' },
+              { value: 'quilt', label: 'Quilt' },
+            ]}
+          />
+        </div>
+
+        {modLoader !== 'vanilla' && (
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-medium text-foreground">Phiên bản Loader</label>
+            <Select
+              value={selectedLoaderVersion}
+              onChange={setSelectedLoaderVersion}
+              options={isFetchingLoaders ? [{ value: selectedLoaderVersion, label: 'Đang tải danh sách...' }] : loaderVersions.map(v => ({
+                value: v.version,
+                label: v.version + (v.stable ? ' (Stable)' : ' (Beta)')
+              }))}
+            />
+          </div>
+        )}
+
+        {modLoader !== 'vanilla' && (
+          <div className="col-span-2 flex items-start gap-2 text-xs text-primary/90 bg-primary/10 border border-primary/20 rounded-lg p-2.5">
+            <Info size={13} className="mt-0.5 shrink-0" />
+            <span>
+              Launcher sẽ tự động tải và cài đặt nền tảng {modLoader === 'fabric' ? 'Fabric' : 'Quilt'} vào thư mục game.
+            </span>
+          </div>
+        )}
 
         <div className="col-span-2">
           <Input

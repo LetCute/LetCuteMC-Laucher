@@ -1,4 +1,4 @@
-﻿import type { LauncherSettings } from '../../shared/types'
+import type { LauncherSettings } from '../../shared/types'
 import {
   getSettingsFilePath,
   ensureLauncherDataDirectory,
@@ -20,9 +20,6 @@ const DEFAULT_SETTINGS: LauncherSettings = {
   checkJavaOnStartup: true,
   checkVersionsOnStartup: true,
   autoCloseLauncherAfterStart: true,
-  enableLaunchBoost: true,
-  launchBoostDurationMs: 45000,
-  launchBoostPriority: 'above_normal',
   enableAutoPrepareGame: true,
   downloadConcurrency: 8,
   manifestCacheTtlMs: 21600000,
@@ -43,15 +40,10 @@ function migrateSettings(raw: Partial<LauncherSettings> & Record<string, unknown
     merged.defaultMinMemoryMb = rec.recommendedMinRam
     merged.defaultMaxMemoryMb = rec.recommendedMaxRam
     merged.downloadConcurrency = rec.recommendedConcurrency
-    merged.launchBoostDurationMs = rec.recommendedBoostDurationMs
-    merged.launchBoostPriority = rec.recommendedBoostPriority
     merged.performanceMode = 'auto'
   }
 
   merged.downloadConcurrency = Math.max(1, Math.min(merged.downloadConcurrency, 16))
-  if (merged.launchBoostPriority !== 'above_normal' && merged.launchBoostPriority !== 'high') {
-    merged.launchBoostPriority = 'above_normal'
-  }
   return merged
 }
 

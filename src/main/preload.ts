@@ -21,6 +21,7 @@ import type {
   ProfilesStore,
   UpdateProfileInput,
   AccountState,
+  ModLoaderVersion,
   // New Worker-based launch types
   StartLaunchResult,
   CancelLaunchResult,
@@ -85,6 +86,22 @@ const launcherApi = {
 
   scanMinecraftDirectory(gameDir: string): Promise<MinecraftScanResult> {
     return ipcRenderer.invoke('minecraft:scan-directory', gameDir)
+  },
+
+  getFabricVersions(): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-fabric-versions')
+  },
+
+  getQuiltVersions(): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-quilt-versions')
+  },
+
+  installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+    return ipcRenderer.invoke('modloader:install-fabric', mcVersion, loaderVersion, gameDir)
+  },
+
+  installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+    return ipcRenderer.invoke('modloader:install-quilt', mcVersion, loaderVersion, gameDir)
   },
 
   scanJavaRuntimes(customScanDirs?: string[], forceRefresh?: boolean): Promise<JavaScanResult> {

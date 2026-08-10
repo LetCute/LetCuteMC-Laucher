@@ -322,7 +322,16 @@ function App() {
   return (
     <ToastProvider>
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans">
-      <div className="flex min-h-0 flex-1 overflow-hidden">
+      {!criticalReady ? (
+        <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#1c2127]">
+          <img src="./logo.png" alt="LetCuteMC" className="w-32 h-32 animate-pulse" />
+          <div className="flex items-center gap-3 text-muted-foreground">
+            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <span className="text-sm font-medium">{bootstrap.message}</span>
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-h-0 flex-1 overflow-hidden">
       <Sidebar
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -345,15 +354,6 @@ function App() {
         )}
 
         <div className="min-h-0 flex-1 overflow-y-auto">
-          {!criticalReady ? (
-            <div className="flex h-full flex-col gap-3 p-6">
-              <div className="h-8 w-48 animate-pulse rounded-lg bg-muted/40" />
-              <div className="h-28 animate-pulse rounded-xl bg-muted/30" />
-              <div className="h-28 animate-pulse rounded-xl bg-muted/25" />
-              <div className="h-28 animate-pulse rounded-xl bg-muted/20" />
-            </div>
-          ) : (
-            <>
           {activeTab === 'profiles' && (
             <ProfilesScreen
               profiles={profiles}
@@ -439,11 +439,10 @@ function App() {
           {activeTab === 'about' && (
             <AboutScreen />
           )}
-            </>
-          )}
+          </div>
+        </main>
         </div>
-      </main>
-      </div>
+      )}
 
       <ProfileModal
         isOpen={isProfileModalOpen}

@@ -18,10 +18,6 @@ import type {
   AuthSession,
   MinecraftVersionType,
 } from '../../shared/types'
-import {
-  applyTemporaryLaunchBoost,
-  restoreProcessPriority,
-} from '../services/performanceBoostService'
 import { Version, launch as xmclLaunch, type ResolvedVersion } from '@xmcl/core'
 import { selectBestJavaRuntime } from '../services/javaScannerService'
 import { getSettings } from '../services/settingsService'
@@ -228,15 +224,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
 
     const customArgs: string[] = []
-    if (input.performance?.enableLaunchBoost) {
-      customArgs.push(
-        '-XX:+UnlockExperimentalVMOptions',
-        '-XX:+UseG1GC',
-        '-XX:G1NewSizePercent=20',
-        '-XX:G1ReservePercent=20',
-        '-XX:MaxGCPauseMillis=50',
-        '-XX:G1HeapRegionSize=32M'
-      )
+    if (javaVer >= 21) {
+      customArgs.push('--enable-native-access=ALL-UNNAMED')
     }
 
     // XMCL launch (auto inheritance, no downloads.client crash)
@@ -255,14 +244,6 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     const minecraftPid = child.pid ?? null
     if (minecraftPid) {
       postLog(jobId, 'info', `Minecraft process started with PID ${minecraftPid}.`)
-      if (input.performance?.enableLaunchBoost) {
-        void applyTemporaryLaunchBoost({
-          pid: minecraftPid,
-          priority: input.performance.launchBoostPriority,
-          durationMs: input.performance.launchBoostDurationMs,
-          onLog: (level, msg) => postLog(jobId, level, msg),
-        })
-      }
     }
 
     child.stderr?.on('data', (data: Buffer) => {
@@ -273,9 +254,6 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
 
     child.on('exit', (code) => {
-      if (minecraftPid) {
-        void restoreProcessPriority(minecraftPid).catch(() => {})
-      }
       if (code !== 0 && code !== null) {
         postLog(jobId, 'error', `Minecraft thoát lỗi với mã: ${code}`)
       } else {

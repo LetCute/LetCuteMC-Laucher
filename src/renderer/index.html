@@ -3,7 +3,7 @@
 
 <head>
   <meta charset="UTF-8" />
-  <link rel="icon" type="image/png" href="/logo.png" />
+  <link rel="icon" type="image/png" href="./logo.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LetCuteMC Launcher</title>
   <style>
@@ -22,49 +22,36 @@
 
     #boot-shell {
       display: flex;
-      height: 100%;
-    }
-
-    #boot-shell .side {
-      width: 240px;
-      background: #15191e;
-      border-right: 1px solid rgba(255, 255, 255, 0.06);
-    }
-
-    #boot-shell .main {
-      flex: 1;
-      display: flex;
       flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      background: #1c2127;
+      gap: 24px;
     }
 
-    #boot-shell .bar {
-      height: 36px;
-      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    #boot-shell img {
+      width: 120px;
+      height: 120px;
+      animation: boot-pulse 1.5s ease-in-out infinite;
     }
 
-    #boot-shell .body {
-      flex: 1;
-      padding: 24px;
-    }
-
-    #boot-shell .pulse {
-      height: 112px;
-      margin-bottom: 12px;
-      border-radius: 12px;
-      background: rgba(255, 255, 255, 0.04);
-      animation: boot-pulse 1.2s ease-in-out infinite;
+    #boot-shell .spinner {
+      width: 24px;
+      height: 24px;
+      border: 3px solid rgba(255, 255, 255, 0.1);
+      border-top-color: #2563eb;
+      border-radius: 50%;
+      animation: boot-spin 1s linear infinite;
     }
 
     @keyframes boot-pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(0.95); opacity: 0.7; }
+    }
 
-      0%,
-      100% {
-        opacity: 0.45;
-      }
-
-      50% {
-        opacity: 0.85;
-      }
+    @keyframes boot-spin {
+      to { transform: rotate(360deg); }
     }
   </style>
 </head>
@@ -72,15 +59,8 @@
 <body>
   <div id="root">
     <div id="boot-shell" aria-hidden="true">
-      <div class="side"></div>
-      <div class="main">
-        <div class="bar"></div>
-        <div class="body">
-          <div class="pulse"></div>
-          <div class="pulse"></div>
-          <div class="pulse"></div>
-        </div>
-      </div>
+      <img src="./logo.png" alt="LetCuteMC" />
+      <div class="spinner"></div>
     </div>
   </div>
   <script type="module" src="/main.tsx"></script>

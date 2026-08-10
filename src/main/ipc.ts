@@ -61,6 +61,12 @@ import {
   clearVersionManifestCache,
 } from './services/versionManifestCacheService'
 import {
+  getFabricVersions,
+  getQuiltVersions,
+  installFabric,
+  installQuilt
+} from './services/modLoaderService'
+import {
   getSystemPerformanceInfo,
 } from './services/systemInfoService'
 import {
@@ -152,6 +158,11 @@ export function registerIpcHandlers(): void {
 
   handleIpc('versions:get-catalog', getMinecraftVersionCatalog)
   handleIpc('minecraft:scan-directory', scanMinecraftDirectory)
+
+  handleIpc('modloader:get-fabric-versions', getFabricVersions)
+  handleIpc('modloader:get-quilt-versions', getQuiltVersions)
+  handleIpc('modloader:install-fabric', installFabric)
+  handleIpc('modloader:install-quilt', installQuilt)
 
   handleIpc('java:scan', (customScanDirs?: string[], forceRefresh?: boolean) =>
     scanJavaRuntimes(customScanDirs ?? [], forceRefresh === true)

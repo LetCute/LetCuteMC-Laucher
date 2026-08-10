@@ -63,11 +63,6 @@ export interface LaunchInput {
   maxMemoryMb: number
   serverAddress?: string
   auth?: AuthSession | null
-  performance?: {
-    enableLaunchBoost: boolean
-    launchBoostDurationMs: number
-    launchBoostPriority: 'above_normal' | 'high'
-  }
 }
 
 export interface LaunchResult {
@@ -256,6 +251,13 @@ export type MinecraftVersionType =
   | 'old_alpha'
   | 'unknown'
 
+export type ModLoaderType = 'vanilla' | 'fabric' | 'quilt'
+
+export interface ModLoaderVersion {
+  version: string
+  stable: boolean
+}
+
 export interface LauncherProfile {
   id: string
   name: string
@@ -317,16 +319,11 @@ export interface AutoPerformanceRecommendation {
   recommendedMinRam: number
   recommendedMaxRam: number
   recommendedConcurrency: number
-  recommendedBoostDurationMs: number
-  recommendedBoostPriority: 'above_normal' | 'high'
   reason: string
 }
 
 /** Runtime-resolved knobs (auto overrides manual). Shared main↔renderer. */
 export interface EffectivePerformanceSettings {
-  enableLaunchBoost: boolean
-  launchBoostDurationMs: number
-  launchBoostPriority: 'above_normal' | 'high'
   enableAutoPrepareGame: boolean
   downloadConcurrency: number
   fastLaunchMode: boolean
@@ -346,9 +343,6 @@ export interface LauncherSettings {
   checkJavaOnStartup: boolean
   checkVersionsOnStartup: boolean
   autoCloseLauncherAfterStart: boolean
-  enableLaunchBoost: boolean
-  launchBoostDurationMs: number
-  launchBoostPriority: 'above_normal' | 'high'
   enableAutoPrepareGame: boolean
   downloadConcurrency: number
   manifestCacheTtlMs: number

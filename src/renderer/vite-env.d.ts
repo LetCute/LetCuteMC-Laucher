@@ -31,6 +31,7 @@ import type {
   PrepareGameResult,
   PreparedProfileState,
   PrepareGameProgress,
+  ModLoaderVersion,
 } from '../shared/types'
 
 declare global {
@@ -134,6 +135,12 @@ declare global {
       clearVersionManifestCache(): Promise<boolean>
       clearPreparedProfilesCache(): Promise<boolean>
       onPrepareGameProgress(callback: (progress: PrepareGameProgress) => void): () => void
+
+      // Mod Loader API
+      getFabricVersions(): Promise<ModLoaderVersion[]>
+      getQuiltVersions(): Promise<ModLoaderVersion[]>
+      installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
+      installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
     }
   }
 }

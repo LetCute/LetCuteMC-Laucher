@@ -218,31 +218,12 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
       }
 
       const parentJson = JSON.parse(await fs.readFile(parentJsonPath, 'utf8'))
-      postLog('info', `Cấu hình cha ${inheritedVersion} đã sẵn sàng. Tiến hành merge cấu hình...`)
-
-      // Merge libraries
-      const childLibs = versionJson.libraries || []
-      const parentLibs = parentJson.libraries || []
-      versionJson.libraries = [...childLibs, ...parentLibs]
-
-      // Merge assetIndex
-      if (!versionJson.assetIndex && parentJson.assetIndex) {
-        versionJson.assetIndex = parentJson.assetIndex
-      }
-
-      // Merge downloads
-      if (!versionJson.downloads?.client && parentJson.downloads?.client) {
-        versionJson.downloads = {
-          ...versionJson.downloads,
-          client: parentJson.downloads.client
-        }
-      }
-
-      // Merge javaVersion
-      if (!versionJson.javaVersion && parentJson.javaVersion) {
-        versionJson.javaVersion = parentJson.javaVersion
-      }
+      postLog('info', `Cấu hình cha ${inheritedVersion} đã sẵn sàng.`)
     }
+
+    // Use XMCL Core to parse and resolve the entire version correctly (including inheritsFrom and libraries)
+    const { Version } = await import('@xmcl/core')
+    const resolvedVersion = await Version.parse(gameDir, version)
 
     let clientJarReady = await pathExists(clientJarPath)
     postLog('info', `[PrepareWorker] Client Jar path: ${clientJarPath} (Ready: ${clientJarReady})`)
@@ -250,59 +231,43 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     const downloadQueue: DownloadTask[] = []
 
     // 2a. Add client jar task if missing
-    if (!clientJarReady && versionJson.downloads?.client) {
+    if (!clientJarReady && resolvedVersion.downloads?.client) {
       downloadQueue.push({
-        id: `client-jar-${versionJson.id || version}`,
-        url: versionJson.downloads.client.url,
+        id: `client-jar-${resolvedVersion.id}`,
+        url: resolvedVersion.downloads.client.url,
         destinationPath: clientJarPath,
-        sha1: versionJson.downloads.client.sha1,
-        size: versionJson.downloads.client.size,
+        sha1: resolvedVersion.downloads.client.sha1,
+        size: resolvedVersion.downloads.client.size,
         label: `Minecraft Client ${inheritedVersion !== 'None' ? inheritedVersion : version} Jar`,
       })
     }
 
-    // 2b. Check libraries
-    if (versionJson.libraries && Array.isArray(versionJson.libraries)) {
-      for (const lib of versionJson.libraries) {
-        // Simple OS rule check
-        if (lib.rules) {
-          let allowed = true
-          for (const rule of lib.rules) {
-            if (rule.os && rule.os.name === 'windows') {
-              allowed = rule.action === 'allow'
-            } else if (rule.os) {
-              allowed = rule.action === 'disallow'
-            }
-          }
-          if (!allowed) continue
-        }
-
-        const artifact = lib.downloads?.artifact
-        if (artifact) {
-          const libPath = path.join(gameDir, 'libraries', artifact.path)
-          if (!(await pathExists(libPath))) {
-            downloadQueue.push({
-              id: lib.name,
-              url: artifact.url,
-              destinationPath: libPath,
-              sha1: artifact.sha1,
-              size: artifact.size,
-              label: path.basename(artifact.path),
-            })
-          }
+    // 2b. Check libraries (XMCL already handles OS rules and Fabric/Quilt maven URLs)
+    for (const lib of resolvedVersion.libraries) {
+      if (lib.download) {
+        const libPath = path.join(gameDir, 'libraries', lib.download.path)
+        if (!(await pathExists(libPath))) {
+          downloadQueue.push({
+            id: lib.name,
+            url: lib.download.url,
+            destinationPath: libPath,
+            sha1: lib.download.sha1,
+            size: lib.download.size || 0,
+            label: path.basename(lib.download.path),
+          })
         }
       }
     }
 
     // 2c. Check assetIndex and assets
-    if (versionJson.assetIndex) {
+    if (resolvedVersion.assetIndex) {
       const assetIndexDir = path.join(gameDir, 'assets', 'indexes')
-      const assetIndexPath = path.join(assetIndexDir, `${versionJson.assetIndex.id}.json`)
+      const assetIndexPath = path.join(assetIndexDir, `${resolvedVersion.assetIndex.id}.json`)
       await fs.mkdir(assetIndexDir, { recursive: true })
 
       if (!(await pathExists(assetIndexPath))) {
-        postLog('info', `Đang tải asset index: ${versionJson.assetIndex.id}...`)
-        const res = await fetch(versionJson.assetIndex.url)
+        postLog('info', `Đang tải asset index: ${resolvedVersion.assetIndex.id}...`)
+        const res = await fetch(resolvedVersion.assetIndex.url)
         if (!res.ok) throw new Error(`Tải asset index thất bại: HTTP status ${res.status}`)
         const indexData = await res.json()
         await fs.writeFile(assetIndexPath, JSON.stringify(indexData, null, 2), 'utf8')
@@ -409,8 +374,8 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     postLog('info', ` - Phiên bản game con (child version): ${version}`)
     postLog('info', ` - Phiên bản kế thừa (inherited version): ${inheritedVersion}`)
     postLog('info', ` - Resolved Client Jar: ${clientJarPath}`)
-    postLog('info', ` - Asset Index ID: ${versionJson.assetIndex?.id || 'None'}`)
-    postLog('info', ` - Tổng số thư viện (libraries): ${versionJson.libraries?.length || 0}`)
+    postLog('info', ` - Asset Index ID: ${resolvedVersion.assetIndex?.id || 'None'}`)
+    postLog('info', ` - Tổng số thư viện (libraries): ${resolvedVersion.libraries?.length || 0}`)
 
     // Check Java Selection status
     const javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {

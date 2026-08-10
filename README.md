@@ -4,6 +4,18 @@
 
 ---
 
+## 📚 Bộ Tài Liệu Kỹ Thuật (Technical Documentation)
+
+Để hỗ trợ việc tìm hiểu kiến trúc, phát triển tính năng mới cũng như bảo trì hệ thống, dự án cung cấp bộ tài liệu kỹ thuật chi tiết tại thư mục [`docs/`](file:///e:/website-app/LetCuteMC/docs):
+
+* 🏗️ **[Kiến Trúc Hệ Thống (ARCHITECTURE.md)](file:///e:/website-app/LetCuteMC/docs/ARCHITECTURE.md)**: Mô hình đa tiến trình (Main, Renderer, Worker Threads), cơ chế giao tiếp IPC bảo mật, luồng khởi chạy game.
+* ⚙️ **[Chi Tiết Services & Workers (SERVICES.md)](file:///e:/website-app/LetCuteMC/docs/SERVICES.md)**: Phân tích danh mục 20 backend services và 2 tiến trình xử lý ngầm (launchWorker, prepareWorker).
+* 🔌 **[Danh Mục IPC Channel & API (IPC_API.md)](file:///e:/website-app/LetCuteMC/docs/IPC_API.md)**: Tra cứu chi tiết toàn bộ các phương thức bridge `window.launcherApi` và các sự kiện thời gian thực.
+* 🎯 **[Đặc Tả Tính Năng Kỹ Thuật (FEATURES_SPEC.md)](file:///e:/website-app/LetCuteMC/docs/FEATURES_SPEC.md)**: Cơ chế quét & tự động cài Java OpenJDK, tải song song & xác minh SHA-1, quản lý Mods/ResourcePacks và xác thực Microsoft.
+* 🛠️ **[Hướng Dẫn Phát Triển & Đóng Gói (DEVELOPER_GUIDE.md)](file:///e:/website-app/LetCuteMC/docs/DEVELOPER_GUIDE.md)**: Cài đặt môi trường, danh mục các lệnh script (`npm run dev`, `build`, `dist`) và cấu trúc dự án.
+
+---
+
 ## ✨ Tính Năng Nổi Bật
 
 * **Quản lý Cấu hình (Profiles)**: Dễ dàng thêm, sửa, xoá cấu hình phiên bản Minecraft. Hỗ trợ tùy chỉnh thư mục game, phân bổ bộ nhớ (RAM), Java Runtime riêng biệt cho từng cấu hình.
@@ -15,7 +27,7 @@
   * Bật/tắt nhanh hoặc xoá bỏ tài nguyên chỉ với 1 click.
 * **Xác thực & Tải tệp tin game thông minh**:
   * Tự động quét, đối chiếu kích thước tệp tin trước khi vào game.
-  * Hỗ trợ tải song song (lên đến 8 luồng đồng thời) các tệp tin asset, thư viện (libraries) và client jar từ Mojang.
+  * Hỗ trợ tải song song (lên đến 16 luồng đồng thời) các tệp tin asset, thư viện (libraries) và client jar từ Mojang.
   * Cơ chế tải qua tệp tạm `.part` và xác minh mã băm SHA-1 trước khi đổi tên chính thức để ngăn chặn tệp tin bị hỏng (corruption).
 * **Tính năng Sửa lỗi (Repair)**: Cung cấp tuỳ chọn quét toàn diện mã băm SHA-1 của toàn bộ tệp tin game và tự động tải lại các tệp bị lỗi/thiếu.
 * **Trình xem Nhật ký (Logs View)**: Hộp thoại dòng lệnh trực tiếp (console log) cho phép bôi đen, lựa chọn và sao chép văn bản log thuận tiện.
@@ -26,13 +38,13 @@
 ## 🛠️ Công Nghệ Sử Dụng
 
 * **Khung ứng dụng**: Electron 43 & Node.js
-* **Giao diện**: React, Vite, TypeScript
+* **Giao diện**: React 19, Vite, TypeScript
 * **Styling**: TailwindCSS & Vanilla CSS (với các hiệu ứng Blur, Glassmorphism, Dark mode cao cấp)
-* **Minecraft Core**: `@xmcl/core`, `@xmcl/user`, `@xmcl/unzip`...
+* **Minecraft Core**: `@xmcl/core`, `@xmcl/installer`, `@xmcl/unzip`...
 
 ---
 
-## 🚀 Hướng Dẫn Phát Triển & Đóng Gói
+## 🚀 Hướng Dẫn Nhanh Phát Triển & Đóng Gói
 
 ### Cài đặt dependencies
 ```bash
@@ -59,8 +71,9 @@ npm run dist
 
 ## 📁 Cấu Trúc Thư Mục Chính
 
-* `src/main/`: Mã nguồn tiến trình Electron Main và các Services chạy nền.
+* `docs/`: Bộ tài liệu kỹ thuật toàn diện của dự án.
+* `src/main/`: Mã nguồn tiến trình Electron Main và 20 Services chạy nền.
 * `src/main/workers/`: Các worker tiến trình độc lập xử lý tải game (`prepareWorker.ts`) và khởi chạy game (`launchWorker.ts`).
-* `src/renderer/`: Giao diện người dùng (React, components, screens, hooks).
+* `src/renderer/`: Giao diện người dùng (React 19, components, screens, hooks).
 * `src/shared/`: Định nghĩa kiểu dữ liệu (Types) dùng chung giữa Main và Renderer.
 * `public/`: Tài nguyên tĩnh phục vụ dev & build.
