@@ -196,7 +196,7 @@ export function Sidebar({
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
-              <DropdownMenuItem 
+              <DropdownMenuItem
                 key={p.id}
                 onSelect={() => onSetActiveProfile(p.id)}
                 className="flex items-center gap-2 py-2 cursor-pointer"
@@ -306,7 +306,7 @@ export function Sidebar({
                           try {
                             const updated = await window.launcherApi.selectAccount(acc.id)
                             onAccountStateChange(updated)
-                          } catch(err) {
+                          } catch (err) {
                             console.error(err)
                           }
                         }

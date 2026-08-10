@@ -378,6 +378,7 @@ function App() {
               profiles={profiles}
               activeProfileId={activeProfileId}
               onSetActive={handleSetActiveProfile}
+              onCreateProfile={() => openCreateProfile()}
               onEdit={openEditProfile}
               onDelete={handleDeleteProfile}
               onLaunchProfile={handleLaunchProfileDirectly}

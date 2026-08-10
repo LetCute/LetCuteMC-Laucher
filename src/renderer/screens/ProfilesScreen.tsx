@@ -1,5 +1,5 @@
 import type { LauncherProfile } from '../../shared/types'
-import { Layers, Edit2, Trash2, Check, Play } from 'lucide-react'
+import { Layers, Edit2, Trash2, Check, Play, PlusCircle } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { useLauncherJob } from '../hooks/useLauncherJob'
@@ -9,6 +9,7 @@ interface ProfilesScreenProps {
   profiles: LauncherProfile[]
   activeProfileId: string | null
   onSetActive: (id: string) => void
+  onCreateProfile: () => void
   onEdit: (profile: LauncherProfile) => void
   onDelete: (id: string) => void
   onLaunchProfile: (id: string) => Promise<void>
@@ -19,6 +20,7 @@ export const ProfilesScreen = ({
   profiles,
   activeProfileId,
   onSetActive,
+  onCreateProfile,
   onEdit,
   onDelete,
   onLaunchProfile,
@@ -44,7 +46,19 @@ export const ProfilesScreen = ({
               Danh sách các cấu hình cài đặt
             </p>
           </div>
-
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => onCreateProfile()}
+              disabled={isWorking}
+              variant="primary"
+              size="sm"
+              className="h-9 px-3"
+              title="Tạo cấu hình mới"
+            >
+              <PlusCircle size={14} className="mr-1.5" />
+              Tạo cấu hình
+            </Button>
+          </div>
         </div>
 
         {/* List or Empty State */}
