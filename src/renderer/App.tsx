@@ -68,15 +68,13 @@ function App() {
     checkJavaOnStartup: true,
     checkVersionsOnStartup: true,
     autoCloseLauncherAfterStart: true,
-    enableLaunchBoost: true,
-    launchBoostDurationMs: 45000,
-    launchBoostPriority: 'high',
     enableAutoPrepareGame: true,
     downloadConcurrency: 8,
     manifestCacheTtlMs: 21600000,
     fastLaunchMode: true,
     enableOptimizedJvmArgs: true,
     performanceMode: 'auto',
+    enableDiscordRpc: false,
   });
 
   const [versionCatalog, setVersionCatalog] = useState<MinecraftVersionCatalog | null>(null);
@@ -123,6 +121,8 @@ function App() {
       version: target.minecraftVersion,
       versionType: 'release',
       gameDir: target.gameDir || gameDir,
+      // Với profile modpack có gameDir riêng: dùng mcRootDir để XMCL tìm libraries/versions đúng chỗ
+      resourcePath: target.mcRootDir || null,
       javaPath: javaSelection?.selectedRuntime?.javaPath ?? null,
       minMemoryMb: target.minMemoryMb || settings.defaultMinMemoryMb,
       maxMemoryMb: target.maxMemoryMb || settings.defaultMaxMemoryMb,
@@ -136,11 +136,6 @@ function App() {
             accessToken: activeAccount.accessToken || '',
             expiresAt: activeAccount.expiresAt,
           },
-      performance: {
-        enableLaunchBoost: settings.enableLaunchBoost,
-        launchBoostDurationMs: settings.launchBoostDurationMs,
-        launchBoostPriority: settings.launchBoostPriority,
-      },
     })
   }
 
@@ -365,6 +360,9 @@ function App() {
         <div className="min-h-0 flex-1 overflow-y-auto">
           {activeTab === 'store' && (
             <StoreScreen 
+              gameDir={activeProfile?.gameDir || gameDir}
+              profiles={profiles}
+              activeProfileId={activeProfileId}
               onInstallSuccess={async (newProfileId) => {
                 await initializeAppData();
                 await handleSetActiveProfile(newProfileId);

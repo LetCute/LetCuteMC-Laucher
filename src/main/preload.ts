@@ -301,6 +301,18 @@ const launcherApi = {
 
   installModrinthModpack(versionId: string, profileName: string): Promise<string> {
     return ipcRenderer.invoke('modrinth:install-modpack', { versionId, profileName })
+  },
+
+  getStoreInstallations(gameDir: string): Promise<import('../shared/types').StoreInstallation[]> {
+    return ipcRenderer.invoke('store:get-installations', gameDir)
+  },
+
+  installStoreMod(versionId: string, gameDir: string): Promise<boolean> {
+    return ipcRenderer.invoke('store:install-mod', { versionId, gameDir })
+  },
+
+  uninstallStoreItem(projectId: string, gameDir: string): Promise<boolean> {
+    return ipcRenderer.invoke('store:uninstall-item', { projectId, gameDir })
   }
 }
 

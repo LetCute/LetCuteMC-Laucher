@@ -19,6 +19,7 @@ import {
   RefreshCw,
 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
+import { useToast } from '../ui/Toast'
 import logoImg from '../../assets/logo.png'
 import steveImg from '../../assets/steve.png'
 import type {
@@ -58,9 +59,10 @@ interface SidebarProps {
 }
 
 import { ShoppingBag } from 'lucide-react'
+import { ModrinthIcon } from '../icons/ModrinthIcon'
 
 const MENU_ITEMS = [
-  { id: 'store', label: 'Cửa hàng', icon: ShoppingBag },
+  { id: 'store', label: 'Cửa hàng', icon: ModrinthIcon },
   { id: 'profiles', label: 'Cấu hình game', icon: Layers },
   { id: 'versions', label: 'Phiên bản', icon: List },
   { id: 'accounts', label: 'Tài khoản', icon: User },
@@ -85,6 +87,8 @@ export function Sidebar({
   gameDir,
   isWorking
 }: SidebarProps) {
+  const { showToast } = useToast()
+
   const { state, isBusy, isStarting, isRunning, isFailed, startLaunch, cancelLaunch } = useLauncherJob()
   const { prepareState, progress: prepareProgress, isPreparing, startPrepare } = usePrepareGame(activeProfile, settings)
   const [shouldLaunchAfterPrepare, setShouldLaunchAfterPrepare] = useState(false)
@@ -120,16 +124,12 @@ export function Sidebar({
       version: activeProfile.minecraftVersion,
       versionType: 'release',
       gameDir: activeProfile.gameDir || gameDir,
+      resourcePath: activeProfile.mcRootDir || null,
       javaPath: javaSelection?.selectedRuntime?.javaPath ?? null,
       minMemoryMb: activeProfile.minMemoryMb || settings.defaultMinMemoryMb,
       maxMemoryMb: activeProfile.maxMemoryMb || settings.defaultMaxMemoryMb,
       serverAddress: undefined,
       auth,
-      performance: {
-        enableLaunchBoost: settings.enableLaunchBoost,
-        launchBoostDurationMs: settings.launchBoostDurationMs,
-        launchBoostPriority: settings.launchBoostPriority,
-      },
     })
   }
 
@@ -140,6 +140,17 @@ export function Sidebar({
       void triggerLaunch()
     }
   }, [shouldLaunchAfterPrepare, prepareState?.isReady, isPreparing])
+
+  // Show error toast if launch fails
+  useEffect(() => {
+    if (isFailed && state?.error) {
+      showToast({
+        title: 'Khởi chạy thất bại',
+        description: state.error,
+        type: 'error',
+      })
+    }
+  }, [isFailed, state?.error, showToast])
 
   const handlePlay = async () => {
     console.log('[Sidebar] handlePlay clicked', { activeProfile: activeProfile?.id, isBusy, isStarting, isPreparing })
@@ -209,17 +220,8 @@ export function Sidebar({
             )}
             <DropdownMenuSeparator />
             <DropdownMenuItem onSelect={() => onTabChange('profiles')} className="text-primary focus:text-primary cursor-pointer">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Tạo Cấu hình mới
-            </DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => onTabChange('profiles')} className="cursor-pointer">
               <Layers className="mr-2 h-4 w-4" />
               Quản lý Cấu hình
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => window.location.reload()} className="text-emerald-500 focus:text-emerald-500 cursor-pointer">
-              <RefreshCw className="mr-2 h-4 w-4" />
-              Tải lại Launcher
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

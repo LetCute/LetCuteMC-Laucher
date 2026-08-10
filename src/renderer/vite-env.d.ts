@@ -141,6 +141,16 @@ declare global {
       getQuiltVersions(): Promise<ModLoaderVersion[]>
       installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
       installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
+
+      // Modrinth API
+      searchModrinth(query: string, projectType: string, offset: number): Promise<import('../shared/types').ModrinthSearchResult>
+      getModrinthVersions(projectId: string): Promise<import('../shared/types').ModrinthVersion[]>
+      installModrinthModpack(versionId: string, profileName: string): Promise<string>
+      
+      // Store Management
+      getStoreInstallations(gameDir: string): Promise<import('../shared/types').StoreInstallation[]>
+      installStoreMod(versionId: string, gameDir: string): Promise<boolean>
+      uninstallStoreItem(projectId: string, gameDir: string): Promise<boolean>
     }
   }
 }

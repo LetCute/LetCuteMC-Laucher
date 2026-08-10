@@ -164,10 +164,17 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     const scanDirs = [...settings.customJavaScanDirs]
     const mcRoot = settings.minecraftDirectory
 
+    // resourcePath: thư mục chứa versions/, libraries/, assets/
+    // Với profile modpack có gameDir riêng: dùng input.resourcePath (mcRootDir của profile)
+    // Với profile thường: dùng mcRoot từ settings
+    const resourcePath = (input.resourcePath && input.resourcePath.trim() !== '') 
+      ? input.resourcePath 
+      : mcRoot
+
     const javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
-      gameDir: mcRoot,
+      gameDir: resourcePath,
       preferredJavaPath: input.javaPath,
-      allowNewer: true,
+      allowNewer: false,
     })
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
@@ -192,7 +199,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
     assertNotCancelled()
 
-    const checkDir = path.join(mcRoot, 'versions', input.version)
+    // Tìm version JSON tại resourcePath (nơi cài Fabric/Vanilla)
+    const checkDir = path.join(resourcePath, 'versions', input.version)
     const versionJson = path.join(checkDir, `${input.version}.json`)
     const isInstalled = await pathExists(versionJson)
 
@@ -212,8 +220,34 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
     assertNotCancelled()
 
-    // XMCL: parse version (auto-resolves inheritsFrom, guarantees downloads.client)
-    const resolved: ResolvedVersion = await Version.parse(mcRoot, input.version)
+    // XMCL parse version:
+    // - Với profile modpack (có mcRootDir hoặc gameDir nằm trong profiles/):
+    //   version files đã được copy vào gameDir/versions/ bởi prepareWorker
+    //   Nên parse tại gamePath (input.gameDir) để XMCL tìm được đúng JSON
+    // - Với profile thường: parse tại resourcePath (mcRoot)
+    const hasResourcePath = input.resourcePath && input.resourcePath.trim() !== '' && 
+      input.resourcePath.toLowerCase() !== input.gameDir.toLowerCase()
+    const isInProfilesPath = input.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
+      input.gameDir.toLowerCase().includes('/profiles/')
+    const isModpackProfile = hasResourcePath || (isInProfilesPath && input.gameDir.toLowerCase() !== resourcePath.toLowerCase())
+    const parseRoot = isModpackProfile ? input.gameDir : resourcePath
+    
+    postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile})`)
+    const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
+
+    // Filter out unsupported JVM flags for Java < 24 (e.g. UseCompactObjectHeaders)
+    if (javaVer < 24 && (resolved as any).arguments?.jvm) {
+      ;(resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
+        if (typeof arg === 'string') {
+          return !arg.includes('UseCompactObjectHeaders')
+        }
+        if (arg && typeof arg === 'object' && Array.isArray(arg.value)) {
+          arg.value = arg.value.filter((v: string) => !v.includes('UseCompactObjectHeaders'))
+          return arg.value.length > 0
+        }
+        return true
+      })
+    }
 
     // ── Launch ────────────────────────────────────────────────────────────
     assertNotCancelled()
@@ -226,14 +260,27 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     })
 
     const customArgs: string[] = []
-    if (javaVer >= 21) {
-      customArgs.push('--enable-native-access=ALL-UNNAMED')
+    if (javaVer >= 17) {
+      customArgs.push(
+        '--enable-native-access=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.invoke=ALL-UNNAMED',
+        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED',
+        '--add-opens=java.base/java.io=ALL-UNNAMED',
+        '--add-opens=java.base/java.net=ALL-UNNAMED',
+        '--add-opens=java.base/java.nio=ALL-UNNAMED',
+        '--add-opens=java.base/java.util=ALL-UNNAMED',
+        '--add-opens=java.base/java.util.concurrent=ALL-UNNAMED',
+        '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED'
+      )
     }
 
-    // XMCL launch (auto inheritance, no downloads.client crash)
+    // XMCL launch:
+    // - gamePath: thư mục chứa saves/, mods/, config/ (profile riêng của modpack)
+    // - resourcePath: thư mục chứa versions/, libraries/, assets/ (mcRoot)
     const child = await xmclLaunch({
       gamePath: input.gameDir,
-      resourcePath: mcRoot,
+      resourcePath: resourcePath,
       javaPath,
       version: resolved,
       accessToken: auth.accessToken,
@@ -247,23 +294,45 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     const minecraftPid = child.pid ?? null
     if (minecraftPid) {
       postLog(jobId, 'info', `Minecraft process started with PID ${minecraftPid}.`)
+      if ((child as any).spawnargs) {
+        postLog(jobId, 'info', `Command: ${(child as any).spawnargs.join(' ')}`)
+      }
     }
+
+    let lastErrorSummary = ''
+
+    child.stdout?.on('data', (data: Buffer) => {
+      const text = data.toString('utf8').trim()
+      if (text) {
+        postLog(jobId, 'info', text)
+        if (text.includes('Exception') || text.includes('Error') || text.includes('IncompatibleModException') || text.includes('net.fabricmc.loader')) {
+          lastErrorSummary = text
+        }
+      }
+    })
 
     child.stderr?.on('data', (data: Buffer) => {
       const text = data.toString('utf8').trim()
       if (text) {
-        postLog(jobId, 'error', `[Minecraft STDERR] ${text}`)
+        postLog(jobId, 'error', text)
+        lastErrorSummary = text
       }
     })
 
     child.on('exit', (code) => {
-      if (code !== 0 && code !== null) {
-        postLog(jobId, 'error', `Minecraft thoát lỗi với mã: ${code}`)
+      const ok = code === 0 || code === null
+      if (!ok) {
+        const errMsg = lastErrorSummary
+          ? `Lỗi khởi chạy Minecraft (mã ${code}): ${lastErrorSummary.slice(0, 200)}`
+          : `Minecraft thoát lỗi với mã: ${code}`
+        postLog(jobId, 'error', errMsg)
+        postStatus(jobId, 'failed')
+        postMsg({ type: 'finished', jobId, ok: false, message: errMsg })
       } else {
         postLog(jobId, 'success', 'Minecraft kết thúc bình thường.')
+        postStatus(jobId, 'closed')
+        postMsg({ type: 'finished', jobId, ok: true, message: `Minecraft closed with code ${code}.` })
       }
-      postStatus(jobId, 'closed')
-      postMsg({ type: 'finished', jobId, ok: code === 0 || code === null, message: `Minecraft closed with code ${code}.` })
     })
 
     postStatus(jobId, 'running')

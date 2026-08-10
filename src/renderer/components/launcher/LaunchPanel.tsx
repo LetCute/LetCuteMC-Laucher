@@ -116,16 +116,12 @@ export function LaunchPanel({
       version: activeProfile.minecraftVersion,
       versionType: 'release',
       gameDir: activeProfile.gameDir || gameDir,
+      resourcePath: activeProfile.mcRootDir || null,
       javaPath: javaSelection?.selectedRuntime?.javaPath ?? null,
       minMemoryMb: activeProfile.minMemoryMb || settings.defaultMinMemoryMb,
       maxMemoryMb: activeProfile.maxMemoryMb || settings.defaultMaxMemoryMb,
       serverAddress: undefined,
       auth,
-      performance: {
-        enableLaunchBoost: settings.enableLaunchBoost,
-        launchBoostDurationMs: settings.launchBoostDurationMs,
-        launchBoostPriority: settings.launchBoostPriority,
-      },
     })
   }
 

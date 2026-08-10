@@ -150,8 +150,16 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
   const version = profile.minecraftVersion
   const mcRoot = settings.minecraftDirectory
   const gameDir = profile.gameDir || mcRoot
+  
+  // Phát hiện modpack profile:
+  // 1. Nếu profile có mcRootDir (tạo sau khi fix)
+  // 2. Hoặc gameDir nằm trong subfolder 'profiles/' của mcRoot (tạo trước khi fix - tương thích ngược)
+  const hasMcRootDir = !!(profile.mcRootDir && profile.mcRootDir.toLowerCase() !== gameDir.toLowerCase())
+  const isInProfilesSubfolder = gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
+    gameDir.toLowerCase().includes('/profiles/')
+  const isModpackProfile = hasMcRootDir || (isInProfilesSubfolder && gameDir.toLowerCase() !== mcRoot.toLowerCase())
 
-  postLog('info', `[PrepareWorker] START prepare profile=${profileId} version=${version} gameDir=${gameDir} mcRoot=${mcRoot}`)
+  postLog('info', `[PrepareWorker] START prepare profile=${profileId} version=${version} gameDir=${gameDir} mcRoot=${mcRoot} isModpackProfile=${isModpackProfile}`)
 
   try {
     postProgress(profileId, version, {
@@ -370,6 +378,51 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
       throw new Error(`Tệp Client Jar chưa được tải hoặc không tồn tại tại: "${clientJarPath}".`)
     }
 
+    // ── Bước thêm: Copy version folder vào profile's gameDir nếu là modpack profile ──
+    // Modpack profile có gameDir riêng cần có versions/ của nó để Minecraft client tìm thấy và tránh xung đột
+    if (isModpackProfile) {
+      postProgress(profileId, version, {
+        status: 'checking',
+        title: 'Sao chép dữ liệu phiên bản',
+        message: 'Đang sao chép tệp phiên bản vào thư mục profile...',
+        percent: 92,
+      })
+
+      // Copy toàn bộ các version folder cần thiết (bao gồm cả inheritsFrom chain)
+      const versionsToCopy: string[] = [version]
+      if (inheritedVersion !== 'None') {
+        versionsToCopy.push(inheritedVersion)
+      }
+
+      for (const ver of versionsToCopy) {
+        const srcVersionDir = path.join(mcRoot, 'versions', ver)
+        const dstVersionDir = path.join(gameDir, 'versions', ver)
+
+        if (!(await pathExists(srcVersionDir))) {
+          postLog('warn', `[PrepareWorker] Version source folder không tồn tại: ${srcVersionDir}, bỏ qua copy.`)
+          continue
+        }
+
+        await fs.mkdir(dstVersionDir, { recursive: true })
+
+        // Copy tất cả file trong folder version (json, jar, natives-info...)
+        const entries = await fs.readdir(srcVersionDir, { withFileTypes: true })
+        for (const entry of entries) {
+          if (entry.isFile()) {
+            const srcFile = path.join(srcVersionDir, entry.name)
+            const dstFile = path.join(dstVersionDir, entry.name)
+            // Chỉ copy nếu file đích chưa tồn tại hoặc forceRepair
+            const dstExists = await pathExists(dstFile)
+            if (!dstExists || forceRepair) {
+              await fs.copyFile(srcFile, dstFile)
+              postLog('info', `[PrepareWorker] Đã sao chép: ${entry.name} → ${dstVersionDir}`)
+            }
+          }
+        }
+        postLog('success', `[PrepareWorker] Phiên bản ${ver} đã được sao chép vào profile.`)
+      }
+    }
+
     // Log detailed summary
     postLog('info', `[PrepareWorker] HOÀN TẤT CHUẨN BỊ GAME:`)
     postLog('info', ` - Phiên bản game con (child version): ${version}`)
@@ -380,7 +433,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
 
     // Check Java Selection status
     const javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {
-      gameDir,
+      gameDir: mcRoot,
     })
 
     const finalState: PreparedProfileState = {

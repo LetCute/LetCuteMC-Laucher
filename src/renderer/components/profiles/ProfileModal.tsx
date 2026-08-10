@@ -57,6 +57,7 @@ export function ProfileModal({
   const [selectedLoaderVersion, setSelectedLoaderVersion] = useState<string>('')
   const [isFetchingLoaders, setIsFetchingLoaders] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const [isIsolated, setIsIsolated] = useState(true)
 
   useEffect(() => {
     if (!versionCatalog || !formData.minecraftVersion) {
@@ -77,6 +78,7 @@ export function ProfileModal({
         minMemoryMb: profile.minMemoryMb,
         maxMemoryMb: profile.maxMemoryMb,
       })
+      setIsIsolated(!!profile.mcRootDir || (!!profile.gameDir && profile.gameDir.toLowerCase() !== defaultGameDir.toLowerCase()))
     } else {
       const first = preselectedVersion ?? (versionCatalog?.releases?.[0] ?? null)
       setFormData({
@@ -86,6 +88,7 @@ export function ProfileModal({
         minMemoryMb: 2048,
         maxMemoryMb: 4096,
       })
+      setIsIsolated(true)
     }
     setErrors({})
     setModLoader('vanilla')
@@ -133,6 +136,21 @@ export function ProfileModal({
     if (!validate()) return
 
     let finalMinecraftVersion = formData.minecraftVersion
+    
+    let finalGameDir = formData.gameDir
+    let mcRootDir = null
+    
+    if (isIsolated) {
+      if (finalGameDir === defaultGameDir || !finalGameDir) {
+        const safeName = formData.name.replace(/[^a-zA-Z0-9_-]/g, '_')
+        const sep = defaultGameDir.includes('\\') ? '\\' : '/'
+        finalGameDir = `${defaultGameDir}${sep}profiles${sep}${safeName}`
+      }
+      mcRootDir = defaultGameDir
+    } else {
+      finalGameDir = defaultGameDir
+      mcRootDir = null
+    }
 
     if (modLoader !== 'vanilla' && selectedLoaderVersion) {
       setIsInstalling(true)
@@ -141,13 +159,13 @@ export function ProfileModal({
           finalMinecraftVersion = await window.launcherApi.installFabric(
             formData.minecraftVersion,
             selectedLoaderVersion,
-            formData.gameDir
+            isIsolated ? mcRootDir! : finalGameDir
           )
         } else if (modLoader === 'quilt') {
           finalMinecraftVersion = await window.launcherApi.installQuilt(
             formData.minecraftVersion,
             selectedLoaderVersion,
-            formData.gameDir
+            isIsolated ? mcRootDir! : finalGameDir
           )
         }
       } catch (err) {
@@ -161,7 +179,8 @@ export function ProfileModal({
     onSave({
       name: formData.name,
       minecraftVersion: finalMinecraftVersion,
-      gameDir: formData.gameDir,
+      gameDir: finalGameDir,
+      mcRootDir: mcRootDir,
       minMemoryMb: formData.minMemoryMb,
       maxMemoryMb: formData.maxMemoryMb,
     })
@@ -280,7 +299,25 @@ export function ProfileModal({
           </div>
         )}
 
-        <div className="col-span-2">
+        <div className="col-span-2 flex flex-col gap-2 p-3 bg-input/50 rounded-xl border border-border">
+          <label className="flex items-start gap-3 opacity-90 cursor-not-allowed">
+            <input 
+              type="checkbox" 
+              checked={isIsolated} 
+              disabled={true}
+              readOnly
+              className="mt-0.5 w-4 h-4 rounded border-border text-primary focus:ring-primary bg-input/50 accent-primary cursor-not-allowed"
+            />
+            <div className="flex flex-col">
+              <span className="text-sm font-medium text-foreground">Chia profile riêng biệt (Profile Độc Lập)</span>
+              <span className="text-xs text-muted-foreground mt-1">
+                Mặc định mỗi Cấu hình sẽ có thư mục riêng để lưu trữ Mods, Shaders và Saves độc lập khỏi thư mục gốc (Bắt buộc).
+              </span>
+            </div>
+          </label>
+        </div>
+
+        {/* <div className="col-span-2">
           <Input
             label="Thư Mục Game"
             placeholder="Để trống để Launcher tự tạo thư mục riêng biệt"
@@ -288,7 +325,7 @@ export function ProfileModal({
             onChange={(e) => setFormData({ ...formData, gameDir: e.target.value })}
             error={errors.gameDir}
           />
-        </div>
+        </div> */}
 
         <Input
           label="RAM Tối Thiểu (MB)"

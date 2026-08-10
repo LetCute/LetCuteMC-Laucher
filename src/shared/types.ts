@@ -58,6 +58,8 @@ export interface LaunchInput {
   version: string
   versionType: 'release' | 'snapshot' | 'old_beta' | 'old_alpha' | 'unknown'
   gameDir: string
+  /** Thư mục chứa versions/libraries/assets (thường là .minecraft chính). Dùng cho profile modpack có gameDir riêng biệt. */
+  resourcePath?: string | null
   javaPath?: string | null
   minMemoryMb: number
   maxMemoryMb: number
@@ -263,6 +265,8 @@ export interface LauncherProfile {
   name: string
   minecraftVersion: string
   gameDir: string
+  /** Thư mục chứa versions/libraries/assets. Dùng khi gameDir là thư mục profile riêng (modpack). */
+  mcRootDir?: string | null
   minMemoryMb: number
   maxMemoryMb: number
   javaPath?: string | null
@@ -279,6 +283,7 @@ export interface CreateProfileInput {
   name: string
   minecraftVersion: string
   gameDir?: string
+  mcRootDir?: string | null
   minMemoryMb?: number
   maxMemoryMb?: number
   javaPath?: string | null
@@ -288,15 +293,7 @@ export interface UpdateProfileInput {
   name?: string
   minecraftVersion?: string
   gameDir?: string
-  minMemoryMb?: number
-  maxMemoryMb?: number
-  javaPath?: string | null
-}
-
-export interface UpdateProfileInput {
-  name?: string
-  minecraftVersion?: string
-  gameDir?: string
+  mcRootDir?: string | null
   minMemoryMb?: number
   maxMemoryMb?: number
   javaPath?: string | null
@@ -655,3 +652,14 @@ export interface ModrinthVersion {
     dependency_type: 'required' | 'optional' | 'incompatible' | 'embedded'
   }[]
 }
+
+export interface StoreInstallation {
+  projectId: string
+  versionId: string
+  projectType: string
+  title: string
+  versionName: string
+  installedAt: string
+  files: string[] // Paths of installed files relative to gameDir
+}
+

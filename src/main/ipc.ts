@@ -183,15 +183,39 @@ export function registerIpcHandlers(): void {
   })
   handleIpc('modrinth:install-modpack', async ({ versionId, profileName }: { versionId: string, profileName: string }) => {
     const { installModrinthModpack } = await import('./services/modrinthService.js')
+    const { getSettings } = await import('./services/settingsService.js')
     const { getDefaultMinecraftDirectory } = await import('./services/storageService.js')
+    
+    // Dùng minecraftDirectory từ settings thực tế (người dùng có thể đã tùy chỉnh)
+    const currentSettings = await getSettings()
+    const mcRootDir = currentSettings.minecraftDirectory || getDefaultMinecraftDirectory()
     
     // Send logs to frontend via the same channel as launch job, or just standard log
     const appendLog = (level: string, msg: string) => {
       BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
     }
     
-    return await installModrinthModpack(versionId, profileName, getDefaultMinecraftDirectory(), appendLog)
+    return await installModrinthModpack(versionId, profileName, mcRootDir, appendLog)
   })
+
+  // Store Management
+  handleIpc('store:get-installations', async (gameDir: string) => {
+    const { getStoreInstallations } = await import('./services/modrinthService.js')
+    return getStoreInstallations(gameDir)
+  })
+  handleIpc('store:install-mod', async ({ versionId, gameDir }: { versionId: string, gameDir: string }) => {
+    const { installModrinthMod } = await import('./services/modrinthService.js')
+    const appendLog = (level: string, msg: string) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
+    }
+    await installModrinthMod(versionId, gameDir, appendLog)
+    return true
+  })
+  handleIpc('store:uninstall-item', async ({ projectId, gameDir }: { projectId: string, gameDir: string }) => {
+    const { uninstallStoreItem } = await import('./services/modrinthService.js')
+    return uninstallStoreItem(projectId, gameDir)
+  })
+
 
   handleIpc('modloader:get-fabric-versions', getFabricVersions)
   handleIpc('modloader:get-quilt-versions', getQuiltVersions)

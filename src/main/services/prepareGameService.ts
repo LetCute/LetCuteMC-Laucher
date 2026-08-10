@@ -93,12 +93,26 @@ export async function checkPreparedProfile(
   settings: LauncherSettings
 ): Promise<PreparedProfileState> {
   const gameDir = profile.gameDir || settings.minecraftDirectory
+  const mcRootDir = profile.mcRootDir || settings.minecraftDirectory
+  
+  // Phát hiện modpack profile (tương thích cả profile cũ và mới):
+  // 1. Có mcRootDir (profile tạo sau khi fix)
+  // 2. Hoặc gameDir nằm trong subfolder profiles/ (profile cũ)
+  const hasMcRootDir = !!(profile.mcRootDir && profile.mcRootDir.toLowerCase() !== gameDir.toLowerCase())
+  const isInProfilesSubfolder = gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
+    gameDir.toLowerCase().includes('/profiles/')
+  const isModpackProfile = hasMcRootDir || (isInProfilesSubfolder && gameDir.toLowerCase() !== mcRootDir.toLowerCase())
+  
+  // Với modpack profile: prepareWorker đã copy version vào gameDir/versions/ → kiểm tra tại đó
+  // Với profile thường: kiểm tra tại mcRootDir (= gameDir)
+  const versionCheckDir = isModpackProfile ? gameDir : mcRootDir
+  
   const cached = await getPreparedProfiles()
 
   if (cached[profile.id]) {
-    // Quick validation of existing cached record
+    // Quick validation: kiểm tra version JSON và JAR tại đường dẫn đúng
     const record = cached[profile.id]
-    const versionDir = path.join(gameDir, 'versions', profile.minecraftVersion)
+    const versionDir = path.join(versionCheckDir, 'versions', profile.minecraftVersion)
     const versionJsonPath = path.join(versionDir, `${profile.minecraftVersion}.json`)
     
     let clientJarPath = path.join(versionDir, `${profile.minecraftVersion}.jar`)
@@ -110,7 +124,8 @@ export async function checkPreparedProfile(
         const json = JSON.parse(content)
         if (json.inheritsFrom) {
           const parentVersion = json.inheritsFrom
-          clientJarPath = path.join(gameDir, 'versions', parentVersion, `${parentVersion}.jar`)
+          // Parent version jar \u0111\u01b0\u1ee3c copy v\u00e0o gameDir c\u00f9ng n\u01a1i
+          clientJarPath = path.join(versionCheckDir, 'versions', parentVersion, `${parentVersion}.jar`)
         }
       } catch (_) {
         jsonExists = false
@@ -135,7 +150,7 @@ export async function checkPreparedProfile(
     assetsReady: false,
     javaReady: false,
     missingFiles: -1,
-    message: 'Chưa được chuẩn bị hoặc còn thiếu tệp tin.',
+    message: 'Ch\u01b0a \u0111\u01b0\u1ee3c chu\u1ea9n b\u1ecb ho\u1eb7c c\u00f2n thi\u1ebfu t\u1ec7p tin.',
   }
 }
 

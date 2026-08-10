@@ -8,6 +8,7 @@ import type {
 } from '../../shared/types';
 import {
   getProfilesFilePath,
+  getLauncherDataDirectory,
   ensureLauncherDataDirectory,
   readJsonFile,
   writeJsonFile,
@@ -50,6 +51,7 @@ function normalizeProfile(raw: any): LauncherProfile {
     name,
     minecraftVersion,
     gameDir: raw.gameDir ?? '',
+    mcRootDir: raw.mcRootDir ?? null,
     minMemoryMb: Number(raw.minMemoryMb ?? 2048),
     maxMemoryMb: Number(raw.maxMemoryMb ?? 4096),
     javaPath: raw.javaPath ?? null,
@@ -104,6 +106,7 @@ export async function createProfile(
     name: input.name,
     minecraftVersion: input.minecraftVersion,
     gameDir: finalGameDir,
+    mcRootDir: input.mcRootDir ?? null,
     minMemoryMb: input.minMemoryMb ?? rec.recommendedMinRam,
     maxMemoryMb: input.maxMemoryMb ?? rec.recommendedMaxRam,
     javaPath: input.javaPath ?? null,
@@ -133,14 +136,14 @@ export async function updateProfile(
   const errors = validateInput(input, false);
   if (errors.length) throw new Error('Dữ liệu không hợp lệ: ' + errors.join('; '));
 
-  const { getLauncherDataDirectory } = await import('./storageService.js');
-  let finalGameDir = input.gameDir || '';
-  if (finalGameDir.trim() === '') {
+  const existing = store.profiles[index];
+  let finalGameDir = input.gameDir !== undefined ? input.gameDir : existing.gameDir;
+  if (!finalGameDir || finalGameDir.trim() === '') {
     finalGameDir = getLauncherDataDirectory();
   }
 
   const updated: LauncherProfile = {
-    ...store.profiles[index],
+    ...existing,
     ...input,
     gameDir: finalGameDir,
     updatedAt: new Date().toISOString(),
@@ -162,6 +165,18 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   const store = await getProfiles();
   const index = store.profiles.findIndex(p => p.id === profileId);
   if (index === -1) return false;
+  
+  const profile = store.profiles[index];
+  const { getLauncherDataDirectory } = await import('./storageService.js');
+  const rootDir = getLauncherDataDirectory();
+  
+  // Only delete directory if it's explicitly inside a 'profiles' subfolder
+  // to avoid accidentally deleting the root game directory or important folders.
+  if (profile.gameDir && profile.gameDir.toLowerCase() !== rootDir.toLowerCase()) {
+    const fs = await import('node:fs/promises');
+    await fs.rm(profile.gameDir, { recursive: true, force: true }).catch(() => {});
+  }
+
   store.profiles.splice(index, 1);
   if (store.activeProfileId === profileId) store.activeProfileId = null;
   await writeJsonFile(getProfilesFilePath(), store);

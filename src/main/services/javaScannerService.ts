@@ -843,10 +843,18 @@ export async function selectBestJavaRuntime(
     }
   }
 
-  const selected = selectCompatibleJava(candidates, requiredMajor, {
+  let selected = selectCompatibleJava(candidates, requiredMajor, {
     allowNewer: options?.allowNewer === true,
     preferredJavaPath: options?.preferredJavaPath,
   })
+
+  // If not found, try forcing a refresh of the cache once
+  if (!selected && !options?.forceRefresh) {
+    return selectBestJavaRuntime(minecraftVersion, customScanDirs, {
+      ...options,
+      forceRefresh: true,
+    })
+  }
 
   if (!selected) {
     const available = candidates.map((c) => c.majorVersion).join(', ')
