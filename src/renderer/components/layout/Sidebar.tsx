@@ -202,7 +202,7 @@ export function Sidebar({
       <div className="px-3 pb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-card/30 p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
+            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-card p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
               <div className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
                 <span className="truncate text-sm font-semibold text-sidebar-foreground">
@@ -271,7 +271,7 @@ export function Sidebar({
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div
-                className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent/30 p-1.5 rounded-lg transition duration-150"
+                className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent p-1.5 rounded-lg transition duration-150"
                 title="Đổi tài khoản"
               >
                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
