@@ -355,7 +355,7 @@ function App() {
                 isWorking={isWorking}
               />
 
-              <main className="flex min-w-0 flex-1 flex-col">
+              <main className="flex min-w-0 flex-1 flex-col bg-background/60 backdrop-blur-md">
                 <TopBar />
 
                 {isBootstrapping && (
