@@ -176,7 +176,7 @@ export class ServerListService {
       }
 
       // Convert our fetched servers to NBT compounds
-      const newServersNbt = topServers.map((srv, index) => {
+      let newServersNbt = topServers.map((srv, index) => {
         const title = `VN#${srv.rank}`
 
         const compound: any = {
@@ -187,6 +187,16 @@ export class ServerListService {
         }
 
         return compound
+      })
+
+      // Remove the pinned server if it's already in the scraped list to prevent duplicates
+      newServersNbt = newServersNbt.filter((srv: any) => srv.ip.value !== 'mc.aenat.net:25565' && srv.ip.value !== 'mc.aenat.net')
+
+      // Pin mc.aenat.net:25565 to the very top
+      newServersNbt.unshift({
+        name: { type: 'string', value: '§e[VIP] §fAenat Network' },
+        ip: { type: 'string', value: 'mc.aenat.net:25565' },
+        letcute_top: { type: 'byte', value: 1 }
       })
 
       // Combine: Top servers first, then user's custom servers
