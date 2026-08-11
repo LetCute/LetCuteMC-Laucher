@@ -326,9 +326,6 @@ function App() {
         className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans bg-cover bg-center bg-no-repeat relative"
         style={{ backgroundImage: 'url(./background.jpg)' }}
       >
-        {/* Dark overlay to ensure text remains readable */}
-        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-
         {/* Content container - must have z-index to stay above the overlay */}
         <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
           {!criticalReady ? (
@@ -355,7 +352,7 @@ function App() {
                 isWorking={isWorking}
               />
 
-              <main className="flex min-w-0 flex-1 flex-col bg-background/60 backdrop-blur-md">
+              <main className="flex min-w-0 flex-1 flex-col">
                 <TopBar />
 
                 {isBootstrapping && (

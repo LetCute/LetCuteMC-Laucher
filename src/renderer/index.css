@@ -203,4 +203,28 @@ body {
   body {
     @apply bg-background text-foreground;
   }
+  
+  /* Add text shadows to headings and common text to make them readable on bright image backgrounds */
+  h1, h2, h3, h4, h5, h6, label {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  }
+}
+
+@layer components {
+  /* Global glassmorphism for all surface elements */
+  .bg-card, .bg-popover, .bg-accent, .bg-muted, .bg-secondary, .bg-background {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+  
+  /* Remove blur from elements that shouldn't have it */
+  input, select, textarea {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+.bg-dot-pattern {
+  background-image: radial-gradient(var(--border) 1px, transparent 1px);
+  background-size: 16px 16px;
 }

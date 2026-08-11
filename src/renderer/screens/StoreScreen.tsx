@@ -133,7 +133,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
   }
 
   return (
-    <div className="flex flex-col h-full bg-background text-foreground">
+    <div className="flex flex-col h-full text-foreground">
       {/* Header */}
       <div className="px-6 pt-0 pb-5 flex-shrink-0">
         <h2 className="text-xl font-bold flex items-center gap-2">
@@ -178,7 +178,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Nhập tên modpack (VD: Fabulously Optimized, RLcraft...)"
-              className="pl-10 h-11 text-base bg-accent/20 border-accent/40 rounded-xl"
+              className="pl-10 h-11 text-base bg-accent/90 border-accent rounded-xl "
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />

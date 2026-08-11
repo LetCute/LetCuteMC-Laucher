@@ -95,7 +95,7 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
         </div>
       </div>
 
-      <div className="flex items-center gap-1 border-b border-border pb-3 flex-wrap">
+      <div className="flex items-center gap-1 pb-3 flex-wrap">
         {TABS.map(tab => (
           <Button
             key={tab.key}
@@ -132,64 +132,64 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
         ) : (
           <div className="flex flex-col gap-2">
             {displayedList.map(v => (
-                <div
-                  key={v.id}
-                  className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
-                >
-                    <div className="flex flex-col gap-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-semibold text-foreground truncate">{v.name}</span>
-                        {!v.isInstalled ? (
-                          <span className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
-                            <Download size={10} />
-                            Sẽ tải khi chạy
-                          </span>
-                        ) : (
-                          <Badge variant="success">Đã cài đặt</Badge>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <SourceBadge source={v.source} />
-                        {v.releaseTime && (
-                          <span className="text-xs text-muted-foreground">
-                            {new Date(v.releaseTime).toLocaleDateString('vi-VN')}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-
-                  <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    {v.isInstalled && v.path && (
-                      <Button
-                        title="Mở thư mục"
-                        onClick={() => launcherClient.openVersionFolder(v.path!)}
-                        variant="secondary"
-                        size="sm"
-                      >
-                        <FolderOpen size={14} />
-                      </Button>
+              <div
+                key={v.id}
+                className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
+              >
+                <div className="flex flex-col gap-1 min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-sm font-semibold text-foreground truncate">{v.name}</span>
+                    {!v.isInstalled ? (
+                      <span className="flex items-center gap-1 text-xs text-yellow-400 bg-yellow-500/10 px-2 py-0.5 rounded-full border border-yellow-500/20">
+                        <Download size={10} />
+                        Sẽ tải khi chạy
+                      </span>
+                    ) : (
+                      <Badge variant="success">Đã cài đặt</Badge>
                     )}
-                    <Button onClick={() => onCreateProfile(v)} variant="primary" size="sm">
-                      <PlusCircle size={14} />
-                      Tạo cấu hình
-                    </Button>
-                    {v.isInstalled && v.path && (
-                      <Button
-                        title="Xóa phiên bản"
-                        onClick={async () => {
-                          if (!confirm(`Xóa ${v.name}?`)) return;
-                          await launcherClient.deleteVersion(v.path!);
-                          onRefresh?.();
-                        }}
-                        variant="secondary"
-                        size="sm"
-                        className="text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <SourceBadge source={v.source} />
+                    {v.releaseTime && (
+                      <span className="text-xs text-muted-foreground">
+                        {new Date(v.releaseTime).toLocaleDateString('vi-VN')}
+                      </span>
                     )}
                   </div>
                 </div>
+
+                <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {v.isInstalled && v.path && (
+                    <Button
+                      title="Mở thư mục"
+                      onClick={() => launcherClient.openVersionFolder(v.path!)}
+                      variant="secondary"
+                      size="sm"
+                    >
+                      <FolderOpen size={14} />
+                    </Button>
+                  )}
+                  <Button onClick={() => onCreateProfile(v)} variant="primary" size="sm">
+                    <PlusCircle size={14} />
+                    Tạo cấu hình
+                  </Button>
+                  {v.isInstalled && v.path && (
+                    <Button
+                      title="Xóa phiên bản"
+                      onClick={async () => {
+                        if (!confirm(`Xóa ${v.name}?`)) return;
+                        await launcherClient.deleteVersion(v.path!);
+                        onRefresh?.();
+                      }}
+                      variant="secondary"
+                      size="sm"
+                      className="text-destructive hover:bg-destructive/10"
+                    >
+                      <Trash2 size={14} />
+                    </Button>
+                  )}
+                </div>
+              </div>
             ))}
           </div>
         )}
