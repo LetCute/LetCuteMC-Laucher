@@ -68,7 +68,7 @@ export async function uploadMojangSkin(
   variant: 'classic' | 'slim'
 ): Promise<void> {
   const blob = new Blob([fileBuffer], { type: 'image/png' })
-  
+
   const form = new FormData()
   form.append('variant', variant)
   form.append('file', blob, 'skin.png')

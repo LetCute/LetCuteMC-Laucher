@@ -64,7 +64,7 @@ export async function updateSettings(
   await ensureLauncherDataDirectory()
   const current = await getSettings()
   // Ignore any attempt to change minecraftDirectory
-  const { minecraftDirectory: _ignored, ...safeInput } = input
+  const { minecraftDirectory: _ignored, ...safeInput } = input || {}
   const updated = migrateSettings({ ...current, ...safeInput })
   const { getDefaultMinecraftDirectory } = await import('./storageService.js')
   updated.minecraftDirectory = getDefaultMinecraftDirectory()

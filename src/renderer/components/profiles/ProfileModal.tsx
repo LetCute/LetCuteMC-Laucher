@@ -79,12 +79,22 @@ export function ProfileModal({
       })
     } else {
       const first = preselectedVersion ?? (versionCatalog?.releases?.[0] ?? null)
-      setFormData({
-        name: first?.id ? first.id : '',
-        minecraftVersion: first?.id ?? '',
-        gameDir: defaultGameDir || '',
-        minMemoryMb: 2048,
-        maxMemoryMb: 4096,
+      window.launcherApi.getSettings().then(settings => {
+        setFormData({
+          name: first?.id ? first.id : '',
+          minecraftVersion: first?.id ?? '',
+          gameDir: defaultGameDir || '',
+          minMemoryMb: settings.defaultMinMemoryMb || 2048,
+          maxMemoryMb: settings.defaultMaxMemoryMb || 4096,
+        })
+      }).catch(() => {
+        setFormData({
+          name: first?.id ? first.id : '',
+          minecraftVersion: first?.id ?? '',
+          gameDir: defaultGameDir || '',
+          minMemoryMb: 2048,
+          maxMemoryMb: 4096,
+        })
       })
     }
     setErrors({})
