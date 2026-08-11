@@ -47,25 +47,6 @@ export const ProfilesScreen = ({
           </div>
           <div className="flex items-center gap-2">
             <Button
-              onClick={async () => {
-                try {
-                  const success = await window.launcherApi.injectTopServers(activeProfileId)
-                  if (success) alert('Đã cập nhật Top Server VN vào profile thành công!')
-                  else alert('Lỗi: Không tìm thấy máy chủ nào hoặc lỗi khi ghi file.')
-                } catch (e) {
-                  alert('Có lỗi xảy ra: ' + String(e))
-                }
-              }}
-              disabled={isWorking || !activeProfileId}
-              variant="outline"
-              size="sm"
-              className="h-9 px-3 bg-card"
-              title="Cập nhật Top Server VN vào game"
-            >
-              <RefreshCw size={14} className="mr-1.5" />
-              Cập nhật Top Server
-            </Button>
-            <Button
               onClick={() => onCreateProfile()}
               disabled={isWorking}
               variant="primary"

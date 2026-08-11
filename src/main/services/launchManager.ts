@@ -342,6 +342,16 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     }
   }
 
+  // Inject top servers for this version automatically
+  try {
+    const { serverListService } = await import('./serverListService.js')
+    // Run in background without blocking the launch
+    serverListService.injectServersToProfile(input.profileId, 1, input.version)
+      .catch(err => console.error('[LaunchManager] Failed to inject servers in background:', err))
+  } catch (err) {
+    console.error('[LaunchManager] Failed to load serverListService:', err)
+  }
+
   // Create worker
   const workerPath = getWorkerPath()
   console.log('[LaunchManager] Spawning launchWorker at', workerPath)

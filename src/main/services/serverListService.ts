@@ -19,18 +19,18 @@ export class ServerListService {
     try {
       const url = page === 1 ? this.baseUrl + '/' : `${this.baseUrl}/${page}/`
       const res = await fetch(url)
-      
+
       if (!res.ok) {
         throw new Error(`HTTP Error: ${res.status}`)
       }
-      
+
       const html = await res.text()
       const $ = cheerio.load(html)
       const servers: MinecraftServer[] = []
 
       $('.servers-table tbody tr').each((_, el) => {
         const $el = $(el)
-        
+
         // Skip hidden/ad rows that don't have proper data
         if ($el.attr('height') !== '120') return
 
@@ -40,7 +40,7 @@ export class ServerListService {
         const $aboutTd = $el.find('td.server-about')
         const name = $aboutTd.find('.server-title-responsive a').text().trim()
         const description = $aboutTd.find('.server-description').text().trim()
-        
+
         // IP
         const ipRaw = $el.find('.server-ip-main a.btn-server-ip').text()
         // The IP has whitespace and a flag img inside it, clean it up:
@@ -49,7 +49,7 @@ export class ServerListService {
         // Favicon and Banner
         const faviconUrl = $el.find('td:nth-child(1) img').attr('src')
         let bannerUrl = $el.find('.server-card video').attr('src') || $el.find('.server-card video').attr('data-src') || $el.find('.server-card img.card-img-fluid').attr('src')
-        
+
         // Tags
         const tags: string[] = []
         $aboutTd.find('.list-server-tags .btn-tag').each((__, tagEl) => {
@@ -59,7 +59,7 @@ export class ServerListService {
         // Status & Players
         const $statusTd = $el.find('td:nth-child(4)')
         const isOnline = $statusTd.find('.btn-success').length > 0
-        
+
         const playersBtn = $statusTd.find('.btn-xs-playercount').text() // " 622 / 2026"
         let online = 0
         let max = 0
@@ -106,11 +106,23 @@ export class ServerListService {
    * Injects top servers into a profile's servers.dat
    * Removes previously injected servers by checking letcute_top flag.
    */
-  async injectServersToProfile(profileId: string, page: number = 1): Promise<boolean> {
+  async injectServersToProfile(profileId: string, page: number = 1, targetVersion?: string): Promise<boolean> {
     try {
-      console.log(`[ServerListService] Fetching top servers for injection (page ${page})`)
-      const topServers = await this.getTopServers(page)
+      console.log(`[ServerListService] Fetching top servers for injection (page ${page}, targetVersion ${targetVersion})`)
+      let topServers = await this.getTopServers(page)
       
+      // Filter by target version if provided
+      if (targetVersion) {
+        const majorMinorMatch = targetVersion.match(/^(\d+\.\d+)/)
+        const targetMajorMinor = majorMinorMatch ? majorMinorMatch[1] : targetVersion
+        
+        topServers = topServers.filter(srv => {
+          // If server version contains the exact targetVersion, or at least the major.minor version
+          return srv.version.includes(targetVersion) || srv.version.includes(targetMajorMinor)
+        })
+        console.log(`[ServerListService] Filtered down to ${topServers.length} servers matching ${targetVersion}`)
+      }
+
       if (topServers.length === 0) {
         console.warn('[ServerListService] No servers found to inject')
         return false
@@ -136,7 +148,7 @@ export class ServerListService {
         const parsed = (await parseNbt(buffer)) as any
         // prismarine-nbt typings can be weird, util.promisify returns the first argument `parsed` or an object {parsed, type} depending on version. Let's handle both.
         rootData = parsed.parsed || parsed
-        
+
         if (rootData.value && rootData.value.servers && rootData.value.servers.value) {
           const srvList = rootData.value.servers.value
           if (srvList.type === 'compound' && Array.isArray(srvList.value)) {
@@ -165,15 +177,15 @@ export class ServerListService {
 
       // Convert our fetched servers to NBT compounds
       const newServersNbt = topServers.map((srv, index) => {
-        const title = `§a[Top VN #${srv.rank}] §f${srv.name}`
-        
+        const title = `VN#${srv.rank}`
+
         const compound: any = {
           name: { type: 'string', value: title },
           ip: { type: 'string', value: srv.ip },
           // Hidden NBT tag that Minecraft ignores, but we use it to recognize our injection!
           letcute_top: { type: 'byte', value: 1 }
         }
-        
+
         return compound
       })
 
@@ -185,7 +197,7 @@ export class ServerListService {
       if (!rootData.value.servers) {
         rootData.value.servers = { type: 'list', value: { type: 'compound', value: [] } }
       }
-      
+
       // Prismarine-nbt list format requires the nested type
       rootData.value.servers.value = {
         type: 'compound',
@@ -195,7 +207,7 @@ export class ServerListService {
       // Write back uncompressed NBT
       const outBuffer = nbt.writeUncompressed(rootData)
       fs.writeFileSync(serversDatPath, outBuffer)
-      
+
       console.log(`[ServerListService] Successfully injected ${newServersNbt.length} servers into ${serversDatPath}`)
       return true
     } catch (error) {

@@ -319,6 +319,15 @@ export function registerIpcHandlers(): void {
       percent: 5,
     })
 
+    // Inject top servers for this version automatically
+    try {
+      const { serverListService } = await import('./services/serverListService.js')
+      serverListService.injectServersToProfile(profile.id, 1, input.version)
+        .catch(err => console.error('[minecraft:launch] Failed to inject servers:', err))
+    } catch (err) {
+      console.error('[minecraft:launch] Failed to load serverListService:', err)
+    }
+
     try {
       const result = await coreLaunch(
         input,
