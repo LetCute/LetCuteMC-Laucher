@@ -438,7 +438,7 @@ export const AccountsScreen = ({
                   </div>
 
                   {/* Account Info */}
-                  <div className="text-center w-full min-w-0">
+                  <div className="text-center w-full min-w-0 px-4">
                     <p className={['text-sm font-bold truncate transition-colors', isActive ? 'text-primary' : 'text-foreground'].join(' ')}>
                       {acc.username}
                     </p>
