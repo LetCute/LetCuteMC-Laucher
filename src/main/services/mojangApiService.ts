@@ -67,7 +67,8 @@ export async function uploadMojangSkin(
   fileBuffer: Buffer,
   variant: 'classic' | 'slim'
 ): Promise<void> {
-  const blob = new Blob([fileBuffer], { type: 'image/png' })
+  // Chuyển Buffer thành Uint8Array để tương thích với cấu trúc BlobPart của TypeScript/DOM
+  const blob = new Blob([new Uint8Array(fileBuffer)], { type: 'image/png' })
 
   const form = new FormData()
   form.append('variant', variant)

@@ -228,6 +228,10 @@ export const launcherClient = {
     return getApi().getMojangProfile(accessToken)
   },
 
+  fetchMojangTexture(url: string): Promise<string | null> {
+    return getApi().fetchMojangTexture(url)
+  },
+
   uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
     return getApi().uploadMojangSkin(accessToken, fileBuffer, variant)
   },

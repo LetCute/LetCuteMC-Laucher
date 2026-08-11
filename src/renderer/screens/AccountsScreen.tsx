@@ -177,10 +177,11 @@ export const AccountsScreen = ({
         // Find active skin
         const activeSkin = profile.skins?.find((s: any) => s.state === 'ACTIVE')
         if (activeSkin) {
-          setPendingSkinFile(activeSkin.url)
+          const base64Skin = await window.launcherApi.fetchMojangTexture(activeSkin.url)
+          setPendingSkinFile(base64Skin || activeSkin.url)
           setPendingSkinModel(activeSkin.variant === 'SLIM' ? 'slim' : 'default')
-          // Cache to localStorage
-          setSkinMap(prev => ({ ...prev, [accountId]: { url: activeSkin.url, model: activeSkin.variant === 'SLIM' ? 'slim' : 'default' } }))
+          // Cache to localStorage (use original URL for storage size, base64 for preview)
+          setSkinMap(prev => ({ ...prev, [accountId]: { url: base64Skin || activeSkin.url, model: activeSkin.variant === 'SLIM' ? 'slim' : 'default' } }))
           setModelMap(prev => ({ ...prev, [accountId]: activeSkin.variant === 'SLIM' ? 'slim' : 'default' }))
         } else {
           setPendingSkinFile(null)
@@ -191,9 +192,10 @@ export const AccountsScreen = ({
         const activeCape = profile.capes?.find((c: any) => c.state === 'ACTIVE')
         if (activeCape) {
           setPendingCapeId(activeCape.id)
-          setPendingCapeFile(activeCape.url)
+          const base64Cape = await window.launcherApi.fetchMojangTexture(activeCape.url)
+          setPendingCapeFile(base64Cape || activeCape.url)
           // Cache to localStorage
-          setCapeMap(prev => ({ ...prev, [accountId]: activeCape.url }))
+          setCapeMap(prev => ({ ...prev, [accountId]: base64Cape || activeCape.url }))
         } else {
           setPendingCapeId('')
           setPendingCapeFile(null)

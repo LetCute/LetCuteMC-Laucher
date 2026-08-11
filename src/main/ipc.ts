@@ -367,6 +367,17 @@ export function registerIpcHandlers(): void {
   handleIpc('launch:clear-logs', clearJobLogs)
 
   // ── NEW prepare game and caching API ────────────────────────────────────────
+  handleIpc('mojang:fetch-texture', async (url: string) => {
+    try {
+      const res = await fetch(url)
+      const arrayBuffer = await res.arrayBuffer()
+      const buffer = Buffer.from(arrayBuffer)
+      return `data:image/png;base64,${buffer.toString('base64')}`
+    } catch {
+      return null
+    }
+  })
+
   handleIpc('prepare:check', (profile: LauncherProfile, settings: LauncherSettings) => checkPreparedProfile(profile, settings))
   handleIpc('prepare:start', (profile: LauncherProfile, settings: LauncherSettings, forceRepair?: boolean) => prepareGameFiles(profile, settings, forceRepair))
   handleIpc('prepare:cancel', () => cancelPrepareGame())

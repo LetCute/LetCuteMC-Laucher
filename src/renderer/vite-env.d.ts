@@ -123,6 +123,7 @@ declare global {
       
       // Mojang API
       getMojangProfile(accessToken: string): Promise<import('../shared/types').MojangProfile>
+      fetchMojangTexture(url: string): Promise<string | null>
       uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
       changeMojangCape(accessToken: string, capeId: string): Promise<void>
 

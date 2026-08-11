@@ -295,6 +295,10 @@ const launcherApi = {
     return ipcRenderer.invoke('mojang:get-profile', accessToken)
   },
 
+  fetchMojangTexture(url: string): Promise<string | null> {
+    return ipcRenderer.invoke('mojang:fetch-texture', url)
+  },
+
   uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
     return ipcRenderer.invoke('mojang:upload-skin', accessToken, fileBuffer, variant)
   },
