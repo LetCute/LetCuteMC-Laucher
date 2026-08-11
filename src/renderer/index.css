@@ -204,9 +204,14 @@ body {
     @apply bg-background text-foreground;
   }
   
-  /* Add text shadows to headings and common text to make them readable on bright image backgrounds */
-  h1, h2, h3, h4, h5, h6, label {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.9);
+  /* Add strong text shadows to headings to make them pop out from vivid backgrounds */
+  h1, h2, h3, h4, h5, h6 {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 16px rgba(0,0,0,0.5);
+  }
+  
+  /* Add subtle text shadow to normal text to prevent blending */
+  p, span, label, a, button {
+    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
   }
 }
 
