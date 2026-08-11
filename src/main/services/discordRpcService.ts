@@ -11,7 +11,6 @@ let reconnectTimer: NodeJS.Timeout | null = null
 
 export async function initDiscordRpc(): Promise<void> {
   const settings = await getSettings()
-  if (!settings.enableDiscordRpc) return
 
   if (rpcClient) return
 

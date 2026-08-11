@@ -155,13 +155,7 @@ export function registerIpcHandlers(): void {
     const oldSettings = await getSettings()
     const newSettings = await updateSettings(input as Partial<LauncherSettings>)
     
-    if (oldSettings.enableDiscordRpc !== newSettings.enableDiscordRpc) {
-      if (newSettings.enableDiscordRpc) {
-        import('./services/discordRpcService.js').then(m => m.initDiscordRpc().catch(console.error))
-      } else {
-        import('./services/discordRpcService.js').then(m => m.stopDiscordRpc().catch(console.error))
-      }
-    }
+
     
     return newSettings
   })
