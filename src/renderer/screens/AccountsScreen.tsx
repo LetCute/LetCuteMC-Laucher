@@ -376,8 +376,8 @@ export const AccountsScreen = ({
                 >
                   {/* Active badge */}
                   {isActive && (
-                    <div className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md z-10">
-                      <Check size={12} strokeWidth={3} />
+                    <div className="absolute top-0 right-0 flex h-7 w-7 items-center justify-center rounded-bl-xl rounded-tr-[15px] bg-primary text-primary-foreground z-10">
+                      <Check size={13} strokeWidth={3} />
                     </div>
                   )}
 
@@ -397,7 +397,7 @@ export const AccountsScreen = ({
                   </div>
 
                   {/* Delete button */}
-                  <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150" onClick={e => e.stopPropagation()}>
+                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150" onClick={e => e.stopPropagation()}>
                     <Button
                       variant="ghost" size="icon-sm"
                       className="h-6 w-6 p-0 hover:bg-destructive/15 text-muted-foreground hover:text-destructive rounded-lg"
