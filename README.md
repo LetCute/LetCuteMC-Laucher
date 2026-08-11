@@ -3,7 +3,7 @@
   <h1>LetCuteMC Launcher</h1>
   <p><b>Một trình khởi chạy Minecraft hiện đại, hiệu năng cao và giàu tính thẩm mỹ.</b></p>
   
-  ![Giao diện LetCuteMC Launcher](docs/assets/screenshot-v2.png)
+  ![Giao diện LetCuteMC Launcher](docs/assets/screenshot-v3.png)
   
 </div>
 
