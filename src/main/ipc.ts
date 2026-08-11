@@ -81,6 +81,11 @@ import {
   saveMicrosoftAccount
 } from './services/accountService'
 import { loginWithMicrosoft } from './services/microsoftAuthService'
+import {
+  fetchMojangProfile,
+  uploadMojangSkin,
+  changeMojangCape
+} from './services/mojangApiService'
 
 // ─── In-memory launcher state ─────────────────────────────────────────────────
 
@@ -397,4 +402,11 @@ export function registerIpcHandlers(): void {
     const { refreshMicrosoftAccountToken } = await import('./services/accountService')
     return refreshMicrosoftAccountToken(accountId)
   })
+
+  // Mojang API endpoints
+  handleIpc('mojang:get-profile', (accessToken: string) => fetchMojangProfile(accessToken))
+  handleIpc('mojang:upload-skin', (accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim') => 
+    uploadMojangSkin(accessToken, Buffer.from(fileBuffer), variant)
+  )
+  handleIpc('mojang:change-cape', (accessToken: string, capeId: string) => changeMojangCape(accessToken, capeId))
 }

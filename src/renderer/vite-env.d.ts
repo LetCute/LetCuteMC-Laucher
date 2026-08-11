@@ -120,6 +120,11 @@ declare global {
       saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState>
       loginMicrosoft(): Promise<MicrosoftAccount>
       refreshMicrosoftAccount(accountId?: string): Promise<AccountState>
+      
+      // Mojang API
+      getMojangProfile(accessToken: string): Promise<import('../shared/types').MojangProfile>
+      uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
+      changeMojangCape(accessToken: string, capeId: string): Promise<void>
 
       // New non-blocking launch API
       startLaunch(input: LaunchInput): Promise<StartLaunchResult>

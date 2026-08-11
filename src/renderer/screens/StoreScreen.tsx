@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react'
-import { Search, Download, Star, Loader2, PackageOpen, Layers, Trash2, CheckCircle } from 'lucide-react'
+import { Search, Download, Loader2, PackageOpen, Layers, Trash2, CheckCircle } from 'lucide-react'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/button'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
 import { Badge } from '../components/ui/Badge'
-import type { ModrinthProject, ModrinthVersion, ModrinthSearchResult, StoreInstallation, LauncherProfile } from '../../shared/types'
+import type { ModrinthVersion, ModrinthSearchResult, StoreInstallation, LauncherProfile } from '../../shared/types'
 import { Select } from '../components/ui/Select'
 import { ModrinthIcon } from '@/components/icons/ModrinthIcon'
 

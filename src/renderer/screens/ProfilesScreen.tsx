@@ -2,7 +2,6 @@ import type { LauncherProfile } from '../../shared/types'
 import { Layers, Edit2, Trash2, Check, Play, PlusCircle } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
-import { useLauncherJob } from '../hooks/useLauncherJob'
 import { Button } from '@/components/ui/button'
 
 interface ProfilesScreenProps {

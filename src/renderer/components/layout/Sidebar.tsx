@@ -13,12 +13,8 @@ import {
   User,
   Heart,
   ChevronDown,
-  LogOut,
   Settings2,
-  PlusCircle,
-  RefreshCw,
 } from 'lucide-react'
-import { Badge } from '../ui/Badge'
 import { useToast } from '../ui/Toast'
 import logoImg from '../../assets/logo.png'
 import steveImg from '../../assets/steve.png'
@@ -32,6 +28,7 @@ import type {
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { cn } from '@/lib/utils'
+import { SkinHead } from '../ui/SkinHead'
 import { Button } from '../ui/button'
 import {
   DropdownMenu,
@@ -58,7 +55,6 @@ interface SidebarProps {
   isWorking?: boolean
 }
 
-import { ShoppingBag } from 'lucide-react'
 import { ModrinthIcon } from '../icons/ModrinthIcon'
 
 const MENU_ITEMS = [
@@ -85,7 +81,6 @@ export function Sidebar({
   javaSelection,
   settings,
   gameDir,
-  isWorking
 }: SidebarProps) {
   const { showToast } = useToast()
 
@@ -99,6 +94,24 @@ export function Sidebar({
   const displayUsername = activeAccount?.username || 'Player'
   const isVirtual = !activeAccount || activeAccount.type === 'local'
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
+
+  // Read custom skin from localStorage (shared with AccountsScreen)
+  const getAccountAvatar = (accId: string, accType: string, accUsername: string): { url: string, isFullSkin: boolean } => {
+    try {
+      const saved = localStorage.getItem('letcutemc_skinMap')
+      if (saved) {
+        const skinMap = JSON.parse(saved)
+        if (skinMap[accId]?.url) return { url: skinMap[accId].url, isFullSkin: true }
+      }
+    } catch { /* ignore */ }
+    // Fallback: Microsoft uses minotar, local uses steve
+    return {
+      url: accType === 'microsoft'
+        ? `https://minotar.net/helm/${accUsername}/64.png`
+        : steveImg,
+      isFullSkin: false
+    }
+  }
 
   const triggerLaunch = async () => {
     if (!activeProfile) return
@@ -144,11 +157,7 @@ export function Sidebar({
   // Show error toast if launch fails
   useEffect(() => {
     if (isFailed && state?.error) {
-      showToast({
-        title: 'Khởi chạy thất bại',
-        description: state.error,
-        type: 'error',
-      })
+      showToast('error', state.error)
     }
   }, [isFailed, state?.error, showToast])
 
@@ -266,16 +275,25 @@ export function Sidebar({
                 title="Đổi tài khoản"
               >
                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
-                  <img
-                    src={isMicrosoft && activeAccount
-                      ? `https://minotar.net/helm/${activeAccount.username}/64.png`
-                      : steveImg}
-                    alt={displayUsername}
-                    className="h-full w-full object-cover"
-                    onError={(e) => {
-                      e.currentTarget.src = steveImg
-                    }}
-                  />
+                  {(() => {
+                    const avatarData = activeAccount
+                      ? getAccountAvatar(activeAccount.id, activeAccount.type, activeAccount.username)
+                      : { url: steveImg, isFullSkin: false }
+                    
+                    if (avatarData.isFullSkin) {
+                      return <SkinHead skinUrl={avatarData.url} size={36} className="h-full w-full object-cover" />
+                    }
+                    return (
+                      <img
+                        src={avatarData.url}
+                        alt={displayUsername}
+                        className="h-full w-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = steveImg
+                        }}
+                      />
+                    )
+                  })()}
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-1">
@@ -315,10 +333,18 @@ export function Sidebar({
                       }}
                       className="cursor-pointer"
                     >
-                      <img
-                        src={acc.type === 'microsoft' ? `https://minotar.net/helm/${acc.username}/64.png` : steveImg}
-                        className="h-5 w-5 rounded-sm mr-2 object-cover border border-border"
-                      />
+                      {(() => {
+                        const avatarData = getAccountAvatar(acc.id, acc.type, acc.username)
+                        if (avatarData.isFullSkin) {
+                          return <SkinHead skinUrl={avatarData.url} size={20} className="h-5 w-5 rounded-sm mr-2 object-cover border border-border" />
+                        }
+                        return (
+                          <img
+                            src={avatarData.url}
+                            className="h-5 w-5 rounded-sm mr-2 object-cover border border-border"
+                          />
+                        )
+                      })()}
                       <div className="flex-1 min-w-0">
                         <p className="text-xs font-medium truncate">{acc.username}</p>
                         <p className="text-[9px] text-muted-foreground uppercase">{acc.type}</p>

@@ -222,6 +222,20 @@ export const launcherClient = {
     return getApi().refreshMicrosoftAccount(accountId)
   },
 
+  // ── Mojang API ─────────────────────────────────────────────────────────────
+
+  getMojangProfile(accessToken: string): Promise<import('../../shared/types').MojangProfile> {
+    return getApi().getMojangProfile(accessToken)
+  },
+
+  uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
+    return getApi().uploadMojangSkin(accessToken, fileBuffer, variant)
+  },
+
+  changeMojangCape(accessToken: string, capeId: string): Promise<void> {
+    return getApi().changeMojangCape(accessToken, capeId)
+  },
+
   // ── New non-blocking launch API ────────────────────────────────────────────
 
   startLaunch(input: LaunchInput): Promise<StartLaunchResult> {

@@ -291,6 +291,18 @@ const launcherApi = {
     return ipcRenderer.invoke('account:refresh-microsoft', accountId)
   },
 
+  getMojangProfile(accessToken: string): Promise<any> {
+    return ipcRenderer.invoke('mojang:get-profile', accessToken)
+  },
+
+  uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
+    return ipcRenderer.invoke('mojang:upload-skin', accessToken, fileBuffer, variant)
+  },
+
+  changeMojangCape(accessToken: string, capeId: string): Promise<void> {
+    return ipcRenderer.invoke('mojang:change-cape', accessToken, capeId)
+  },
+
   searchModrinth(query: string, projectType: string, offset?: number): Promise<any> {
     return ipcRenderer.invoke('modrinth:search', { query, projectType, offset })
   },

@@ -663,3 +663,25 @@ export interface StoreInstallation {
   files: string[] // Paths of installed files relative to gameDir
 }
 
+// ─── Mojang API Types ────────────────────────────────────────────────────────
+
+export interface MojangSkin {
+  id: string
+  state: 'ACTIVE' | 'INACTIVE'
+  url: string
+  variant: 'CLASSIC' | 'SLIM'
+}
+
+export interface MojangCape {
+  id: string
+  state: 'ACTIVE' | 'INACTIVE'
+  url: string
+  alias: string
+}
+
+export interface MojangProfile {
+  id: string
+  name: string
+  skins: MojangSkin[]
+  capes: MojangCape[]
+}
