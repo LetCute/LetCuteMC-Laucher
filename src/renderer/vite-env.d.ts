@@ -112,6 +112,9 @@ declare global {
       getLauncherProgress(): Promise<LauncherProgress>
       getLauncherLogs(): Promise<LauncherLog[]>
       clearLauncherLogs(): Promise<boolean>
+      
+      getMinecraftServers(page?: number): Promise<import('../shared/types').MinecraftServer[]>
+      injectTopServers(profileId: string, page?: number): Promise<boolean>
 
       getAccountState(): Promise<AccountState>
       selectAccount(accountId: string): Promise<AccountState>

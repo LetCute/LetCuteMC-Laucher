@@ -203,6 +203,14 @@ const launcherApi = {
     return ipcRenderer.invoke('launcher:clear-logs')
   },
 
+  getMinecraftServers(page?: number): Promise<import('../shared/types').MinecraftServer[]> {
+    return ipcRenderer.invoke('server-list:get', { page })
+  },
+  
+  injectTopServers(profileId: string, page?: number): Promise<boolean> {
+    return ipcRenderer.invoke('server-list:inject', { profileId, page })
+  },
+
   // ── New non-blocking launch API ────────────────────────────────────────────
 
   startLaunch(input: LaunchInput): Promise<StartLaunchResult> {

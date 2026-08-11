@@ -196,8 +196,15 @@ export function registerIpcHandlers(): void {
     
     return await installModrinthModpack(versionId, profileName, mcRootDir, appendLog)
   })
-
   // Store Management
+  handleIpc('server-list:get', async ({ page }: { page?: number }) => {
+    const { serverListService } = await import('./services/serverListService.js')
+    return serverListService.getTopServers(page)
+  })
+  handleIpc('server-list:inject', async ({ profileId, page }: { profileId: string, page?: number }) => {
+    const { serverListService } = await import('./services/serverListService.js')
+    return serverListService.injectServersToProfile(profileId, page)
+  })
   handleIpc('store:get-installations', async (gameDir: string) => {
     const { getStoreInstallations } = await import('./services/modrinthService.js')
     return getStoreInstallations(gameDir)

@@ -299,6 +299,23 @@ export interface UpdateProfileInput {
   javaPath?: string | null
 }
 
+export interface MinecraftServer {
+  id: string
+  rank: number
+  name: string
+  ip: string
+  bannerUrl?: string
+  faviconUrl?: string
+  description: string
+  isOnline: boolean
+  players: {
+    online: number
+    max: number
+  }
+  version: string
+  tags: string[]
+}
+
 // ─── Settings types ───────────────────────────────────────────────────────────
 
 export type PerformanceMode = 'auto' | 'manual'

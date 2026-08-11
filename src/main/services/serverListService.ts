@@ -1,0 +1,206 @@
+import * as fs from 'fs'
+import * as path from 'path'
+import * as util from 'util'
+import * as cheerio from 'cheerio'
+import * as nbt from 'prismarine-nbt'
+import { MinecraftServer } from '../../shared/types'
+import { profileService } from './profileService'
+import { minecraftDirectoryService } from './minecraftDirectoryService'
+
+const parseNbt = util.promisify(nbt.parse)
+
+export class ServerListService {
+  private readonly baseUrl = 'https://minecraft-mp.com/country/vietnam'
+
+  /**
+   * Fetches and parses the server list from minecraft-mp.com
+   * @param page Page number
+   */
+  async getTopServers(page: number = 1): Promise<MinecraftServer[]> {
+    try {
+      const url = page === 1 ? this.baseUrl + '/' : `${this.baseUrl}/${page}/`
+      const res = await fetch(url)
+      
+      if (!res.ok) {
+        throw new Error(`HTTP Error: ${res.status}`)
+      }
+      
+      const html = await res.text()
+      const $ = cheerio.load(html)
+      const servers: MinecraftServer[] = []
+
+      $('.servers-table tbody tr').each((_, el) => {
+        const $el = $(el)
+        
+        // Skip hidden/ad rows that don't have proper data
+        if ($el.attr('height') !== '120') return
+
+        const rankStr = $el.find('td:nth-child(1) strong').text().replace('#', '').trim()
+        const rank = parseInt(rankStr, 10) || 0
+
+        const $aboutTd = $el.find('td.server-about')
+        const name = $aboutTd.find('.server-title-responsive a').text().trim()
+        const description = $aboutTd.find('.server-description').text().trim()
+        
+        // IP
+        const ipRaw = $el.find('.server-ip-main a.btn-server-ip').text()
+        // The IP has whitespace and a flag img inside it, clean it up:
+        const ip = ipRaw.replace(/\n/g, '').replace(/[\t ]+/g, ' ').trim()
+
+        // Favicon and Banner
+        const faviconUrl = $el.find('td:nth-child(1) img').attr('src')
+        let bannerUrl = $el.find('.server-card video').attr('src') || $el.find('.server-card video').attr('data-src') || $el.find('.server-card img.card-img-fluid').attr('src')
+        
+        // Tags
+        const tags: string[] = []
+        $aboutTd.find('.list-server-tags .btn-tag').each((__, tagEl) => {
+          tags.push($(tagEl).text().trim())
+        })
+
+        // Status & Players
+        const $statusTd = $el.find('td:nth-child(4)')
+        const isOnline = $statusTd.find('.btn-success').length > 0
+        
+        const playersBtn = $statusTd.find('.btn-xs-playercount').text() // " 622 / 2026"
+        let online = 0
+        let max = 0
+        const playersMatch = playersBtn.match(/(\d+)\s*\/\s*(\d+)/)
+        if (playersMatch) {
+          online = parseInt(playersMatch[1], 10)
+          max = parseInt(playersMatch[2], 10)
+        } else {
+          // Sometimes it is inside strong and small tags separately
+          const strong = $statusTd.find('strong').text().trim()
+          const small = $statusTd.find('small').text().replace('/', '').trim()
+          online = parseInt(strong, 10) || 0
+          max = parseInt(small, 10) || 0
+        }
+
+        // Version
+        const version = $statusTd.find('.btn-version-fade').text().trim()
+
+        if (name && ip) {
+          servers.push({
+            id: `vn_top_${rank}`,
+            rank,
+            name,
+            ip,
+            bannerUrl: bannerUrl && bannerUrl.startsWith('/') ? `https://minecraft-mp.com${bannerUrl}` : bannerUrl,
+            faviconUrl: faviconUrl && faviconUrl.startsWith('/') ? `https://minecraft-mp.com${faviconUrl}` : faviconUrl,
+            description,
+            isOnline,
+            players: { online, max },
+            version,
+            tags
+          })
+        }
+      })
+
+      return servers
+    } catch (error) {
+      console.error('[ServerListService] Error fetching servers:', error)
+      return []
+    }
+  }
+
+  /**
+   * Injects top servers into a profile's servers.dat
+   * Removes previously injected servers by checking letcute_top flag.
+   */
+  async injectServersToProfile(profileId: string, page: number = 1): Promise<boolean> {
+    try {
+      console.log(`[ServerListService] Fetching top servers for injection (page ${page})`)
+      const topServers = await this.getTopServers(page)
+      
+      if (topServers.length === 0) {
+        console.warn('[ServerListService] No servers found to inject')
+        return false
+      }
+
+      const profile = profileService.getProfile(profileId)
+      if (!profile) {
+        throw new Error(`Profile ${profileId} not found`)
+      }
+
+      const defaultMcDir = minecraftDirectoryService.getMinecraftDirectory()
+      const gameDir = profile.gameDir || defaultMcDir
+      const serversDatPath = path.join(gameDir, 'servers.dat')
+
+      let rootData: any
+      let currentServers: any[] = []
+
+      // If servers.dat exists, parse it
+      if (fs.existsSync(serversDatPath)) {
+        const buffer = fs.readFileSync(serversDatPath)
+        const { parsed } = await parseNbt(buffer)
+        rootData = parsed
+        
+        if (rootData.value && rootData.value.servers && rootData.value.servers.value) {
+          const srvList = rootData.value.servers.value
+          if (srvList.type === 'compound' && Array.isArray(srvList.value)) {
+            // Keep servers that DO NOT have our letcute_top tag
+            currentServers = srvList.value.filter((srv: any) => {
+              return !(srv.letcute_top && srv.letcute_top.value === 1)
+            })
+          }
+        }
+      } else {
+        // Initialize an empty servers.dat NBT structure
+        rootData = {
+          name: '',
+          type: 'compound',
+          value: {
+            servers: {
+              type: 'list',
+              value: {
+                type: 'compound',
+                value: []
+              }
+            }
+          }
+        }
+      }
+
+      // Convert our fetched servers to NBT compounds
+      const newServersNbt = topServers.map((srv, index) => {
+        const title = `§a[Top VN #${srv.rank}] §f${srv.name}`
+        
+        const compound: any = {
+          name: { type: 'string', value: title },
+          ip: { type: 'string', value: srv.ip },
+          // Hidden NBT tag that Minecraft ignores, but we use it to recognize our injection!
+          letcute_top: { type: 'byte', value: 1 }
+        }
+        
+        return compound
+      })
+
+      // Combine: Top servers first, then user's custom servers
+      const mergedServers = [...newServersNbt, ...currentServers]
+
+      // Update rootData
+      if (!rootData.value) rootData.value = {}
+      if (!rootData.value.servers) {
+        rootData.value.servers = { type: 'list', value: { type: 'compound', value: [] } }
+      }
+      
+      // Prismarine-nbt list format requires the nested type
+      rootData.value.servers.value = {
+        type: 'compound',
+        value: mergedServers
+      }
+
+      // Write back uncompressed NBT
+      const outBuffer = nbt.writeUncompressed(rootData)
+      fs.writeFileSync(serversDatPath, outBuffer)
+      
+      console.log(`[ServerListService] Successfully injected ${newServersNbt.length} servers into ${serversDatPath}`)
+      return true
+    } catch (error) {
+      console.error('[ServerListService] Error injecting servers:', error)
+      return false
+    }
+  }
+}
+
+export const serverListService = new ServerListService()

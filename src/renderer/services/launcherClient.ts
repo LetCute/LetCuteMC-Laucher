@@ -193,6 +193,14 @@ export const launcherClient = {
   clearLauncherLogs(): Promise<boolean> {
     return getApi().clearLauncherLogs()
   },
+  
+  getMinecraftServers(page?: number): Promise<import('../../shared/types').MinecraftServer[]> {
+    return getApi().getMinecraftServers(page)
+  },
+
+  injectTopServers(profileId: string, page?: number): Promise<boolean> {
+    return getApi().injectTopServers(profileId, page)
+  },
 
   getAccountState(): Promise<AccountState> {
     return getApi().getAccountState()
