@@ -54,7 +54,7 @@ export const AccountsScreen = ({
   const [newLocalUsername, setNewLocalUsername] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showLocalInput, setShowLocalInput] = useState(false)
-  
+
   const skinInputRef = useRef<HTMLInputElement>(null)
   const capeInputRef = useRef<HTMLInputElement>(null)
 
@@ -94,12 +94,12 @@ export const AccountsScreen = ({
   const [skinModalTargetId, setSkinModalTargetId] = useState<string | null>(null)
   const [skinModalTargetType, setSkinModalTargetType] = useState<'local' | 'microsoft'>('local')
   const [skinModalTargetName, setSkinModalTargetName] = useState('')
-  
+
   const [pendingSkinFile, setPendingSkinFile] = useState<string | null>(null)
   const [pendingSkinModel, setPendingSkinModel] = useState<SkinModel>('default')
   const [pendingCapeFile, setPendingCapeFile] = useState<string | null>(null)
   const [pendingCapeId, setPendingCapeId] = useState<string>('') // For Premium owned capes
-  
+
   const [isFetchingMojang, setIsFetchingMojang] = useState(false)
   const [isSavingMojang, setIsSavingMojang] = useState(false)
   const [mojangProfile, setMojangProfile] = useState<any>(null)
@@ -173,7 +173,7 @@ export const AccountsScreen = ({
       try {
         const profile = await window.launcherApi.getMojangProfile(accessToken)
         setMojangProfile(profile)
-        
+
         // Find active skin
         const activeSkin = profile.skins?.find((s: any) => s.state === 'ACTIVE')
         if (activeSkin) {
@@ -199,7 +199,7 @@ export const AccountsScreen = ({
         } else {
           setPendingCapeId('')
           setPendingCapeFile(null)
-          setCapeMap(prev => { const nm = {...prev}; delete nm[accountId]; return nm })
+          setCapeMap(prev => { const nm = { ...prev }; delete nm[accountId]; return nm })
         }
       } catch (err) {
         showToast('error', 'Không thể lấy thông tin từ Mojang.')
@@ -292,7 +292,7 @@ export const AccountsScreen = ({
           if (activeCape) {
             setCapeMap(prev => ({ ...prev, [skinModalTargetId]: activeCape.url }))
           } else {
-            setCapeMap(prev => { const nm = {...prev}; delete nm[skinModalTargetId]; return nm })
+            setCapeMap(prev => { const nm = { ...prev }; delete nm[skinModalTargetId]; return nm })
           }
         }
         closeSkinModal()
@@ -316,7 +316,7 @@ export const AccountsScreen = ({
       if (pendingCapeFile) {
         setCapeMap(prev => ({ ...prev, [skinModalTargetId]: pendingCapeFile }))
       } else {
-        setCapeMap(prev => { const nm = {...prev}; delete nm[skinModalTargetId]; return nm })
+        setCapeMap(prev => { const nm = { ...prev }; delete nm[skinModalTargetId]; return nm })
       }
       showToast('success', 'Đã cập nhật ngoại hình Local!')
       closeSkinModal()
@@ -352,7 +352,7 @@ export const AccountsScreen = ({
       </div>
 
       {/* Account Cards Grid */}
-      <div className="flex-1 overflow-y-auto pr-1">
+      <div className="flex-1 overflow-y-auto pr-1 pt-2">
         {accounts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {accounts.map(acc => {
@@ -502,7 +502,7 @@ export const AccountsScreen = ({
 
               {/* Controls */}
               <div className="flex-1 flex flex-col gap-6">
-                
+
                 {/* 1. Skin Section */}
                 <div className="space-y-3">
                   <div className="flex items-center justify-between">
@@ -511,7 +511,7 @@ export const AccountsScreen = ({
                       <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file mới
                     </Button>
                   </div>
-                  
+
                   {/* Arm type selector */}
                   <div className="grid grid-cols-2 gap-2.5">
                     <button
@@ -587,7 +587,7 @@ export const AccountsScreen = ({
                         </div>
                         <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng</span>
                       </button>
-                      
+
                       {mojangProfile?.capes?.map((cape: any) => (
                         <button
                           key={cape.id}
