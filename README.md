@@ -1,8 +1,13 @@
-# LetCuteMC Launcher
+<div align="center">
+  <img src="public/logo.png" alt="LetCuteMC Logo" width="128" />
+  <h1>LetCuteMC Launcher</h1>
+  <p><b>Một trình khởi chạy Minecraft hiện đại, hiệu năng cao và giàu tính thẩm mỹ.</b></p>
+  
+  ![Giao diện LetCuteMC Launcher](docs/assets/screenshot.png)
+  *(Thêm ảnh chụp màn hình giao diện launcher của bạn vào thư mục docs/assets/screenshot.png)*
+</div>
 
-**LetCuteMC Launcher** là một trình khởi chạy Minecraft hiện đại, hiệu năng cao và giàu tính thẩm mỹ. Dự án được phát triển dựa trên **Electron**, **React**, **TypeScript**, sử dụng hệ thống thư viện lõi **@xmcl** mạnh mẽ để quản lý việc tải và vận hành game.
-
----
+Dự án được phát triển dựa trên **Electron**, **React**, **TypeScript**, sử dụng hệ thống thư viện lõi **@xmcl** mạnh mẽ để quản lý việc tải và vận hành game.
 
 ## 📚 Bộ Tài Liệu Kỹ Thuật (Technical Documentation)
 
@@ -22,6 +27,10 @@
 * **Cơ chế xác thực tài khoản**:
   * Chế độ chơi Offline (Tài khoản ảo).
   * Đăng nhập Microsoft/Xbox chính thức.
+* **Tự động hóa thông minh (Mới)**:
+  * 🌐 **Tự động thêm Server Top VN**: Tự động lấy danh sách các máy chủ Minecraft hàng đầu Việt Nam và nạp thẳng vào danh sách máy chủ trong game của bạn mà không hề gây chậm trễ khởi động.
+  * ⚙️ **Thiết lập mặc định tối ưu**: Tự động cài đặt sẵn **ngôn ngữ Tiếng Việt**, **bật phông chữ Unicode**, và **tự động chấp nhận tải Resource Pack** cho các server để bạn có trải nghiệm chơi liền mạch nhất.
+  * 🛡️ **Bảo vệ Server riêng**: Thuật toán quét và xóa thông minh thông qua IP giúp chống trùng lặp server hoàn hảo, đảm bảo không bao giờ xóa nhầm server do chính người chơi tự thêm.
 * **Quản lý Tài nguyên tích hợp**:
   * Quản lý Mods, Resource Packs (Gói tài nguyên) và Shader Packs trực tiếp trên giao diện trực quan.
   * Bật/tắt nhanh hoặc xoá bỏ tài nguyên chỉ với 1 click.
