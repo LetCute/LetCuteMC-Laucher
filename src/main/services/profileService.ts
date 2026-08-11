@@ -89,6 +89,11 @@ export async function createProfile(
   if (errors.length) throw new Error('Dữ liệu không hợp lệ: ' + errors.join('; '));
 
   await ensureLauncherDataDirectory();
+  const store = await getProfiles();
+
+  if (store.profiles.some(p => p.name.trim().toLowerCase() === input.name.trim().toLowerCase())) {
+    throw new Error('Tên cấu hình đã tồn tại, vui lòng chọn tên khác');
+  }
 
   const now = new Date().toISOString();
   const rec = recommendPerformance();
@@ -117,7 +122,6 @@ export async function createProfile(
   // Ensure game directory structure is created and launcher_profiles.json is valid/created
   await ensureGameDirectoryStructure(profile.gameDir);
 
-  const store = await getProfiles();
   store.profiles.push(profile);
   await writeJsonFile(getProfilesFilePath(), store);
   return profile;
@@ -135,6 +139,11 @@ export async function updateProfile(
 
   const errors = validateInput(input, false);
   if (errors.length) throw new Error('Dữ liệu không hợp lệ: ' + errors.join('; '));
+
+  if (input.name) {
+    const isDuplicate = store.profiles.some(p => p.name.trim().toLowerCase() === input.name!.trim().toLowerCase() && p.id !== profileId);
+    if (isDuplicate) throw new Error('Tên cấu hình đã tồn tại, vui lòng chọn tên khác');
+  }
 
   const existing = store.profiles[index];
   let finalGameDir = input.gameDir !== undefined ? input.gameDir : existing.gameDir;
