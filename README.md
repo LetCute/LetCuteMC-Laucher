@@ -4,7 +4,7 @@
   <p><b>Một trình khởi chạy Minecraft hiện đại, hiệu năng cao và giàu tính thẩm mỹ.</b></p>
   
   ![Giao diện LetCuteMC Launcher](docs/assets/screenshot.png)
-  *(Thêm ảnh chụp màn hình giao diện launcher của bạn vào thư mục docs/assets/screenshot.png)*
+  
 </div>
 
 Dự án được phát triển dựa trên **Electron**, **React**, **TypeScript**, sử dụng hệ thống thư viện lõi **@xmcl** mạnh mẽ để quản lý việc tải và vận hành game.
