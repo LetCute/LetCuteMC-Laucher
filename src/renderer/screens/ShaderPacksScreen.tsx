@@ -86,7 +86,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchPacks} disabled={loading} variant="outline" size="sm" className="h-9 px-3">
+          <Button onClick={fetchPacks} disabled={loading} variant="outline" size="sm" className="h-9 px-3 bg-card">
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </Button>
@@ -94,7 +94,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
             onClick={() => gameDir && launcherClient.openContentFolder(gameDir, 'shader_pack')}
             variant="outline"
             size="sm"
-            className="h-9 px-3"
+            className="h-9 px-3 bg-card"
           >
             <Zap className="h-3.5 w-3.5" />
             Thư mục
@@ -108,54 +108,55 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         icon={<Search className="h-4 w-4" />}
+        className='bg-card'
       />
 
       <DropZone accept={['zip']} onDropFiles={handleDropImport} label="Thả file .zip">
-      {filteredPacks.length > 0 ? (
-        <div className="flex-1 overflow-y-auto pr-1">
-          <div className="flex flex-col gap-2">
-            {filteredPacks.map((pack) => {
-              const isOperating = operatingPacks.has(pack.path)
-              return (
-                <div
-                  key={pack.path}
-                  className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
-                >
-                  <div className="flex flex-col gap-1 min-w-0 flex-1">
-                    <span className="text-sm font-semibold text-foreground truncate">{pack.name}</span>
-                    <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
-                      <span className="truncate max-w-[280px]">{pack.fileName}</span>
-                      <span>·</span>
-                      <span>{formatSize(pack.sizeBytes)}</span>
-                      <span>·</span>
-                      <span>{formatDate(pack.updatedAt)}</span>
+        {filteredPacks.length > 0 ? (
+          <div className="flex-1 overflow-y-auto pr-1">
+            <div className="flex flex-col gap-2">
+              {filteredPacks.map((pack) => {
+                const isOperating = operatingPacks.has(pack.path)
+                return (
+                  <div
+                    key={pack.path}
+                    className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
+                  >
+                    <div className="flex flex-col gap-1 min-w-0 flex-1">
+                      <span className="text-sm font-semibold text-foreground truncate">{pack.name}</span>
+                      <div className="flex items-center gap-2 flex-wrap text-xs text-muted-foreground">
+                        <span className="truncate max-w-[280px]">{pack.fileName}</span>
+                        <span>·</span>
+                        <span>{formatSize(pack.sizeBytes)}</span>
+                        <span>·</span>
+                        <span>{formatDate(pack.updatedAt)}</span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Button
+                        disabled={isOperating}
+                        onClick={() => handleDelete(pack)}
+                        variant="secondary"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10"
+                        title="Xóa"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      disabled={isOperating}
-                      onClick={() => handleDelete(pack)}
-                      variant="secondary"
-                      size="sm"
-                      className="text-destructive hover:bg-destructive/10"
-                      title="Xóa"
-                    >
-                      <Trash2 size={14} />
-                    </Button>
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })}
+            </div>
           </div>
-        </div>
-      ) : (
-        <EmptyState
-          icon={<Zap size={32} />}
-          title="Chưa có shader pack"
-          description="Kéo thả file .zip vào đây để thêm shader pack."
-        />
-      )}
+        ) : (
+          <EmptyState
+            icon={<Zap size={32} />}
+            title="Chưa có shader pack"
+            description="Kéo thả file .zip vào đây để thêm shader pack."
+          />
+        )}
       </DropZone>
     </div>
   )

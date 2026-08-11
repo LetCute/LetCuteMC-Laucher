@@ -168,11 +168,11 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm" className="h-9 px-3">
-            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
+          <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm" className="h-9 px-3 bg-card">
+            <RefreshCw className={`h-3.5 w-3.5  ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </Button>
-          <Button onClick={handleOpenFolder} variant="outline" size="sm" className="h-9 px-3">
+          <Button onClick={handleOpenFolder} variant="outline" size="sm" className="h-9 px-3 bg-card">
             <Box className="h-3.5 w-3.5" />
             Thư mục
           </Button>
@@ -182,6 +182,7 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
       <div className="flex gap-3 items-center">
         <div className="flex-1">
           <Input
+            className='bg-card'
             type="text"
             placeholder="Tìm kiếm mods..."
             value={searchTerm}

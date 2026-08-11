@@ -11,16 +11,16 @@ interface LogsScreenProps {
 }
 
 const LEVEL_CONFIG = {
-  info:    { cls: 'text-foreground/80',   badge: 'text-muted-foreground' },
-  success: { cls: 'text-emerald-300',     badge: 'text-emerald-300 font-semibold' },
-  warn:    { cls: 'text-amber-300',       badge: 'text-amber-300 font-semibold' },
-  error:   { cls: 'text-red-300',         badge: 'text-red-300 font-semibold' },
-  debug:   { cls: 'text-foreground/40',   badge: 'text-muted-foreground/60 text-[10px]' },
+  info: { cls: 'text-foreground/80', badge: 'text-muted-foreground' },
+  success: { cls: 'text-emerald-300', badge: 'text-emerald-300 font-semibold' },
+  warn: { cls: 'text-amber-300', badge: 'text-amber-300 font-semibold' },
+  error: { cls: 'text-red-300', badge: 'text-red-300 font-semibold' },
+  debug: { cls: 'text-foreground/40', badge: 'text-muted-foreground/60 text-[10px]' },
 } as const
 
 export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps) => {
-  const scrollRef  = useRef<HTMLDivElement>(null)
-  const rafRef     = useRef<number>(0)
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const rafRef = useRef<number>(0)
   const atBottomRef = useRef(true)
 
   // Track if user scrolled away from bottom
@@ -65,9 +65,9 @@ export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps)
       .map(l => `[${l.createdAt}] [${l.level.toUpperCase()}] ${l.message}`)
       .join('\n')
     const blob = new Blob([text], { type: 'text/plain' })
-    const url  = URL.createObjectURL(blob)
-    const a    = document.createElement('a')
-    a.href     = url
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
     a.download = `letcutemc-log-${Date.now()}.txt`
     a.click()
     URL.revokeObjectURL(url)
@@ -93,6 +93,8 @@ export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps)
             onClick={handleCopy}
             variant="outline"
             size="sm"
+            className='bg-card'
+
           >
             <Copy className="h-3.5 w-3.5" />
             Sao chép
@@ -101,6 +103,7 @@ export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps)
             onClick={handleExport}
             variant="outline"
             size="sm"
+            className='bg-card'
           >
             <Download className="h-3.5 w-3.5" />
             Xuất file
@@ -117,9 +120,9 @@ export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps)
       </div>
 
       {/* Terminal panel */}
-      <div className="flex-1 rounded-2xl border border-border overflow-hidden flex flex-col bg-[oklch(0.10_0.005_240)]">
+      <div className="flex-1 rounded-2xl border border-border overflow-hidden flex flex-col bg-card">
         {/* Terminal titlebar */}
-        <div className="px-4 py-2.5 border-b border-border bg-[oklch(0.13_0.008_240)] flex items-center gap-2 shrink-0">
+        <div className="px-4 py-2.5 border-b border-border bg-card flex items-center gap-2 shrink-0">
           <div className="flex gap-1.5">
             <div className="h-3 w-3 rounded-full bg-red-500/60" />
             <div className="h-3 w-3 rounded-full bg-amber-500/60" />

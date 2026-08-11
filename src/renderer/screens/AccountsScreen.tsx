@@ -367,11 +367,11 @@ export const AccountsScreen = ({
                   key={acc.id}
                   onClick={() => !isActive && !isWorking && handleSelectAccount(acc.id)}
                   className={[
-                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer',
+                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer bg-card',
                     isWorking ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
-                      ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/25 shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_12%,transparent)]'
-                      : 'border-border bg-card hover:border-primary/30 hover:bg-accent/30 hover:shadow-lg hover:-translate-y-0.5',
+                      ? 'border-primary/50'
+                      : 'border-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
                   ].join(' ')}
                 >
                   {/* Active badge */}
@@ -446,7 +446,7 @@ export const AccountsScreen = ({
                       UUID: {acc.uuid.slice(0, 8)}...
                     </p>
                   </div>
-                  {isActive && <div className="absolute bottom-0 left-3 right-3 h-0.5 rounded-full bg-primary/60" />}
+
                 </div>
               )
             })}

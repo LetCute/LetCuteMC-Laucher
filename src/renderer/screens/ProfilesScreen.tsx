@@ -76,9 +76,7 @@ export const ProfilesScreen = ({
                     className={[
                       'group flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl border transition',
                       isWorking ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
-                      isActive
-                        ? 'border-primary/50 bg-primary/5 ring-1 ring-primary/25 shadow-sm'
-                        : 'border-border bg-card hover:border-primary/30 hover:bg-accent/40',
+                      'border-border bg-card hover:border-primary/30 ',
                     ].join(' ')}
                   >
                     {/* Left: Info */}

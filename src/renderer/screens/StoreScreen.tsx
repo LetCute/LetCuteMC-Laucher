@@ -178,7 +178,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Nhập tên modpack (VD: Fabulously Optimized, RLcraft...)"
-              className="pl-10 h-11 text-base bg-accent/90 border-accent rounded-xl "
+              className="pl-10 h-11 text-base bg-card border-accent rounded-xl "
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -206,7 +206,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
               <div
                 key={project.project_id}
                 onClick={() => openProject(project)}
-                className="group relative flex flex-col bg-card border border-border/50 rounded-2xl overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)] transition-all cursor-pointer"
+                className="group relative flex flex-col bg-card border border-border/50 rounded-sm overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)] transition-all cursor-pointer"
               >
                 {/* Banner / Icon area */}
                 <div className="h-32 bg-zinc-900 flex items-center justify-center overflow-hidden border-b border-border/50 relative">
@@ -276,7 +276,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
             <Layers className="h-4 w-4 text-primary" /> Các phiên bản (Versions)
           </h4>
 
-          <div className="bg-accent/10 border border-border/60 rounded-xl overflow-hidden max-h-[50vh] overflow-y-auto">
+          <div className="bg-accent/10 border border-border/60 rounded-sm overflow-hidden max-h-[50vh] overflow-y-auto">
             {loadingVersions ? (
               <div className="flex h-32 items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
