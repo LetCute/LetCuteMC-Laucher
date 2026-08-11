@@ -111,8 +111,15 @@ export class ServerListService {
       console.log(`[ServerListService] Fetching top servers for injection (page ${page}, targetVersion ${targetVersion})`)
       let topServers = await this.getTopServers(page)
       
-      // Filter out offline servers
-      topServers = topServers.filter(srv => srv.isOnline)
+      // Filter out offline servers and private servers (whitelist)
+      topServers = topServers.filter(srv => {
+        if (!srv.isOnline) return false
+        
+        const isPrivateTag = srv.tags.some(t => t.toLowerCase().includes('private') || t.toLowerCase().includes('whitelist'))
+        const isPrivateNameDesc = srv.name.toLowerCase().includes('private') || srv.description.toLowerCase().includes('private') || srv.description.toLowerCase().includes('whitelist')
+        
+        return !isPrivateTag && !isPrivateNameDesc
+      })
       
       // Filter by target version if provided
       if (targetVersion) {
