@@ -4,8 +4,7 @@ import * as util from 'util'
 import * as cheerio from 'cheerio'
 import * as nbt from 'prismarine-nbt'
 import { MinecraftServer } from '../../shared/types'
-import { profileService } from './profileService'
-import { minecraftDirectoryService } from './minecraftDirectoryService'
+import { detectMinecraftDirectory } from './minecraftDirectoryService'
 
 const parseNbt = util.promisify(nbt.parse)
 
@@ -117,13 +116,15 @@ export class ServerListService {
         return false
       }
 
-      const profile = profileService.getProfile(profileId)
+      const { getProfiles } = await import('./profileService')
+      const profilesStore = await getProfiles()
+      const profile = profilesStore.profiles.find(p => p.id === profileId)
       if (!profile) {
         throw new Error(`Profile ${profileId} not found`)
       }
 
-      const defaultMcDir = minecraftDirectoryService.getMinecraftDirectory()
-      const gameDir = profile.gameDir || defaultMcDir
+      const defaultMcDirObj = await detectMinecraftDirectory()
+      const gameDir = profile.gameDir ?? defaultMcDirObj.path
       const serversDatPath = path.join(gameDir, 'servers.dat')
 
       let rootData: any
@@ -132,8 +133,9 @@ export class ServerListService {
       // If servers.dat exists, parse it
       if (fs.existsSync(serversDatPath)) {
         const buffer = fs.readFileSync(serversDatPath)
-        const { parsed } = await parseNbt(buffer)
-        rootData = parsed
+        const parsed = (await parseNbt(buffer)) as any
+        // prismarine-nbt typings can be weird, util.promisify returns the first argument `parsed` or an object {parsed, type} depending on version. Let's handle both.
+        rootData = parsed.parsed || parsed
         
         if (rootData.value && rootData.value.servers && rootData.value.servers.value) {
           const srvList = rootData.value.servers.value
