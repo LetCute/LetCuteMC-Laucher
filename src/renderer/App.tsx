@@ -130,12 +130,12 @@ function App() {
       auth: isVirtual
         ? { type: 'virtual', username, uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
         : {
-            type: 'microsoft',
-            username,
-            uuid: activeAccount.uuid,
-            accessToken: activeAccount.accessToken || '',
-            expiresAt: activeAccount.expiresAt,
-          },
+          type: 'microsoft',
+          username,
+          uuid: activeAccount.uuid,
+          accessToken: activeAccount.accessToken || '',
+          expiresAt: activeAccount.expiresAt,
+        },
     })
   }
 
@@ -322,170 +322,169 @@ function App() {
 
   return (
     <ToastProvider>
-      <div 
+      <div
         className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans bg-cover bg-center bg-no-repeat relative"
-        style={{ backgroundImage: 'url(./bg.png)' }}
+        style={{ backgroundImage: 'url(./background.jpg)' }}
       >
         {/* Dark overlay to ensure text remains readable */}
         <div className="absolute inset-0 bg-black/40 pointer-events-none" />
-        
+
         {/* Content container - must have z-index to stay above the overlay */}
         <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
-      {!criticalReady ? (
-        <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#1c2127]">
-          <img src="./logo.png" alt="LetCuteMC" className="w-32 h-32 animate-pulse" />
-          <div className="flex items-center gap-3 text-muted-foreground">
-            <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span className="text-sm font-medium">{bootstrap.message}</span>
-          </div>
-        </div>
-      ) : (
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-      <Sidebar
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        accountState={accountState}
-        onAccountStateChange={setAccountState}
-        activeProfile={activeProfile}
-        profiles={profiles}
-        onSetActiveProfile={handleSetActiveProfile}
-        javaSelection={javaSelection}
-        settings={settings}
-        gameDir={gameDir}
-        isWorking={isWorking}
-      />
+          {!criticalReady ? (
+            <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#1c2127]">
+              <img src="./logo.png" alt="LetCuteMC" className="w-32 h-32 animate-pulse" />
+              <div className="flex items-center gap-3 text-muted-foreground">
+                <span className="inline-block h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                <span className="text-sm font-medium">{bootstrap.message}</span>
+              </div>
+            </div>
+          ) : (
+            <div className="flex min-h-0 flex-1 overflow-hidden">
+              <Sidebar
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                accountState={accountState}
+                onAccountStateChange={setAccountState}
+                activeProfile={activeProfile}
+                profiles={profiles}
+                onSetActiveProfile={handleSetActiveProfile}
+                javaSelection={javaSelection}
+                settings={settings}
+                gameDir={gameDir}
+                isWorking={isWorking}
+              />
 
-      <main className="flex min-w-0 flex-1 flex-col">
-       <TopBar />
+              <main className="flex min-w-0 flex-1 flex-col">
+                <TopBar />
 
-        {isBootstrapping && (
-          <div className="flex items-center gap-2 border-b border-border/60 bg-card/40 px-4 py-1.5 text-xs text-muted-foreground">
-            <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <span>{bootstrap.message}</span>
-          </div>
-        )}
+                {isBootstrapping && (
+                  <div className="flex items-center gap-2 border-b border-border/60 bg-card/40 px-4 py-1.5 text-xs text-muted-foreground">
+                    <span className="inline-block h-3 w-3 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+                    <span>{bootstrap.message}</span>
+                  </div>
+                )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {activeTab === 'store' && (
-            <StoreScreen 
-              gameDir={activeProfile?.gameDir || gameDir}
-              profiles={profiles}
-              activeProfileId={activeProfileId}
-              onInstallSuccess={async (newProfileId) => {
-                await initializeAppData();
-                await handleSetActiveProfile(newProfileId);
-                setActiveTab('mods');
-              }}
-            />
-          )}
+                <div className="min-h-0 flex-1 overflow-y-auto">
+                  {activeTab === 'store' && (
+                    <StoreScreen
+                      gameDir={activeProfile?.gameDir || gameDir}
+                      profiles={profiles}
+                      activeProfileId={activeProfileId}
+                      onInstallSuccess={async (newProfileId) => {
+                        await initializeAppData();
+                        await handleSetActiveProfile(newProfileId);
+                        setActiveTab('mods');
+                      }}
+                    />
+                  )}
 
-          {activeTab === 'profiles' && (
-            <ProfilesScreen
-              profiles={profiles}
-              activeProfileId={activeProfileId}
-              onSetActive={handleSetActiveProfile}
-              onCreateProfile={() => openCreateProfile()}
-              onEdit={openEditProfile}
-              onDelete={handleDeleteProfile}
-              onLaunchProfile={handleLaunchProfileDirectly}
-              isWorking={isWorking}
-            />
-          )}
+                  {activeTab === 'profiles' && (
+                    <ProfilesScreen
+                      profiles={profiles}
+                      activeProfileId={activeProfileId}
+                      onSetActive={handleSetActiveProfile}
+                      onCreateProfile={() => openCreateProfile()}
+                      onEdit={openEditProfile}
+                      onDelete={handleDeleteProfile}
+                      onLaunchProfile={handleLaunchProfileDirectly}
+                      isWorking={isWorking}
+                    />
+                  )}
 
-          {activeTab === 'versions' && (
-            <VersionsScreen
-              catalog={versionCatalog}
-              gameDir={gameDir}
-              onCreateProfile={(versionItem) => openCreateProfile(versionItem)}
-              onRefresh={async () => {
-                if (!gameDir) return
-                const catalog = await launcherClient.getMinecraftVersionCatalog(gameDir)
-                setVersionCatalog(catalog)
-              }}
-              isWorking={isWorking}
-            />
-          )}
+                  {activeTab === 'versions' && (
+                    <VersionsScreen
+                      catalog={versionCatalog}
+                      gameDir={gameDir}
+                      onCreateProfile={(versionItem) => openCreateProfile(versionItem)}
+                      onRefresh={async () => {
+                        if (!gameDir) return
+                        const catalog = await launcherClient.getMinecraftVersionCatalog(gameDir)
+                        setVersionCatalog(catalog)
+                      }}
+                      isWorking={isWorking}
+                    />
+                  )}
 
-          {/* Keep mounted after first open — avoid re-scan every tab switch */}
-          {(activeTab === 'mods' || contentVisited.mods) && (
-            <div className={activeTab === 'mods' ? 'h-full' : 'hidden'}>
-              <ModsScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
+                  {/* Keep mounted after first open — avoid re-scan every tab switch */}
+                  {(activeTab === 'mods' || contentVisited.mods) && (
+                    <div className={activeTab === 'mods' ? 'h-full' : 'hidden'}>
+                      <ModsScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
+                    </div>
+                  )}
+
+                  {(activeTab === 'resourcepacks' || contentVisited.resourcepacks) && (
+                    <div className={activeTab === 'resourcepacks' ? 'h-full' : 'hidden'}>
+                      <ResourcePacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
+                    </div>
+                  )}
+
+                  {(activeTab === 'shaderpacks' || contentVisited.shaderpacks) && (
+                    <div className={activeTab === 'shaderpacks' ? 'h-full' : 'hidden'}>
+                      <ShaderPacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
+                    </div>
+                  )}
+
+                  {activeTab === 'settings' && (
+                    <SettingsScreen
+                      settings={settings}
+                      activeProfile={activeProfile}
+                      onSave={async (s) => {
+                        const updated = await launcherClient.updateSettings(s);
+                        setSettings(updated);
+                      }}
+                      onSaveJavaPath={async (javaPath) => {
+                        if (!activeProfile) return;
+                        const updated = await launcherClient.updateProfile(activeProfile.id, { javaPath });
+                        setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                      }}
+                      accountState={accountState}
+                      gameDir={gameDir}
+                      onAccountStateChange={setAccountState}
+                      appendLog={() => {/* logs now managed by useLauncherJob */ }}
+                      isWorking={isWorking}
+                    />
+                  )}
+
+                  {activeTab === 'accounts' && (
+                    <AccountsScreen
+                      accountState={accountState}
+                      onAccountStateChange={setAccountState}
+                      appendLog={() => { }}
+                      isWorking={isWorking}
+                    />
+                  )}
+
+                  {activeTab === 'logs' && (
+                    <LogsScreen
+                      logs={launchJobState?.logs ?? []}
+                      onClear={clearLaunchLogs}
+                      onCopy={() => {/* copy handled inside LogsScreen */ }}
+                      onExport={() => {/* export handled inside LogsScreen */ }}
+                    />
+                  )}
+
+                  {activeTab === 'about' && (
+                    <AboutScreen />
+                  )}
+                </div>
+              </main>
             </div>
           )}
 
-          {(activeTab === 'resourcepacks' || contentVisited.resourcepacks) && (
-            <div className={activeTab === 'resourcepacks' ? 'h-full' : 'hidden'}>
-              <ResourcePacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
-            </div>
-          )}
-
-          {(activeTab === 'shaderpacks' || contentVisited.shaderpacks) && (
-            <div className={activeTab === 'shaderpacks' ? 'h-full' : 'hidden'}>
-              <ShaderPacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
-            </div>
-          )}
-
-          {activeTab === 'settings' && (
-            <SettingsScreen
-              settings={settings}
-              activeProfile={activeProfile}
-              onSave={async (s) => {
-                const updated = await launcherClient.updateSettings(s);
-                setSettings(updated);
-              }}
-              onSaveJavaPath={async (javaPath) => {
-                if (!activeProfile) return;
-                const updated = await launcherClient.updateProfile(activeProfile.id, { javaPath });
-                setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-              }}
-              accountState={accountState}
-              gameDir={gameDir}
-              onAccountStateChange={setAccountState}
-              appendLog={() => {/* logs now managed by useLauncherJob */}}
-              isWorking={isWorking}
-            />
-          )}
-
-          {activeTab === 'accounts' && (
-            <AccountsScreen
-              accountState={accountState}
-              onAccountStateChange={setAccountState}
-              appendLog={() => {}}
-              isWorking={isWorking}
-            />
-          )}
-
-          {activeTab === 'logs' && (
-            <LogsScreen
-              logs={launchJobState?.logs ?? []}
-              onClear={clearLaunchLogs}
-              onCopy={() => {/* copy handled inside LogsScreen */}}
-              onExport={() => {/* export handled inside LogsScreen */}}
-            />
-          )}
-
-          {activeTab === 'about' && (
-            <AboutScreen />
-          )}
-          </div>
-        </main>
-        </div>
-      )}
-
-      <ProfileModal
-        isOpen={isProfileModalOpen}
-        onClose={() => {
-          setIsProfileModalOpen(false);
-          setEditingProfile(null);
-          setPreselectedVersion(null);
-        }}
-        onSave={handleSaveProfile}
-        profile={editingProfile}
-        versionCatalog={versionCatalog}
-        preselectedVersion={preselectedVersion}
-        defaultGameDir={gameDir}
-      />
-    </div>
+          <ProfileModal
+            isOpen={isProfileModalOpen}
+            onClose={() => {
+              setIsProfileModalOpen(false);
+              setEditingProfile(null);
+              setPreselectedVersion(null);
+            }}
+            onSave={handleSaveProfile}
+            profile={editingProfile}
+            versionCatalog={versionCatalog}
+            preselectedVersion={preselectedVersion}
+            defaultGameDir={gameDir}
+          />
         </div>
       </div>
     </ToastProvider>
