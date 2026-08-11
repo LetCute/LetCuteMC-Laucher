@@ -345,9 +345,9 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Inject top servers for this version automatically
   try {
     const { serverListService } = await import('./serverListService.js')
-    // Run in background without blocking the launch
-    serverListService.injectServersToProfile(input.profileId, 1, input.version)
-      .catch(err => console.error('[LaunchManager] Failed to inject servers in background:', err))
+    // Run and wait to ensure servers.dat is written before game launch
+    await serverListService.injectServersToProfile(input.profileId, 1, input.version)
+      .catch(err => console.error('[LaunchManager] Failed to inject servers:', err))
   } catch (err) {
     console.error('[LaunchManager] Failed to load serverListService:', err)
   }

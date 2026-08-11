@@ -17,6 +17,17 @@ export class ServerListService {
    */
   async getTopServers(page: number = 1): Promise<MinecraftServer[]> {
     try {
+      const { getLauncherDataDirectory, readJsonFile, writeJsonFile } = await import('./storageService.js')
+      const cachePath = path.join(getLauncherDataDirectory(), `top-servers-cache-page${page}.json`)
+      
+      const cache = await readJsonFile<{ timestamp: number, data: MinecraftServer[] }>(cachePath, { timestamp: 0, data: [] })
+      const now = Date.now()
+      const ONE_DAY = 24 * 60 * 60 * 1000
+
+      if (now - cache.timestamp < ONE_DAY && cache.data.length > 0) {
+        return cache.data
+      }
+
       const url = page === 1 ? this.baseUrl + '/' : `${this.baseUrl}/${page}/`
       const res = await fetch(url)
 
@@ -95,6 +106,10 @@ export class ServerListService {
         }
       })
 
+      if (servers.length > 0) {
+        await writeJsonFile(cachePath, { timestamp: now, data: servers }).catch(() => {})
+      }
+
       return servers
     } catch (error) {
       console.error('[ServerListService] Error fetching servers:', error)
@@ -110,28 +125,17 @@ export class ServerListService {
     try {
       console.log(`[ServerListService] Fetching top servers for injection (page ${page}, targetVersion ${targetVersion})`)
       let topServers = await this.getTopServers(page)
-      
+
       // Filter out offline servers and private servers (whitelist)
       topServers = topServers.filter(srv => {
         if (!srv.isOnline) return false
-        
+
         const isPrivateTag = srv.tags.some(t => t.toLowerCase().includes('private') || t.toLowerCase().includes('whitelist'))
         const isPrivateNameDesc = srv.name.toLowerCase().includes('private') || srv.description.toLowerCase().includes('private') || srv.description.toLowerCase().includes('whitelist')
-        
-        return !isPrivateTag && !isPrivateNameDesc
+        const isPrivateIp = srv.ip.toLowerCase().includes('private server')
+
+        return !isPrivateTag && !isPrivateNameDesc && !isPrivateIp
       })
-      
-      // Filter by target version if provided
-      if (targetVersion) {
-        const majorMinorMatch = targetVersion.match(/^(\d+\.\d+)/)
-        const targetMajorMinor = majorMinorMatch ? majorMinorMatch[1] : targetVersion
-        
-        topServers = topServers.filter(srv => {
-          // If server version contains the exact targetVersion, or at least the major.minor version
-          return srv.version.includes(targetVersion) || srv.version.includes(targetMajorMinor)
-        })
-        console.log(`[ServerListService] Filtered down to ${topServers.length} servers matching ${targetVersion}`)
-      }
 
       if (topServers.length === 0) {
         console.warn('[ServerListService] No servers found to inject')
@@ -162,9 +166,12 @@ export class ServerListService {
         if (rootData.value && rootData.value.servers && rootData.value.servers.value) {
           const srvList = rootData.value.servers.value
           if (srvList.type === 'compound' && Array.isArray(srvList.value)) {
-            // Keep servers that DO NOT have our letcute_top tag
+            // Keep servers that DO NOT have our letcute_top tag AND do not have our injected names
             currentServers = srvList.value.filter((srv: any) => {
-              return !(srv.letcute_top && srv.letcute_top.value === 1)
+              const hasTag = srv.letcute_top && srv.letcute_top.value === 1
+              const nameStr = srv.name && typeof srv.name.value === 'string' ? srv.name.value : ''
+              const isOldInjected = hasTag || nameStr.startsWith('VN#') || nameStr === '§e[VIP] §fAenat Network'
+              return !isOldInjected
             })
           }
         }
@@ -193,7 +200,8 @@ export class ServerListService {
           name: { type: 'string', value: title },
           ip: { type: 'string', value: srv.ip },
           // Hidden NBT tag that Minecraft ignores, but we use it to recognize our injection!
-          letcute_top: { type: 'byte', value: 1 }
+          letcute_top: { type: 'byte', value: 1 },
+          acceptTextures: { type: 'byte', value: 1 }
         }
 
         return compound
@@ -206,11 +214,19 @@ export class ServerListService {
       newServersNbt.unshift({
         name: { type: 'string', value: '§e[VIP] §fAenat Network' },
         ip: { type: 'string', value: 'mc.aenat.net:25565' },
-        letcute_top: { type: 'byte', value: 1 }
+        letcute_top: { type: 'byte', value: 1 },
+        acceptTextures: { type: 'byte', value: 1 }
       })
 
-      // Combine: Top servers first, then user's custom servers
-      const mergedServers = [...newServersNbt, ...currentServers]
+      // Filter out any server in currentServers that has the exact same IP as any new server
+      const newIps = new Set(newServersNbt.map((srv: any) => srv.ip.value.toLowerCase()))
+      currentServers = currentServers.filter((srv: any) => {
+        const ipStr = srv.ip && typeof srv.ip.value === 'string' ? srv.ip.value.toLowerCase() : ''
+        return !newIps.has(ipStr)
+      })
+
+      // Combine: User's custom servers first, then our injected servers at the bottom
+      const mergedServers = [...currentServers, ...newServersNbt]
 
       // Update rootData
       if (!rootData.value) rootData.value = {}

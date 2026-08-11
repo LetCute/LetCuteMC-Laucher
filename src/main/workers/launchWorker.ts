@@ -117,6 +117,46 @@ function validateInput(input: LaunchInput): string | null {
 
 // ─── Main launch routine ──────────────────────────────────────────────────────
 
+async function injectDefaultOptions(gameDir: string, jobId: string): Promise<void> {
+  const optionsPath = path.join(gameDir, 'options.txt')
+  try {
+    let lines: string[] = []
+    try {
+      const content = await fs.readFile(optionsPath, 'utf8')
+      lines = content.split(/\r?\n/)
+    } catch (err) {
+      // Ignore if file doesn't exist
+    }
+
+    let hasLang = false
+    let hasUnicode = false
+    let hasSkipWarning = false
+
+    for (let i = 0; i < lines.length; i++) {
+      if (lines[i].startsWith('lang:')) {
+        lines[i] = 'lang:vi_vn'
+        hasLang = true
+      } else if (lines[i].startsWith('forceUnicodeFont:')) {
+        lines[i] = 'forceUnicodeFont:true'
+        hasUnicode = true
+      } else if (lines[i].startsWith('skipMultiplayerWarning:')) {
+        lines[i] = 'skipMultiplayerWarning:true'
+        hasSkipWarning = true
+      }
+    }
+
+    if (!hasLang) lines.push('lang:vi_vn')
+    if (!hasUnicode) lines.push('forceUnicodeFont:true')
+    if (!hasSkipWarning) lines.push('skipMultiplayerWarning:true')
+
+    await fs.writeFile(optionsPath, lines.join('\n').trim() + '\n', 'utf8')
+    postLog(jobId, 'info', 'Đã thiết lập ngôn ngữ mặc định thành tiếng Việt (vi_vn), bật Unicode và ẩn cảnh báo Multiplayer.')
+  } catch (err) {
+    postLog(jobId, 'warn', `Không thể thiết lập tùy chọn mặc định (options.txt): ${(err as Error).message}`)
+  }
+}
+
+
 async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
   activeJobId = jobId
   isCancelled = false
@@ -219,6 +259,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       percent: 20,
     })
     assertNotCancelled()
+
+    await injectDefaultOptions(input.gameDir, jobId)
 
     // XMCL parse version:
     // - Với profile modpack (có mcRootDir hoặc gameDir nằm trong profiles/):
