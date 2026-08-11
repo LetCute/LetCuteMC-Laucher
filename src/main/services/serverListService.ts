@@ -111,6 +111,9 @@ export class ServerListService {
       console.log(`[ServerListService] Fetching top servers for injection (page ${page}, targetVersion ${targetVersion})`)
       let topServers = await this.getTopServers(page)
       
+      // Filter out offline servers
+      topServers = topServers.filter(srv => srv.isOnline)
+      
       // Filter by target version if provided
       if (targetVersion) {
         const majorMinorMatch = targetVersion.match(/^(\d+\.\d+)/)
