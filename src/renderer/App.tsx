@@ -322,7 +322,15 @@ function App() {
 
   return (
     <ToastProvider>
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans">
+      <div 
+        className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans bg-cover bg-center bg-no-repeat relative"
+        style={{ backgroundImage: 'url(./bg.png)' }}
+      >
+        {/* Dark overlay to ensure text remains readable */}
+        <div className="absolute inset-0 bg-black/40 pointer-events-none" />
+        
+        {/* Content container - must have z-index to stay above the overlay */}
+        <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">
       {!criticalReady ? (
         <div className="flex h-full w-full flex-col items-center justify-center gap-6 bg-[#1c2127]">
           <img src="./logo.png" alt="LetCuteMC" className="w-32 h-32 animate-pulse" />
@@ -478,6 +486,8 @@ function App() {
         defaultGameDir={gameDir}
       />
     </div>
+        </div>
+      </div>
     </ToastProvider>
   );
 }

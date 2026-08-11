@@ -5,7 +5,7 @@ import { launcherClient } from '../../services/launcherClient'
 export function TopBar() {
   return (
     <div
-      className="h-9 flex items-center justify-between bg-background select-none"
+      className="h-9 flex items-center justify-between bg-transparent select-none z-20"
       style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
     >
       <div className="flex-1"></div>
