@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -16,8 +16,8 @@
     "test:java": "npm run build:main && node scripts/test-java-scanner.mjs",
     "build": "npm run build:renderer && npm run build:main && npm run verify:main",
     "start": "cross-env NODE_ENV=production electron .",
-    "dist": "npm run build && electron-builder",
-    "dist:portable": "npm run build && electron-builder --win portable --x64"
+    "dist": "npm run build && electron-builder -p never",
+    "dist:portable": "npm run build && electron-builder --win portable --x64 -p never"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
