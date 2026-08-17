@@ -4,6 +4,7 @@ import fsPromises from 'node:fs/promises';
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import https from 'node:https';
+import { getLauncherDataDirectory } from './storageService';
 
 const execFileAsync = promisify(execFile);
 
@@ -13,21 +14,34 @@ interface JavaInstallProgress {
   message: string;
 }
 
-// Temurin (Eclipse Adoptium) is the most reliable free JDK
-const JAVA_VERSIONS: Record<number, { url: string; filename: string }> = {
-  17: {
-    url: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.8_7.zip',
-    filename: 'java-17.zip'
-  },
-  21: {
-    url: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_windows_hotspot_21.0.1_12.zip',
-    filename: 'java-21.zip'
-  },
-  8: {
-    url: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_windows_hotspot_8u382b05.zip',
-    filename: 'java-8.zip'
-  }
-};
+const JAVA_EXE = process.platform === 'win32' ? 'java.exe' : 'java';
+
+function getJavaDownloadInfo(version: number) {
+  const p = process.platform;
+  const osPart = p === 'win32' ? 'windows' : p === 'darwin' ? 'mac' : 'linux';
+  const ext = p === 'win32' ? 'zip' : 'tar.gz';
+  
+  const urls: Record<number, Record<string, string>> = {
+    17: {
+      windows: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_windows_hotspot_17.0.8_7.zip',
+      mac: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_mac_hotspot_17.0.8_7.tar.gz',
+      linux: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.8_7.tar.gz'
+    },
+    21: {
+      windows: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_windows_hotspot_21.0.1_12.zip',
+      mac: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_mac_hotspot_21.0.1_12.tar.gz',
+      linux: 'https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.1%2B12/OpenJDK21U-jdk_x64_linux_hotspot_21.0.1_12.tar.gz'
+    },
+    8: {
+      windows: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_windows_hotspot_8u382b05.zip',
+      mac: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_mac_hotspot_8u382b05.tar.gz',
+      linux: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_linux_hotspot_8u382b05.tar.gz'
+    }
+  };
+  
+  if (!urls[version]) return null;
+  return { url: urls[version][osPart], filename: `java-${version}.${ext}` };
+}
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -71,22 +85,28 @@ function downloadFile(url: string, destination: string): Promise<void> {
 }
 
 /**
- * Extract zip file (requires 7-Zip or built-in Windows tar)
+ * Extract zip or tar file
  */
-async function extractZip(zipPath: string, destDir: string): Promise<void> {
+async function extractArchive(archivePath: string, destDir: string): Promise<void> {
   try {
-    // Try Windows tar first (Windows 10+)
-    await execFileAsync('tar', ['-xf', zipPath, '-C', destDir], {
-      timeout: 60000
-    });
+    if (archivePath.endsWith('.tar.gz')) {
+      await execFileAsync('tar', ['-xzf', archivePath, '-C', destDir], {
+        timeout: 60000
+      });
+    } else {
+      // Try Windows tar first (Windows 10+)
+      await execFileAsync('tar', ['-xf', archivePath, '-C', destDir], {
+        timeout: 60000
+      });
+    }
   } catch {
     // Fallback: try 7z if available
     try {
-      await execFileAsync('7z', ['x', zipPath, `-o${destDir}`, '-y'], {
+      await execFileAsync('7z', ['x', archivePath, `-o${destDir}`, '-y'], {
         timeout: 60000
       });
     } catch {
-      throw new Error('Không thể giải nén. Vui lòng cài 7-Zip hoặc sử dụng Windows 10+');
+      throw new Error('Không thể giải nén. Vui lòng cài 7-Zip hoặc sử dụng hệ điều hành có sẵn tar (Windows 10+, Linux, macOS)');
     }
   }
 }
@@ -99,7 +119,7 @@ export async function autoInstallJava(
   installDir: string,
   onProgress?: (progress: JavaInstallProgress) => void
 ): Promise<{ success: boolean; javaPath: string; message: string }> {
-  const versionInfo = JAVA_VERSIONS[javaVersion];
+  const versionInfo = getJavaDownloadInfo(javaVersion);
   
   if (!versionInfo) {
     return {
@@ -113,7 +133,7 @@ export async function autoInstallJava(
     // Create install directory
     await fsPromises.mkdir(installDir, { recursive: true });
 
-    const tempZipPath = path.join(installDir, versionInfo.filename);
+    const tempArchivePath = path.join(installDir, versionInfo.filename);
     const extractDir = path.join(installDir, `java-${javaVersion}`);
 
     // Download
@@ -123,7 +143,7 @@ export async function autoInstallJava(
       message: `Đang tải Java ${javaVersion} (~ 150MB)...`
     });
 
-    await downloadFile(versionInfo.url, tempZipPath);
+    await downloadFile(versionInfo.url, tempArchivePath);
 
     onProgress?.({
       stage: 'downloading',
@@ -139,57 +159,39 @@ export async function autoInstallJava(
     });
 
     await fsPromises.mkdir(extractDir, { recursive: true });
-    await extractZip(tempZipPath, extractDir);
+    await extractArchive(tempArchivePath, extractDir);
 
     onProgress?.({
       stage: 'extracting',
       percent: 80,
-      message: `Hoàn tất giải nén. Tìm kiếm java.exe...`
+      message: `Hoàn tất giải nén. Tìm kiếm ${JAVA_EXE}...`
     });
 
-    // Find java.exe in extracted folder
-    const possiblePaths = [
-      path.join(extractDir, 'jdk-17.0.8+7', 'bin', 'java.exe'),
-      path.join(extractDir, 'jdk-17.0.8+7', 'bin', 'java.exe'),
-      path.join(extractDir, 'jdk-21.0.1+12', 'bin', 'java.exe'),
-      path.join(extractDir, 'jdk8u382-b05', 'bin', 'java.exe'),
-    ];
-
-    let javaPath = '';
-    for (const p of possiblePaths) {
-      if (await pathExists(p)) {
-        javaPath = p;
-        break;
-      }
-    }
-
-    // If not found, search recursively
-    if (!javaPath) {
-      const searchJava = async (dir: string, depth = 0): Promise<string> => {
-        if (depth > 3) return '';
-        try {
-          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
-          for (const entry of entries) {
-            if (entry.name === 'java.exe') {
-              return path.join(dir, entry.name);
-            }
-            if (entry.isDirectory()) {
-              const found = await searchJava(path.join(dir, entry.name), depth + 1);
-              if (found) return found;
-            }
+    // Find java executable in extracted folder
+    const searchJava = async (dir: string, depth = 0): Promise<string> => {
+      if (depth > 5) return '';
+      try {
+        const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+        for (const entry of entries) {
+          if (entry.name === JAVA_EXE) {
+            return path.join(dir, entry.name);
           }
-        } catch {
-          // ignore
+          if (entry.isDirectory()) {
+            const found = await searchJava(path.join(dir, entry.name), depth + 1);
+            if (found) return found;
+          }
         }
-        return '';
-      };
+      } catch {
+        // ignore
+      }
+      return '';
+    };
 
-      javaPath = await searchJava(extractDir);
-    }
+    const javaPath = await searchJava(extractDir);
 
-    // Cleanup temp zip
+    // Cleanup temp archive
     try {
-      await fsPromises.unlink(tempZipPath);
+      await fsPromises.unlink(tempArchivePath);
     } catch {
       // ignore cleanup errors
     }
@@ -198,8 +200,17 @@ export async function autoInstallJava(
       return {
         success: false,
         javaPath: '',
-        message: 'Cài đặt Java thành công nhưng không tìm thấy java.exe'
+        message: `Cài đặt Java thành công nhưng không tìm thấy ${JAVA_EXE}`
       };
+    }
+
+    // Set execute permission on Mac/Linux
+    if (process.platform !== 'win32') {
+      try {
+        await fsPromises.chmod(javaPath, 0o755);
+      } catch (e) {
+        console.warn('Could not chmod java executable', e);
+      }
     }
 
     onProgress?.({
@@ -233,6 +244,5 @@ export async function autoInstallJava(
  * Get default installation directory
  */
 export function getDefaultJavaInstallDir(): string {
-  const appDataDir = process.env.APPDATA || process.env.HOME || '';
-  return path.join(appDataDir, 'LetCuteMC', 'java');
+  return path.join(getLauncherDataDirectory(), 'java');
 }
