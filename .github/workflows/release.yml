@@ -35,24 +35,41 @@ jobs:
       - name: Build and Package
         run: npm run dist
 
-      - name: Release to GitHub (Windows)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'windows-latest'
+      - name: Upload Windows Artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows-latest'
         with:
-          files: |
-            release/*.exe
+          name: windows-artifacts
+          path: release/*.exe
 
-      - name: Release to GitHub (Linux)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'ubuntu-latest'
+      - name: Upload Linux Artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
         with:
-          files: |
+          name: linux-artifacts
+          path: |
             release/*.AppImage
             release/*.deb
 
-      - name: Release to GitHub (Mac)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'macos-latest'
+      - name: Upload Mac Artifacts
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'macos-latest'
         with:
-          files: |
-            release/*.dmg
+          name: mac-artifacts
+          path: release/*.dmg
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          merge-multiple: true
+
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
