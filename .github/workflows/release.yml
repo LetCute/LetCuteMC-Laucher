@@ -35,24 +35,30 @@ jobs:
       - name: Build and Package
         run: npm run dist
 
-      - name: Release to GitHub (Windows)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'windows-latest'
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v4
         with:
-          files: |
+          name: app-release-${{ matrix.os }}
+          path: |
             release/*.exe
-
-      - name: Release to GitHub (Linux)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'ubuntu-latest'
-        with:
-          files: |
             release/*.AppImage
             release/*.deb
-
-      - name: Release to GitHub (Mac)
-        uses: softprops/action-gh-release@v2
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && matrix.os == 'macos-latest'
-        with:
-          files: |
             release/*.dmg
+          retention-days: 1
+
+  publish-release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release-artifacts
+          pattern: app-release-*
+          merge-multiple: true
+
+      - name: Release to GitHub
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release-artifacts/*
