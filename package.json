@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.0.3",
+  "version": "1.0.22",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -103,7 +103,7 @@
           ]
         }
       ],
-      "artifactName": "${productName}-Setup-${version}-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -118,14 +118,16 @@
       "icon": "public/logo.png",
       "target": [
         "dmg"
-      ]
+      ],
+      "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
       "icon": "public/logo.png",
       "target": [
         "AppImage",
         "deb"
-      ]
+      ],
+      "artifactName": "${productName}-${version}-ubuntu-${arch}.${ext}"
     }
   }
 }
