@@ -2,7 +2,7 @@
   "name": "letcutemc",
   "version": "1.0.1",
   "description": "LetCuteMC Minecraft Launcher",
-  "author": "LetCuteMC <contact@letcutemc.com>",
+  "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
   "main": "dist-electron/main/main.js",
   "module": "dist/renderer/index.tsx",
