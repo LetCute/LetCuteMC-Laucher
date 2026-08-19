@@ -39,16 +39,20 @@ export async function initDiscordRpc(): Promise<void> {
 }
 
 export function setIdle(): void {
+  setCustomActivity('Đang ở sảnh chờ', 'Chuẩn bị vào game...')
+}
+
+export function setCustomActivity(details: string, state: string): void {
   if (!rpcClient || !isConnected) return
 
   rpcClient.setActivity({
-    details: 'Đang ở sảnh chờ',
-    state: 'Chuẩn bị vào game...',
+    details,
+    state,
     startTimestamp: new Date(),
     largeImageKey: 'logo', // Thay bằng tên ảnh bạn đã upload lên Discord Developer Portal
     largeImageText: 'LetCuteMC Launcher',
     instance: false,
-  }).catch(err => console.error('[Discord RPC] Lỗi khi set Idle:', err))
+  }).catch(err => console.error('[Discord RPC] Lỗi khi set Activity:', err))
 }
 
 export function setPlaying(version: string, profileName: string): void {

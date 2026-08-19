@@ -442,4 +442,21 @@ export function registerIpcHandlers(): void {
     const { taskManagerService } = await import('./services/taskManagerService.js')
     taskManagerService.clearCompletedTasks()
   })
+
+  // Discord RPC
+  handleIpc('discord:set-activity', async ({ details, state }: { details: string, state: string }) => {
+    const { setCustomActivity } = await import('./services/discordRpcService.js')
+    setCustomActivity(details, state)
+    return true
+  })
+
+  // Auto Updater
+  handleIpc('updater:check', async () => {
+    const { checkForUpdates } = await import('./services/autoUpdaterService.js')
+    return checkForUpdates()
+  })
+  handleIpc('updater:quit-and-install', async () => {
+    const { quitAndInstallUpdate } = await import('./services/autoUpdaterService.js')
+    quitAndInstallUpdate()
+  })
 }

@@ -14,6 +14,7 @@ import TasksScreen from './screens/TasksScreen';
 import { AboutScreen } from './screens/AboutScreen';
 import { StoreScreen } from './screens/StoreScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
+import { AutoUpdaterOverlay } from './components/AutoUpdaterOverlay';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { launcherClient } from './services/launcherClient';
@@ -258,6 +259,29 @@ function App() {
 
 
 
+  // ── Discord RPC Updates ──────────────────────────────────────────────────
+  useEffect(() => {
+    if (settings.enableDiscordRpc && window.launcherApi && launchJobState?.status !== 'running' && launchJobState?.status !== 'launching') {
+      let details = 'Đang ở sảnh chờ'
+      let state = 'Chuẩn bị vào game...'
+      
+      switch (activeTab) {
+        case 'store': details = 'Đang khám phá Cửa hàng'; state = 'Tìm kiếm mods & modpacks'; break;
+        case 'profiles': details = 'Đang quản lý Profile'; state = 'Sẵn sàng khởi động'; break;
+        case 'versions': details = 'Đang quản lý Phiên bản'; state = 'Tải phiên bản Minecraft'; break;
+        case 'mods': details = 'Đang quản lý Mods'; state = 'Tuỳ biến Mods'; break;
+        case 'resourcepacks': details = 'Đang xem Resource Packs'; state = 'Thay đổi giao diện'; break;
+        case 'shaderpacks': details = 'Đang xem Shader Packs'; state = 'Thay đổi đồ hoạ'; break;
+        case 'settings': details = 'Đang cài đặt Launcher'; state = 'Tinh chỉnh hệ thống'; break;
+        case 'accounts': details = 'Đang xem thư viện Skin'; state = 'Quản lý tài khoản'; break;
+        case 'tasks': details = 'Đang xem Tiến trình'; state = 'Theo dõi tác vụ chạy ngầm'; break;
+        case 'about': details = 'Đang xem thông tin'; state = 'LetCuteMC Launcher'; break;
+      }
+
+      window.launcherApi.setDiscordActivity(details, state).catch(console.error)
+    }
+  }, [activeTab, settings.enableDiscordRpc, launchJobState?.status])
+
   // ── Profile Actions ───────────────────────────────────────────────────────
   const handleSetActiveProfile = async (id: string) => {
     try {
@@ -501,6 +525,7 @@ function App() {
             preselectedVersion={preselectedVersion}
             defaultGameDir={gameDir}
           />
+          <AutoUpdaterOverlay />
         </div>
       </div>
     </ToastProvider>

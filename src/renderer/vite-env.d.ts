@@ -166,6 +166,14 @@ declare global {
       getAllTasks(): Promise<import('../shared/types').BackgroundTask[]>
       clearCompletedTasks(): Promise<void>
       onTasksUpdate(callback: (events: import('../shared/types').TaskManagerEvent) => void): () => void
+
+      // Discord RPC
+      setDiscordActivity(details: string, state: string): Promise<boolean>
+
+      // Auto Updater
+      checkForUpdates(): Promise<any>
+      quitAndInstallUpdate(): Promise<void>
+      onUpdateStatus(callback: (status: { type: string, message: string, data?: any }) => void): () => void
     }
   }
 }

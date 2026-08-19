@@ -359,6 +359,23 @@ const launcherApi = {
     return () => {
       ipcRenderer.removeListener('tasks:on-update', listener)
     }
+  },
+
+  setDiscordActivity(details: string, state: string): Promise<boolean> {
+    return ipcRenderer.invoke('discord:set-activity', { details, state })
+  },
+
+  // Auto Updater
+  checkForUpdates(): Promise<any> {
+    return ipcRenderer.invoke('updater:check')
+  },
+  quitAndInstallUpdate(): Promise<void> {
+    return ipcRenderer.invoke('updater:quit-and-install')
+  },
+  onUpdateStatus(callback: (status: { type: string, message: string, data?: any }) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, status: any) => callback(status)
+    ipcRenderer.on('auto-update:status', listener)
+    return () => ipcRenderer.removeListener('auto-update:status', listener)
   }
 }
 

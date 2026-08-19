@@ -40,7 +40,9 @@ jobs:
         if: matrix.os == 'windows-latest'
         with:
           name: windows-artifacts
-          path: release/*.exe
+          path: |
+            release/*.exe
+            release/latest.yml
 
       - name: Upload Linux Artifacts
         uses: actions/upload-artifact@v4
@@ -50,13 +52,16 @@ jobs:
           path: |
             release/*.AppImage
             release/*.deb
+            release/latest-linux.yml
 
       - name: Upload Mac Artifacts
         uses: actions/upload-artifact@v4
         if: matrix.os == 'macos-latest'
         with:
           name: mac-artifacts
-          path: release/*.dmg
+          path: |
+            release/*.dmg
+            release/latest-mac.yml
 
   publish-release:
     needs: build
