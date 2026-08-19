@@ -27,7 +27,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const showToast = (type: ToastType, message: string) => {
     const id = crypto.randomUUID()
-    setToasts(prev => [...prev, { id, type, message }])
+    setToasts(prev => {
+      // Prevent duplicate messages
+      if (prev.some(t => t.message === message)) {
+        return prev;
+      }
+      // Limit to 3 max toasts
+      return [...prev, { id, type, message }].slice(-3);
+    })
   }
 
   const removeToast = (id: string) => {
@@ -37,16 +44,22 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   return (
     <ToastContext.Provider value={{ showToast }}>
       {children}
-      <div className="fixed bottom-4 right-4 z-[100] flex flex-col gap-2 pointer-events-none">
-        {toasts.map(toast => (
-          <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
+      <div className="fixed bottom-6 right-6 z-[100] pointer-events-none w-[320px]">
+        {toasts.map((toast, index) => (
+          <ToastItem
+            key={toast.id}
+            toast={toast}
+            index={index}
+            total={toasts.length}
+            onClose={() => removeToast(toast.id)}
+          />
         ))}
       </div>
     </ToastContext.Provider>
   )
 }
 
-function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
+function ToastItem({ toast, index, total, onClose }: { toast: Toast; index: number; total: number; onClose: () => void }) {
   useEffect(() => {
     const timer = setTimeout(onClose, 5000)
     return () => clearTimeout(timer)
@@ -59,23 +72,30 @@ function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
   }
 
   const bgColors = {
-    error: 'bg-destructive/10 border-destructive/30',
-    success: 'bg-green-500/10 border-green-500/30',
-    info: 'bg-blue-500/10 border-blue-500/30',
+    error: 'bg-destructive/90 border-destructive text-destructive-foreground',
+    success: 'bg-green-600/90 border-green-600 text-white',
+    info: 'bg-blue-600/90 border-blue-600 text-white',
   }
+
+  const offset = total - 1 - index;
 
   return (
     <div
       className={cn(
-        'flex items-center gap-3 rounded-lg border px-4 py-3 shadow-lg backdrop-blur-sm pointer-events-auto min-w-[280px] max-w-[400px]',
+        'absolute bottom-0 right-0 w-full flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xl backdrop-blur-md pointer-events-auto transition-all duration-300 ease-out',
         bgColors[toast.type]
       )}
+      style={{
+        transform: `translateY(-${offset * 16}px) scale(${1 - offset * 0.05})`,
+        zIndex: 100 - offset,
+        opacity: offset > 2 ? 0 : 1 - offset * 0.15,
+      }}
     >
       {icons[toast.type]}
-      <p className="flex-1 text-sm text-foreground">{toast.message}</p>
+      <p className="flex-1 text-sm font-medium">{toast.message}</p>
       <button
         onClick={onClose}
-        className="text-muted-foreground hover:text-foreground transition-colors"
+        className="opacity-70 hover:opacity-100 transition-opacity"
       >
         <XIcon className="h-4 w-4" />
       </button>

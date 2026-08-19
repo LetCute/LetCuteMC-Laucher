@@ -32,7 +32,7 @@ export const Modal = ({
 
       {/* Dialog */}
       <div
-        className={`relative w-full ${maxWidth} bg-popover border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]`}
+        className={`relative w-full ${maxWidth} bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}

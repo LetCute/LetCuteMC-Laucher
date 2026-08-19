@@ -3,7 +3,8 @@ import type { AccountState } from '@/shared/types.ts'
 import { Input } from '../components/ui/Input'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
-import { SkinViewer3D, type SkinModel } from '../components/ui/SkinViewer3D'
+import { SkinViewer3D, LazySkinViewer3D, type SkinModel } from '../components/ui/SkinViewer3D'
+import { SkinHead } from '../components/ui/SkinHead'
 import { CapePreview } from '../components/ui/CapePreview'
 import {
   Key,
@@ -32,6 +33,8 @@ interface AccountsScreenProps {
   isWorking?: boolean
 }
 
+import { SkinBody } from '../components/ui/SkinBody'
+
 // Helper to convert base64 data URL to ArrayBuffer for uploading
 function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
   const base64 = dataUrl.split(',')[1]
@@ -42,6 +45,21 @@ function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
     bytes[i] = binaryString.charCodeAt(i)
   }
   return bytes.buffer
+}
+
+const GallerySkinItem = ({ skin, onSelect }: { skin: any, onSelect: () => void }) => {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-card/50 transition-all group"
+      title={skin.name || 'Skin'}
+    >
+      <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
+        <SkinBody skinUrl={skin.url} width={48} height={96} className="h-full object-contain" />
+      </div>
+    </button>
+  )
 }
 
 export const AccountsScreen = ({
@@ -99,6 +117,20 @@ export const AccountsScreen = ({
   const [pendingSkinModel, setPendingSkinModel] = useState<SkinModel>('default')
   const [pendingCapeFile, setPendingCapeFile] = useState<string | null>(null)
   const [pendingCapeId, setPendingCapeId] = useState<string>('') // For Premium owned capes
+  const [skinTab, setSkinTab] = useState<'skin' | 'cape'>('skin')
+
+  const [mineskinInput, setMineskinInput] = useState('')
+  const [isFetchingMineskin, setIsFetchingMineskin] = useState(false)
+
+  const [mineskinGallery, setMineskinGallery] = useState<any[]>([])
+  const [isFetchingGallery, setIsFetchingGallery] = useState(false)
+  const [galleryPage, setGalleryPage] = useState(1)
+  const [galleryQuery, setGalleryQuery] = useState('')
+  const [activeQuery, setActiveQuery] = useState('')
+
+  const [mineskinCapes, setMineskinCapes] = useState<any[]>([])
+  const [isFetchingCapes, setIsFetchingCapes] = useState(false)
+  const [capeGalleryQuery, setCapeGalleryQuery] = useState('')
 
   const [isFetchingMojang, setIsFetchingMojang] = useState(false)
   const [isSavingMojang, setIsSavingMojang] = useState(false)
@@ -227,6 +259,7 @@ export const AccountsScreen = ({
     setPendingSkinModel('default')
     setPendingCapeFile(null)
     setPendingCapeId('')
+    setSkinTab('skin')
     setMojangProfile(null)
   }
 
@@ -250,6 +283,143 @@ export const AccountsScreen = ({
     }
     reader.readAsDataURL(file)
     e.target.value = ''
+  }
+
+  const loadMineskinGallery = async (page: number, query: string = activeQuery) => {
+    setIsFetchingGallery(true)
+    try {
+      const url = query.trim()
+        ? `https://api.mineskin.org/get/list/${page}?filter=${encodeURIComponent(query)}`
+        : `https://api.mineskin.org/get/list/${page}`
+      const res = await fetch(url)
+      if (res.ok) {
+        const data = await res.json()
+        setMineskinGallery(data.skins || [])
+        setGalleryPage(page)
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsFetchingGallery(false)
+    }
+  }
+
+  const loadMineskinCapes = async () => {
+    setIsFetchingCapes(true)
+    try {
+      const res = await fetch('https://api.mineskin.org/v2/capes')
+      if (res.ok) {
+        const data = await res.json()
+        setMineskinCapes(data.capes || [])
+      }
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsFetchingCapes(false)
+    }
+  }
+
+  const handleSelectGalleryCape = async (url: string) => {
+    setIsFetchingCapes(true)
+    try {
+      const base64Cape = await window.launcherApi.fetchMojangTexture(url)
+      if (base64Cape) {
+        setPendingCapeFile(base64Cape)
+      } else {
+        throw new Error('Không thể tải ảnh cape')
+      }
+    } catch (err) {
+      showToast('error', 'Lỗi tải ảnh cape từ MineSkin')
+    } finally {
+      setIsFetchingCapes(false)
+    }
+  }
+
+  useEffect(() => {
+    if (showSkinModal && skinModalTargetType === 'local' && skinTab === 'cape' && mineskinCapes.length === 0) {
+      loadMineskinCapes()
+    }
+  }, [showSkinModal, skinModalTargetType, skinTab])
+
+  const handleSearchGallery = (e: React.FormEvent) => {
+    e.preventDefault()
+    setActiveQuery(galleryQuery)
+    loadMineskinGallery(1, galleryQuery)
+  }
+
+  useEffect(() => {
+    if (showSkinModal && skinTab === 'skin' && mineskinGallery.length === 0) {
+      loadMineskinGallery(1)
+    }
+  }, [showSkinModal, skinTab])
+
+  const handleSelectGallerySkin = async (textureUrl: string) => {
+    setIsFetchingMineskin(true)
+    try {
+      const base64Skin = await window.launcherApi.fetchMojangTexture(textureUrl)
+      if (base64Skin) {
+        setPendingSkinFile(base64Skin)
+        setPendingSkinModel('default')
+      } else {
+        throw new Error('Không thể tải ảnh')
+      }
+    } catch (err) {
+      showToast('error', 'Lỗi tải ảnh từ thư viện MineSkin')
+    } finally {
+      setIsFetchingMineskin(false)
+    }
+  }
+
+  const handleImportMineskin = async () => {
+    if (!mineskinInput.trim()) return
+    const identifier = mineskinInput.trim()
+
+    setIsFetchingMineskin(true)
+    try {
+      let textureUrl = ''
+      let variant = 'default'
+
+      if (identifier.startsWith('http') && !identifier.includes('mineskin.org/')) {
+        // Direct image URL
+        textureUrl = identifier
+      } else {
+        // Mineskin ID or URL
+        let msId = identifier
+        if (identifier.includes('mineskin.org/')) {
+          const parts = identifier.split('/').filter(Boolean)
+          msId = parts[parts.length - 1]
+        }
+
+        const isId = /^\d+$/.test(msId)
+        const url = isId
+          ? `https://api.mineskin.org/get/id/${msId}`
+          : `https://api.mineskin.org/get/uuid/${msId}`
+
+        const res = await fetch(url)
+        if (!res.ok) throw new Error('Không tìm thấy skin (hoặc MineSkin lỗi)')
+        const data = await res.json()
+
+        textureUrl = data?.data?.texture?.url
+        variant = data?.variant || 'classic'
+      }
+
+      if (textureUrl) {
+        const base64Skin = await window.launcherApi.fetchMojangTexture(textureUrl)
+        if (base64Skin) {
+          setPendingSkinFile(base64Skin)
+          setPendingSkinModel(variant === 'slim' ? 'slim' : 'default')
+        } else {
+          throw new Error('Không thể tải ảnh từ link này (có thể do lỗi CORS hoặc link chết)')
+        }
+      } else {
+        throw new Error('Dữ liệu skin không hợp lệ')
+      }
+    } catch (err: any) {
+      showToast('error', err.message || 'Lỗi tải ảnh skin')
+    } finally {
+      setIsFetchingMineskin(false)
+      setMineskinInput('')
+    }
   }
 
   const handleSkinConfirm = async () => {
@@ -340,7 +510,7 @@ export const AccountsScreen = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Tài khoản</h2>
+          <h2 className="text-xl font-bold text-foreground/80">Tài khoản</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Quản lý và chuyển đổi giữa các tài khoản của bạn
           </p>
@@ -439,11 +609,11 @@ export const AccountsScreen = ({
 
                   {/* Account Info */}
                   <div className="text-center w-full min-w-0 px-4">
-                    <p className={['text-sm font-bold truncate transition-colors', isActive ? 'text-primary' : 'text-foreground'].join(' ')}>
+                    <p className="text-sm font-bold truncate transition-colors text-foreground group-[.border-primary\\/50]:text-primary">
                       {acc.username}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">
-                      UUID: {acc.uuid.slice(0, 8)}...
+                      UUID: {acc.uuid ? acc.uuid.slice(0, 8) + '...' : 'Unknown'}
                     </p>
                   </div>
 
@@ -486,132 +656,287 @@ export const AccountsScreen = ({
               <p className="text-sm font-medium text-muted-foreground">Đang tải thông tin từ Mojang...</p>
             </div>
           ) : (
-            <div className="flex items-stretch gap-6">
-              {/* 3D preview */}
-              <div className="shrink-0 rounded-xl border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
-                <SkinViewer3D
-                  skinUrl={pendingSkinFile || undefined}
-                  capeUrl={pendingCapeFile || undefined}
-                  model={pendingSkinModel}
-                  width={140}
-                  height={200}
-                  autoRotate
-                  rotateSpeed={0.8}
-                />
-              </div>
+            <>
+              <div className="flex items-stretch gap-6">
+                {/* 3D preview */}
+                <div className="shrink-0 rounded-xl border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
+                  <SkinViewer3D
+                    skinUrl={pendingSkinFile || undefined}
+                    capeUrl={pendingCapeFile || undefined}
+                    model={pendingSkinModel}
+                    width={140}
+                    height={200}
+                    autoRotate
+                    rotateSpeed={0.8}
+                  />
+                </div>
 
-              {/* Controls */}
-              <div className="flex-1 flex flex-col gap-6">
+                {/* Controls */}
+                <div className="flex-1 flex flex-col gap-4">
 
-                {/* 1. Skin Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-foreground">Skin (Giao diện)</label>
-                    <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => skinInputRef.current?.click()}>
-                      <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file mới
+                  {/* Tabs */}
+                  <div className="flex gap-2 bg-muted/30 p-1 rounded-xl border border-border">
+                    <Button
+                      variant={skinTab === 'skin' ? 'primary' : 'ghost'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setSkinTab('skin')}
+                    >
+                      Skin (Giao diện)
+                    </Button>
+                    <Button
+                      variant={skinTab === 'cape' ? 'primary' : 'ghost'}
+                      size="sm"
+                      className="flex-1"
+                      onClick={() => setSkinTab('cape')}
+                    >
+                      Cape (Áo choàng)
                     </Button>
                   </div>
 
-                  {/* Arm type selector */}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <button
-                      type="button"
-                      onClick={() => setPendingSkinModel('default')}
-                      className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'default' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
-                    >
-                      <div className="flex items-end gap-0.5">
-                        <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
-                        <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
-                        <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                  {/* 1. Skin Section */}
+                  {skinTab === 'skin' && (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold text-foreground">Skin (Giao diện)</label>
+                        <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => skinInputRef.current?.click()}>
+                          <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file mới
+                        </Button>
                       </div>
-                      <div className="text-left flex-1">
-                        <p className={['text-xs font-bold', pendingSkinModel === 'default' ? 'text-primary' : 'text-foreground'].join(' ')}>Classic</p>
-                        <p className="text-[9px] text-muted-foreground">Tay rộng</p>
+
+                      <div className="flex items-center gap-3">
+                        {pendingSkinFile ? (
+                          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border border-primary/40 bg-black/10">
+                            <span className="text-xs font-medium text-primary">Đã nạp file skin</span>
+                            <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => setPendingSkinFile(null)} title="Gỡ bỏ">
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        ) : (
+                          <p className="text-xs text-muted-foreground">Chưa nạp skin mới. Bạn có thể chọn file hoặc dùng link ảnh để nạp.</p>
+                        )}
                       </div>
-                    </button>
 
-                    <button
-                      type="button"
-                      onClick={() => setPendingSkinModel('slim')}
-                      className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'slim' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
-                    >
-                      <div className="flex items-end gap-0.5">
-                        <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
-                        <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
-                        <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                      {/* Arm type selector */}
+                      <div className="grid grid-cols-2 gap-2.5">
+                        <button
+                          type="button"
+                          onClick={() => setPendingSkinModel('default')}
+                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'default' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                        >
+                          <div className="flex items-end gap-0.5">
+                            <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                            <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
+                            <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className={['text-xs font-bold', pendingSkinModel === 'default' ? 'text-primary' : 'text-foreground'].join(' ')}>Classic</p>
+                            <p className="text-[9px] text-muted-foreground">Tay rộng</p>
+                          </div>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setPendingSkinModel('slim')}
+                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'slim' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                        >
+                          <div className="flex items-end gap-0.5">
+                            <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                            <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
+                            <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                          </div>
+                          <div className="text-left flex-1">
+                            <p className={['text-xs font-bold', pendingSkinModel === 'slim' ? 'text-primary' : 'text-foreground'].join(' ')}>Slim</p>
+                            <p className="text-[9px] text-muted-foreground">Tay mảnh</p>
+                          </div>
+                        </button>
                       </div>
-                      <div className="text-left flex-1">
-                        <p className={['text-xs font-bold', pendingSkinModel === 'slim' ? 'text-primary' : 'text-foreground'].join(' ')}>Slim</p>
-                        <p className="text-[9px] text-muted-foreground">Tay mảnh</p>
+
+                      {/* MineSkin Import */}
+                      <div className="flex items-center gap-2 mt-2">
+                        <Input
+                          placeholder="Link ảnh .png bất kỳ hoặc MineSkin ID..."
+                          className="h-8 text-xs flex-1"
+                          value={mineskinInput}
+                          onChange={(e) => setMineskinInput(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleImportMineskin()
+                          }}
+                          disabled={isFetchingMineskin}
+                        />
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="h-8 text-xs shrink-0"
+                          onClick={handleImportMineskin}
+                          disabled={isFetchingMineskin || !mineskinInput.trim()}
+                        >
+                          {isFetchingMineskin ? <Loader2 size={14} className="animate-spin" /> : 'Import'}
+                        </Button>
                       </div>
-                    </button>
-                  </div>
-                </div>
+                    </div>
+                  )}
 
-                <div className="h-px bg-border/50 w-full" />
-
-                {/* 2. Cape Section */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-foreground">Cape (Áo choàng)</label>
-                    {skinModalTargetType === 'local' && (
-                      <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => capeInputRef.current?.click()}>
-                        <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file cape
-                      </Button>
-                    )}
-                  </div>
-
-                  {skinModalTargetType === 'local' ? (
-                    <div className="flex items-center gap-3">
-                      {pendingCapeFile ? (
-                        <div className="flex-1 flex items-center justify-between p-2.5 rounded-lg border border-primary/30 bg-primary/5">
-                          <span className="text-xs font-medium text-primary">Đã nạp file áo choàng ✓</span>
-                          <Button variant="ghost" size="sm" className="h-6 text-xs px-2 text-destructive hover:bg-destructive/10" onClick={() => setPendingCapeFile(null)}>
-                            Gỡ bỏ
+                  {/* 2. Cape Section */}
+                  {skinTab === 'cape' && (
+                    <div className="space-y-3 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <label className="text-sm font-semibold text-foreground">Cape (Áo choàng)</label>
+                        {skinModalTargetType === 'local' && (
+                          <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => capeInputRef.current?.click()}>
+                            <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file cape
                           </Button>
+                        )}
+                      </div>
+
+                      {skinModalTargetType === 'local' ? (
+                        <div className="flex items-center gap-3">
+                          {pendingCapeFile ? (
+                            <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border border-primary/40 bg-black/10">
+                              <span className="text-xs font-medium text-primary">Đã nạp file áo choàng</span>
+                              <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => setPendingCapeFile(null)} title="Gỡ bỏ">
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể tự upload file ảnh cape (.png) bất kỳ.</p>
+                          )}
                         </div>
                       ) : (
-                        <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể tự upload file ảnh cape (.png) bất kỳ.</p>
-                      )}
-                    </div>
-                  ) : (
-                    // Microsoft Capes
-                    <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-                      <button
-                        type="button"
-                        onClick={() => { setPendingCapeId(''); setPendingCapeFile(null) }}
-                        className={['flex items-center gap-2 p-2 rounded-lg border transition-all', pendingCapeId === '' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
-                      >
-                        <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                          <XCircle size={14} className="text-muted-foreground" />
-                        </div>
-                        <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng</span>
-                      </button>
+                        // Microsoft Capes
+                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
+                          <button
+                            type="button"
+                            onClick={() => { setPendingCapeId(''); setPendingCapeFile(null) }}
+                            className={['flex items-center gap-2 p-2 rounded-lg border transition-all', pendingCapeId === '' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                          >
+                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
+                              <XCircle size={14} className="text-muted-foreground" />
+                            </div>
+                            <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng</span>
+                          </button>
 
-                      {mojangProfile?.capes?.map((cape: any) => (
-                        <button
-                          key={cape.id}
-                          type="button"
-                          onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url) }}
-                          className={['flex items-center gap-3 p-2 rounded-lg border transition-all', pendingCapeId === cape.id ? 'border-primary bg-primary/10 shadow-[0_0_8px_rgba(var(--primary),0.2)]' : 'border-border bg-card hover:border-primary/40'].join(' ')}
-                        >
-                          <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
-                          <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
-                            {cape.alias || 'Cape'}
-                          </span>
-                        </button>
-                      ))}
-                      {mojangProfile?.capes?.length === 0 && (
-                        <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-border">
-                          <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào.</span>
+                          {mojangProfile?.capes?.map((cape: any) => (
+                            <button
+                              key={cape.id}
+                              type="button"
+                              onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url) }}
+                              className={['flex items-center gap-3 p-2 rounded-lg border transition-all', pendingCapeId === cape.id ? 'border-primary bg-primary/10 shadow-[0_0_8px_rgba(var(--primary),0.2)]' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                            >
+                              <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
+                              <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
+                                {cape.alias || 'Cape'}
+                              </span>
+                            </button>
+                          ))}
+                          {mojangProfile?.capes?.length === 0 && (
+                            <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-border">
+                              <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào.</span>
+                            </div>
+                          )}
                         </div>
                       )}
                     </div>
                   )}
                 </div>
-
               </div>
-            </div>
+
+              {/* MineSkin Gallery Independent Section */}
+              {skinTab === 'skin' && (
+                <div className="pt-5 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-foreground">Skin (MineSkin)</label>
+
+                    <div className="flex items-center gap-4">
+                      <form onSubmit={handleSearchGallery} className="flex items-center gap-2">
+                        <Input
+                          placeholder="Tìm kiếm skin..."
+                          className="h-8 text-xs w-48"
+                          value={galleryQuery}
+                          onChange={(e) => setGalleryQuery(e.target.value)}
+                        />
+                        <Button type="submit" variant="secondary" size="sm" className="h-8 text-xs">
+                          Tìm
+                        </Button>
+                      </form>
+
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="h-8 text-xs px-2" disabled={galleryPage <= 1 || isFetchingGallery} onClick={() => loadMineskinGallery(galleryPage - 1)}>
+                          Trước
+                        </Button>
+                        <span className="text-sm font-medium text-muted-foreground flex items-center min-w-[50px] justify-center">Trang {galleryPage}</span>
+                        <Button variant="outline" size="sm" className="h-8 text-xs px-2" disabled={isFetchingGallery || mineskinGallery.length === 0} onClick={() => loadMineskinGallery(galleryPage + 1)}>
+                          Tiếp
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
+                    {isFetchingGallery ? (
+                      <div className="col-span-4 flex justify-center py-10">
+                        <Loader2 size={24} className="animate-spin text-muted-foreground" />
+                      </div>
+                    ) : mineskinGallery.length === 0 ? (
+                      <div className="col-span-4 text-center text-sm text-muted-foreground py-8">
+                        Không tìm thấy skin nào.
+                      </div>
+                    ) : (
+                      mineskinGallery.map((skin) => (
+                        <GallerySkinItem key={skin.id} skin={skin} onSelect={() => handleSelectGallerySkin(skin.url)} />
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* MineSkin Cape Gallery Independent Section */}
+              {skinTab === 'cape' && skinModalTargetType === 'local' && (
+                <div className="pt-5 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-semibold text-foreground">Cape (MineSkin)</label>
+
+                    <div className="flex items-center gap-4">
+                      <Input
+                        placeholder="Tìm kiếm cape..."
+                        className="h-8 text-xs w-48"
+                        value={capeGalleryQuery}
+                        onChange={(e) => setCapeGalleryQuery(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
+                    {isFetchingCapes ? (
+                      <div className="col-span-4 flex justify-center py-10">
+                        <Loader2 size={24} className="animate-spin text-muted-foreground" />
+                      </div>
+                    ) : mineskinCapes.length === 0 ? (
+                      <div className="col-span-4 text-center text-sm text-muted-foreground py-8">
+                        Không tìm thấy cape nào.
+                      </div>
+                    ) : (
+                      mineskinCapes
+                        .filter(cape => !capeGalleryQuery || cape.alias?.toLowerCase().includes(capeGalleryQuery.toLowerCase()))
+                        .map((cape) => (
+                          <button
+                            key={cape.uuid}
+                            type="button"
+                            onClick={() => handleSelectGalleryCape(cape.url)}
+                            className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-card/50 transition-all group"
+                            title={cape.alias || 'Cape'}
+                          >
+                            <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
+                              <CapePreview capeUrl={cape.url} width={40} height={64} className="shrink-0 drop-shadow-md" />
+                            </div>
+                            <span className="text-xs font-medium text-foreground truncate w-full text-center">{cape.alias}</span>
+                          </button>
+                        ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </Modal>
@@ -634,7 +959,7 @@ export const AccountsScreen = ({
               <Key size={20} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-foreground">Tài khoản Microsoft</p>
+              <p className="text-sm font-bold text-foreground/80">Tài khoản Microsoft</p>
               <p className="text-xs text-muted-foreground mt-0.5">Đăng nhập bản quyền Microsoft</p>
             </div>
             <div className="shrink-0 text-muted-foreground group-hover:text-emerald-400">
@@ -652,7 +977,7 @@ export const AccountsScreen = ({
                 <FlaskConical size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground">Tài khoản Local (Offline)</p>
+                <p className="text-sm font-bold text-foreground/80">Tài khoản Local (Offline)</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Khởi tạo nhanh, chơi offline</p>
               </div>
               <div className="shrink-0 text-muted-foreground group-hover:text-amber-400">
@@ -663,7 +988,7 @@ export const AccountsScreen = ({
             <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
               <div className="flex items-center gap-2">
                 <FlaskConical size={16} className="text-amber-400" />
-                <span className="text-sm font-bold text-foreground">Tạo tài khoản Local</span>
+                <span className="text-sm font-bold text-foreground/80">Tạo tài khoản Local</span>
               </div>
               <div className="flex gap-2">
                 <div className="flex-1">

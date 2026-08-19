@@ -64,7 +64,7 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
     <div className="flex flex-col h-full px-6 pt-2 pb-6 gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Phiên bản Minecraft</h2>
+          <h2 className="text-xl font-bold text-foreground/80">Phiên bản Minecraft</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
             Chọn phiên bản để tạo profile (Vanilla hoặc loader thủ công).
           </p>

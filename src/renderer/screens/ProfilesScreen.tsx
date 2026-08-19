@@ -40,7 +40,7 @@ export const ProfilesScreen = ({
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-xl font-bold text-foreground">Cấu hình game</h2>
+            <h2 className="text-xl font-bold text-foreground/80">Cấu hình game</h2>
             <p className="text-sm text-muted-foreground mt-0.5">
               Danh sách các cấu hình cài đặt
             </p>

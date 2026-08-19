@@ -162,7 +162,7 @@ export const SettingsScreen = ({
     <div className="px-6 pt-2 pb-6 max-w-4xl mx-auto flex flex-col gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">Cài đặt</h2>
+          <h2 className="text-xl font-bold text-foreground/80">Cài đặt</h2>
           <p className="text-sm text-muted-foreground mt-0.5">Thiết lập các cấu hình launcher</p>
         </div>
         <Button onClick={handleSave} disabled={isWorking} variant="primary">

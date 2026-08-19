@@ -86,10 +86,10 @@
   --foreground: oklch(0.965 0.006 140);
 
   /* Surfaces - Solid for better readability */
-  --card: oklch(0.220 0.010 240);
+  --card: oklch(0.15 0 0 / 0.55);
   --card-foreground: oklch(0.965 0.006 140);
 
-  --popover: oklch(0.175 0.008 240);
+  --popover: oklch(0.12 0 0 / 0.95);
   --popover-foreground: oklch(0.965 0.006 140);
 
   /* Primary - Minecraft grass / emerald */
@@ -203,27 +203,27 @@ body {
   body {
     @apply bg-background text-foreground;
   }
-  
-  /* Add strong text shadows to headings to make them pop out from vivid backgrounds */
-  h1, h2, h3, h4, h5, h6 {
-    text-shadow: 0 2px 4px rgba(0,0,0,0.8), 0 4px 12px rgba(0,0,0,0.6), 0 0 16px rgba(0,0,0,0.5);
-  }
-  
-  /* Add subtle text shadow to normal text to prevent blending */
-  p, span, label, a, button {
-    text-shadow: 0 1px 2px rgba(0,0,0,0.8);
-  }
+
+  /* Removed text shadows to keep text flat and non-glowing */
 }
 
 @layer components {
+
   /* Global glassmorphism for all surface elements */
-  .bg-card, .bg-popover, .bg-accent, .bg-muted, .bg-secondary, .bg-background {
+  .bg-card,
+  .bg-popover,
+  .bg-accent,
+  .bg-muted,
+  .bg-secondary,
+  .bg-background {
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
   }
-  
+
   /* Remove blur from elements that shouldn't have it */
-  input, select, textarea {
+  input,
+  select,
+  textarea {
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }

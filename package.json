@@ -95,20 +95,14 @@
           "arch": [
             "x64"
           ]
-        },
-        {
-          "target": "portable",
-          "arch": [
-            "x64"
-          ]
         }
       ],
       "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": false,
-      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LetCuteMC",
@@ -122,7 +116,8 @@
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
-      "icon": "public/logo.png",
+      "icon": "public/logo_square.png",
+      "category": "Game",
       "target": [
         "AppImage",
         "deb"

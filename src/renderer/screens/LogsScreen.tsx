@@ -83,7 +83,7 @@ export const LogsScreen = ({ logs, onClear, onCopy, onExport }: LogsScreenProps)
             <TerminalSquare className="h-4.5 w-4.5 text-muted-foreground" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-foreground">Nhật ký hoạt động</h2>
+            <h2 className="text-base font-bold text-foreground/80">Nhật ký hoạt động</h2>
             <p className="text-xs text-muted-foreground">{logs.length} dòng log</p>
           </div>
         </div>

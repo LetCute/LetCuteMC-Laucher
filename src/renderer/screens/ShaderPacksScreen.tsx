@@ -78,7 +78,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
     <div className="px-6 pt-2 pb-6 flex flex-col h-full gap-5">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground">
+          <h2 className="text-xl font-bold text-foreground/80">
             Shader Packs {profileName && <span className="text-sm font-normal text-muted-foreground ml-2 px-2 py-0.5 bg-accent/30 rounded-md">Cấu hình: {profileName}</span>}
           </h2>
           <p className="text-sm text-muted-foreground mt-0.5">
