@@ -196,6 +196,20 @@ export function registerIpcHandlers(): void {
     
     return await installModrinthModpack(versionId, profileName, mcRootDir, appendLog)
   })
+  handleIpc('modrinth:install-local-modpack', async ({ mrpackPath, profileName }: { mrpackPath: string, profileName: string }) => {
+    const { installLocalModrinthModpack } = await import('./services/modrinthService.js')
+    const { getSettings } = await import('./services/settingsService.js')
+    const { getDefaultMinecraftDirectory } = await import('./services/storageService.js')
+    
+    const currentSettings = await getSettings()
+    const mcRootDir = currentSettings.minecraftDirectory || getDefaultMinecraftDirectory()
+    
+    const appendLog = (level: string, msg: string) => {
+      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
+    }
+    
+    return await installLocalModrinthModpack(mrpackPath, profileName, mcRootDir, appendLog)
+  })
   // Store Management
   handleIpc('server-list:get', async ({ page }: { page?: number }) => {
     const { serverListService } = await import('./services/serverListService.js')

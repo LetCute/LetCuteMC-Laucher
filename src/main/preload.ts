@@ -327,6 +327,10 @@ const launcherApi = {
     return ipcRenderer.invoke('modrinth:install-modpack', { versionId, profileName })
   },
 
+  installLocalModrinthModpack(mrpackPath: string, profileName: string): Promise<string> {
+    return ipcRenderer.invoke('modrinth:install-local-modpack', { mrpackPath, profileName })
+  },
+
   getStoreInstallations(gameDir: string): Promise<import('../shared/types').StoreInstallation[]> {
     return ipcRenderer.invoke('store:get-installations', gameDir)
   },

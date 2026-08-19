@@ -58,6 +58,14 @@ export async function installModrinthModpack(versionId: string, profileName: str
   appendLog('info', `Đang tải file .mrpack...`)
   const mrpackPath = await downloadFileToTemp(mrpackFile.url, mrpackFile.filename)
   
+  return await _installMrpack(mrpackPath, profileName, gameDataDir, appendLog, true)
+}
+
+export async function installLocalModrinthModpack(mrpackPath: string, profileName: string, gameDataDir: string, appendLog: (level: any, msg: string) => void): Promise<string> {
+  return await _installMrpack(mrpackPath, profileName, gameDataDir, appendLog, false)
+}
+
+async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, appendLog: (level: any, msg: string) => void, cleanupZip: boolean): Promise<string> {
   // 3. Extract and parse modrinth.index.json
   appendLog('info', `Đang phân tích cấu trúc Modpack...`)
   const zip = new AdmZip(mrpackPath)
@@ -167,7 +175,9 @@ export async function installModrinthModpack(versionId: string, profileName: str
   appendLog('success', `Cài đặt Modpack hoàn tất thành công! Bạn có thể chọn cấu hình ${profileName} để chơi.`)
   
   // Clean up
-  await fs.unlink(mrpackPath).catch(() => {})
+  if (cleanupZip) {
+    await fs.unlink(mrpackPath).catch(() => {})
+  }
   
   return createdProfile.id
 }
@@ -207,6 +217,13 @@ export async function uninstallStoreItem(projectId: string, gameDir: string): Pr
 }
 
 export async function installModrinthMod(versionId: string, gameDir: string, appendLog?: (level: any, msg: string) => void): Promise<void> {
+  await _installModrinthModRecursive(versionId, gameDir, appendLog, new Set())
+}
+
+async function _installModrinthModRecursive(versionId: string, gameDir: string, appendLog: ((level: any, msg: string) => void) | undefined, installedSet: Set<string>): Promise<void> {
+  if (installedSet.has(versionId)) return
+  installedSet.add(versionId)
+
   if (appendLog) appendLog('info', `Đang lấy thông tin Mod...`)
   
   const versionInfo = await client.getProjectVersion(versionId) as any
@@ -234,8 +251,6 @@ export async function installModrinthMod(versionId: string, gameDir: string, app
   const buffer = Buffer.from(arrayBuffer)
   await fs.writeFile(destFile, buffer)
 
-
-  
   const installations = await getStoreInstallations(gameDir)
   
   // Remove existing if any
@@ -260,5 +275,30 @@ export async function installModrinthMod(versionId: string, gameDir: string, app
 
   await saveStoreInstallations(gameDir, installations)
   
-  if (appendLog) appendLog('success', `Đã cài đặt Mod thành công!`)
+  if (appendLog) appendLog('success', `Đã cài đặt: ${projectInfo.title}`)
+
+  // Install required dependencies
+  if (versionInfo.dependencies && versionInfo.dependencies.length > 0) {
+    for (const dep of versionInfo.dependencies) {
+      if (dep.dependency_type === 'required') {
+        if (dep.version_id) {
+          if (appendLog) appendLog('info', `Phát hiện mod lõi/phụ thuộc bắt buộc, đang tải...`)
+          await _installModrinthModRecursive(dep.version_id, gameDir, appendLog, installedSet)
+        } else if (dep.project_id) {
+          if (appendLog) appendLog('info', `Phát hiện mod lõi/phụ thuộc bắt buộc, đang tải...`)
+          // we need the latest version of this project that matches our game version and loader
+          // Since we might not have game version context here easily, we just try to get the latest version overall.
+          // In a perfect world, we'd pass down mcVersion and loader to filter properly.
+          try {
+             const projVersions = await client.getProjectVersions(dep.project_id)
+             if (projVersions && projVersions.length > 0) {
+                 await _installModrinthModRecursive((projVersions[0] as any).id, gameDir, appendLog, installedSet)
+             }
+          } catch(e) {
+             if (appendLog) appendLog('warn', `Không thể tải dependency dự án ${dep.project_id}`)
+          }
+        }
+      }
+    }
+  }
 }

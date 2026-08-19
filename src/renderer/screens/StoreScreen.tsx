@@ -103,6 +103,24 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
       } else {
         const targetProfile = profiles.find(p => p.id === targetProfileId)
         if (!targetProfile || !targetProfile.gameDir) throw new Error('Vui lòng chọn một cấu hình để cài đặt.')
+
+        // Compatibility check
+        let isCompatible = false;
+        for (const gv of version.game_versions) {
+          if (targetProfile.minecraftVersion.includes(gv)) {
+            isCompatible = true;
+            break;
+          }
+        }
+        
+        if (!isCompatible) {
+          const proceed = window.confirm(`Cảnh báo: Mod này có thể không tương thích với phiên bản Minecraft của cấu hình (${targetProfile.minecraftVersion}).\nPhiên bản hỗ trợ: ${version.game_versions.join(', ')}.\nBạn có chắc chắn muốn cài đặt?`)
+          if (!proceed) {
+             setInstalling(null)
+             return;
+          }
+        }
+
         await window.launcherApi.installStoreMod(version.id, targetProfile.gameDir)
         showToast('success', `Đã cài đặt xong Mod: ${selectedProject.title} vào cấu hình ${targetProfile.name}`)
 
@@ -136,11 +154,68 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
     <div className="flex flex-col h-full text-foreground">
       {/* Header */}
       <div className="px-6 pt-0 pb-5 flex-shrink-0">
-        <h2 className="text-xl font-bold flex items-center gap-2">
-          <ModrinthIcon className="h-5 w-5 text-primary" />
-          Cửa Hàng Modrinth
-        </h2>
-        <p className="text-sm text-muted-foreground mt-1">Tìm kiếm và cài đặt hàng ngàn Modpack và Mod chỉ với 1 click.</p>
+        <div className="flex justify-between items-center w-full">
+          <div>
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <ModrinthIcon className="h-5 w-5 text-primary" />
+              Cửa Hàng Modrinth
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">Tìm kiếm và cài đặt hàng ngàn Modpack và Mod chỉ với 1 click.</p>
+          </div>
+          <div className="flex gap-2">
+            <Button variant="secondary" size="sm" onClick={async () => {
+              const url = window.prompt("Nhập link Modrinth của Modpack (ví dụ: https://modrinth.com/modpack/fabulously-optimized/version/XYZ):")
+              if (!url) return;
+              
+              // Extract version ID from URL or just use the input if it's an ID
+              let versionId = url;
+              const match = url.match(/version\/([a-zA-Z0-9]+)/);
+              if (match) {
+                versionId = match[1];
+              }
+              
+              const profileName = window.prompt("Nhập tên Cấu hình cho Modpack này:", "Imported Modpack");
+              if (!profileName) return;
+
+              setLoading(true)
+              showToast('info', `Bắt đầu tải Modpack... Vui lòng chờ.`)
+              try {
+                const newProfileId = await window.launcherApi.installModrinthModpack(versionId, profileName)
+                showToast('success', 'Đã nhập Modpack thành công!')
+                if (onInstallSuccess) onInstallSuccess(newProfileId)
+              } catch (e: any) {
+                showToast('error', `Lỗi: ${e.message}`)
+              } finally {
+                setLoading(false)
+              }
+            }}>
+              <Download className="h-4 w-4 mr-2" />
+              Nhập từ Link
+            </Button>
+            <Button variant="primary" size="sm" onClick={async () => {
+              const file = await window.launcherApi.openFileDialog([{ name: 'Modrinth Pack', extensions: ['mrpack'] }])
+              if (!file) return;
+
+              const profileName = window.prompt("Nhập tên Cấu hình cho Modpack này:", "Local Modpack");
+              if (!profileName) return;
+
+              setLoading(true)
+              showToast('info', `Bắt đầu cài đặt Modpack từ file... Vui lòng chờ.`)
+              try {
+                const newProfileId = await window.launcherApi.installLocalModrinthModpack(file, profileName)
+                showToast('success', 'Đã nhập Modpack thành công!')
+                if (onInstallSuccess) onInstallSuccess(newProfileId)
+              } catch (e: any) {
+                showToast('error', `Lỗi: ${e.message}`)
+              } finally {
+                setLoading(false)
+              }
+            }}>
+              <PackageOpen className="h-4 w-4 mr-2" />
+              Nhập File .mrpack
+            </Button>
+          </div>
+        </div>
 
         <div className="flex flex-wrap gap-2 mt-3">
           <Button
