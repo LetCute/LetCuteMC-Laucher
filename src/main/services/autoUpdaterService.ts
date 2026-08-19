@@ -1,5 +1,5 @@
 import { autoUpdater } from 'electron-updater'
-import { BrowserWindow } from 'electron'
+import { app, BrowserWindow } from 'electron'
 
 export function initAutoUpdater() {
   // Config autoUpdater
@@ -38,7 +38,18 @@ export function initAutoUpdater() {
 
 export function checkForUpdates() {
   console.log('[AutoUpdater] Kiểm tra bản cập nhật mới...')
-  return autoUpdater.checkForUpdatesAndNotify()
+  
+  if (!app.isPackaged) {
+    console.log('[AutoUpdater] Chế độ lập trình (Dev Mode) - Bỏ qua cập nhật.')
+    sendUpdateEvent('update-not-available', 'Đang ở chế độ lập trình, bỏ qua kiểm tra.')
+    return Promise.resolve(null)
+  }
+
+  return autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+    console.error('[AutoUpdater] Lỗi khi checkForUpdatesAndNotify:', err)
+    sendUpdateEvent('update-error', 'Lỗi kiểm tra cập nhật.', err.message)
+    return null
+  })
 }
 
 export function quitAndInstallUpdate() {

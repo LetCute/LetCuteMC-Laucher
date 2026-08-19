@@ -14,7 +14,7 @@ import TasksScreen from './screens/TasksScreen';
 import { AboutScreen } from './screens/AboutScreen';
 import { StoreScreen } from './screens/StoreScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
-import { AutoUpdaterOverlay } from './components/AutoUpdaterOverlay';
+import { UpdaterScreen } from './screens/UpdaterScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { launcherClient } from './services/launcherClient';
@@ -49,6 +49,7 @@ function App() {
   const { showToast } = useToast()
 
   // ── Core state ───────────────────────────────────────────────────────────
+  const [appPhase, setAppPhase] = useState<'updater' | 'client'>('updater');
   const [gameDir, setGameDir] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabId>('profiles');
   const [accountState, setAccountState] = useState<AccountState>({
@@ -204,8 +205,12 @@ function App() {
   };
 
   useEffect(() => {
-    void initializeAppData();
+    if (appPhase === 'client') {
+      void initializeAppData();
+    }
+  }, [appPhase]);
 
+  useEffect(() => {
     // Listen for task completion to reload app data
     const unsubscribe = window.launcherApi.onTasksUpdate(async (event) => {
       if (event.type === 'task-completed') {
@@ -361,6 +366,10 @@ function App() {
         </div>
       </ToastProvider>
     );
+  }
+
+  if (appPhase === 'updater') {
+    return <UpdaterScreen onComplete={() => setAppPhase('client')} />;
   }
 
   return (
@@ -525,7 +534,6 @@ function App() {
             preselectedVersion={preselectedVersion}
             defaultGameDir={gameDir}
           />
-          <AutoUpdaterOverlay />
         </div>
       </div>
     </ToastProvider>

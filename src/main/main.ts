@@ -82,8 +82,7 @@ app.whenReady().then(() => {
   import('./services/discordRpcService').then(m => m.initDiscordRpc().catch(console.error))
   import('./services/autoUpdaterService').then(m => {
     m.initAutoUpdater()
-    // Optional: Auto check for updates on startup
-    m.checkForUpdates().catch(console.error)
+    // Update check is now triggered manually by the renderer via IPC
   })
 
   app.on('activate', () => {
