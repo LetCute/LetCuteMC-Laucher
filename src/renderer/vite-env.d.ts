@@ -155,11 +155,17 @@ declare global {
       searchModrinth(query: string, projectType: string, offset: number): Promise<import('../shared/types').ModrinthSearchResult>
       getModrinthVersions(projectId: string): Promise<import('../shared/types').ModrinthVersion[]>
       installModrinthModpack(versionId: string, profileName: string): Promise<string>
+      installLocalModrinthModpack(mrpackPath: string, profileName: string): Promise<string>
       
       // Store Management
       getStoreInstallations(gameDir: string): Promise<import('../shared/types').StoreInstallation[]>
       installStoreMod(versionId: string, gameDir: string): Promise<boolean>
       uninstallStoreItem(projectId: string, gameDir: string): Promise<boolean>
+
+      // Task Manager API
+      getAllTasks(): Promise<import('../shared/types').BackgroundTask[]>
+      clearCompletedTasks(): Promise<void>
+      onTasksUpdate(callback: (events: import('../shared/types').TaskManagerEvent) => void): () => void
     }
   }
 }

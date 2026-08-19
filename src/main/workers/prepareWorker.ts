@@ -13,7 +13,8 @@ import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
 import { getVersionManifestCacheDir } from '../services/storageService'
 import { getCachedVersionManifest } from '../services/versionManifestCacheService'
-import { selectBestJavaRuntime } from '../services/javaScannerService'
+import { selectBestJavaRuntime, extractMinecraftVersion, resolveRequiredJavaMajor } from '../services/javaScannerService'
+import { autoInstallJava, getDefaultJavaInstallDir } from '../services/javaInstallerService'
 import { writeErrorLog } from '../services/errorLogService'
 
 async function checkFileHash(filePath: string, expectedHash: string): Promise<boolean> {
@@ -432,11 +433,48 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     postLog('info', ` - Tổng số thư viện (libraries): ${resolvedVersion.libraries?.length || 0}`)
 
     // Check Java Selection status
-    const javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {
+    let javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {
       gameDir: mcRoot,
     })
 
-    const finalState: PreparedProfileState = {
+    let autoInstalledJavaPath: string | undefined = undefined
+
+    if (!javaSelection.found) {
+      postLog('warn', `[PrepareWorker] Không tìm thấy Java tương thích cho bản ${version}. Bắt đầu tự động tải Java...`)
+      
+      const requiredMajor = await resolveRequiredJavaMajor(version, mcRoot)
+      const installDir = getDefaultJavaInstallDir()
+      
+      const installResult = await autoInstallJava(
+        requiredMajor,
+        installDir,
+        (progress) => {
+          postProgress(profileId, version, {
+            status: 'downloading',
+            title: `Đang tải Java ${requiredMajor}`,
+            message: progress.message,
+            percent: progress.percent,
+          })
+          postLog('info', `[AutoJava] ${progress.message}`)
+        }
+      )
+
+      if (installResult.success && installResult.javaPath) {
+        postLog('success', `[PrepareWorker] Đã tải thành công Java tại: ${installResult.javaPath}`)
+        autoInstalledJavaPath = installResult.javaPath
+        
+        // Scan again after installing to confirm it's valid
+        javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {
+          gameDir: mcRoot,
+          preferredJavaPath: installResult.javaPath,
+          forceRefresh: true
+        })
+      } else {
+        postLog('error', `[PrepareWorker] Lỗi tải Java: ${installResult.message}`)
+      }
+    }
+
+    const finalState: PreparedProfileState & { autoInstalledJavaPath?: string } = {
       profileId,
       version,
       gameDir,
@@ -448,6 +486,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
       javaReady: javaSelection.found,
       missingFiles: 0,
       message: 'Cấu hình sẵn sàng để khởi chạy.',
+      autoInstalledJavaPath
     }
 
     postProgress(profileId, version, {

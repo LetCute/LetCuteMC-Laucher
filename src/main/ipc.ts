@@ -189,12 +189,7 @@ export function registerIpcHandlers(): void {
     const currentSettings = await getSettings()
     const mcRootDir = currentSettings.minecraftDirectory || getDefaultMinecraftDirectory()
     
-    // Send logs to frontend via the same channel as launch job, or just standard log
-    const appendLog = (level: string, msg: string) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
-    }
-    
-    return await installModrinthModpack(versionId, profileName, mcRootDir, appendLog)
+    return await installModrinthModpack(versionId, profileName, mcRootDir)
   })
   handleIpc('modrinth:install-local-modpack', async ({ mrpackPath, profileName }: { mrpackPath: string, profileName: string }) => {
     const { installLocalModrinthModpack } = await import('./services/modrinthService.js')
@@ -204,11 +199,7 @@ export function registerIpcHandlers(): void {
     const currentSettings = await getSettings()
     const mcRootDir = currentSettings.minecraftDirectory || getDefaultMinecraftDirectory()
     
-    const appendLog = (level: string, msg: string) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
-    }
-    
-    return await installLocalModrinthModpack(mrpackPath, profileName, mcRootDir, appendLog)
+    return await installLocalModrinthModpack(mrpackPath, profileName, mcRootDir)
   })
   // Store Management
   handleIpc('server-list:get', async ({ page }: { page?: number }) => {
@@ -225,10 +216,7 @@ export function registerIpcHandlers(): void {
   })
   handleIpc('store:install-mod', async ({ versionId, gameDir }: { versionId: string, gameDir: string }) => {
     const { installModrinthMod } = await import('./services/modrinthService.js')
-    const appendLog = (level: string, msg: string) => {
-      BrowserWindow.getAllWindows()[0]?.webContents.send('launcher:log', { id: Math.random().toString(), level, message: msg, createdAt: new Date().toISOString() })
-    }
-    await installModrinthMod(versionId, gameDir, appendLog)
+    await installModrinthMod(versionId, gameDir)
     return true
   })
   handleIpc('store:uninstall-item', async ({ projectId, gameDir }: { projectId: string, gameDir: string }) => {
@@ -444,4 +432,14 @@ export function registerIpcHandlers(): void {
     uploadMojangSkin(accessToken, Buffer.from(fileBuffer), variant)
   )
   handleIpc('mojang:change-cape', (accessToken: string, capeId: string) => changeMojangCape(accessToken, capeId))
+
+  // Task Manager endpoints
+  handleIpc('tasks:get-all', async () => {
+    const { taskManagerService } = await import('./services/taskManagerService.js')
+    return taskManagerService.getAllTasks()
+  })
+  handleIpc('tasks:clear-completed', async () => {
+    const { taskManagerService } = await import('./services/taskManagerService.js')
+    taskManagerService.clearCompletedTasks()
+  })
 }

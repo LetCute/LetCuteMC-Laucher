@@ -34,6 +34,15 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
 
   const [targetProfileId, setTargetProfileId] = useState<string>('')
 
+  // Custom import modal state
+  const [importModalState, setImportModalState] = useState<{
+    isOpen: boolean;
+    mode: 'link' | 'file';
+    filePath?: string;
+  } | null>(null)
+  const [importInputValue, setImportInputValue] = useState('')
+  const [importProfileName, setImportProfileName] = useState('')
+
   useEffect(() => {
     if (activeProfileId && !targetProfileId) {
       setTargetProfileId(activeProfileId)
@@ -66,6 +75,17 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
   useEffect(() => {
     searchProjects(query, projectType)
     loadInstallations()
+    
+    const unsubscribe = window.launcherApi.onTasksUpdate((event) => {
+      if (event.type === 'task-completed') {
+        const { task } = event
+        if (task.taskType === 'install-mod' && task.result?.gameDir === gameDir) {
+          loadInstallations()
+        }
+      }
+    })
+    
+    return () => unsubscribe()
   }, [projectType, gameDir])
 
   const handleSearch = (e: React.FormEvent) => {
@@ -94,12 +114,9 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
     showToast('info', `Bắt đầu cài đặt ${selectedProject.title}... Vui lòng chờ vài phút.`)
     try {
       if (projectType === 'modpack') {
-        const profileId = await window.launcherApi.installModrinthModpack(version.id, `${selectedProject.title} (${version.version_number})`)
-        showToast('success', `Đã cài đặt xong Modpack: ${selectedProject.title}`)
+        const taskId = await window.launcherApi.installModrinthModpack(version.id, `${selectedProject.title} (${version.version_number})`)
+        showToast('success', `Đã thêm vào Tiến trình. Bạn có thể xem trong tab Tiến trình.`)
         setSelectedProject(null)
-        if (onInstallSuccess && profileId) {
-          onInstallSuccess(profileId)
-        }
       } else {
         const targetProfile = profiles.find(p => p.id === targetProfileId)
         if (!targetProfile || !targetProfile.gameDir) throw new Error('Vui lòng chọn một cấu hình để cài đặt.')
@@ -163,31 +180,10 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
             <p className="text-sm text-muted-foreground mt-1">Tìm kiếm và cài đặt hàng ngàn Modpack và Mod chỉ với 1 click.</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="secondary" size="sm" onClick={async () => {
-              const url = window.prompt("Nhập link Modrinth của Modpack (ví dụ: https://modrinth.com/modpack/fabulously-optimized/version/XYZ):")
-              if (!url) return;
-              
-              // Extract version ID from URL or just use the input if it's an ID
-              let versionId = url;
-              const match = url.match(/version\/([a-zA-Z0-9]+)/);
-              if (match) {
-                versionId = match[1];
-              }
-              
-              const profileName = window.prompt("Nhập tên Cấu hình cho Modpack này:", "Imported Modpack");
-              if (!profileName) return;
-
-              setLoading(true)
-              showToast('info', `Bắt đầu tải Modpack... Vui lòng chờ.`)
-              try {
-                const newProfileId = await window.launcherApi.installModrinthModpack(versionId, profileName)
-                showToast('success', 'Đã nhập Modpack thành công!')
-                if (onInstallSuccess) onInstallSuccess(newProfileId)
-              } catch (e: any) {
-                showToast('error', `Lỗi: ${e.message}`)
-              } finally {
-                setLoading(false)
-              }
+            <Button variant="secondary" size="sm" onClick={() => {
+              setImportModalState({ isOpen: true, mode: 'link' })
+              setImportInputValue('')
+              setImportProfileName('Imported Modpack')
             }}>
               <Download className="h-4 w-4 mr-2" />
               Nhập từ Link
@@ -196,20 +192,8 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
               const file = await window.launcherApi.openFileDialog([{ name: 'Modrinth Pack', extensions: ['mrpack'] }])
               if (!file) return;
 
-              const profileName = window.prompt("Nhập tên Cấu hình cho Modpack này:", "Local Modpack");
-              if (!profileName) return;
-
-              setLoading(true)
-              showToast('info', `Bắt đầu cài đặt Modpack từ file... Vui lòng chờ.`)
-              try {
-                const newProfileId = await window.launcherApi.installLocalModrinthModpack(file, profileName)
-                showToast('success', 'Đã nhập Modpack thành công!')
-                if (onInstallSuccess) onInstallSuccess(newProfileId)
-              } catch (e: any) {
-                showToast('error', `Lỗi: ${e.message}`)
-              } finally {
-                setLoading(false)
-              }
+              setImportModalState({ isOpen: true, mode: 'file', filePath: file })
+              setImportProfileName('Local Modpack')
             }}>
               <PackageOpen className="h-4 w-4 mr-2" />
               Nhập File .mrpack
@@ -360,7 +344,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
               <div className="p-6 text-center text-sm text-muted-foreground">Không có phiên bản nào khả dụng.</div>
             ) : (
               <table className="w-full text-left text-sm">
-                <thead className="bg-accent/40 text-xs uppercase text-muted-foreground sticky top-0 backdrop-blur-md">
+                <thead className="bg-background z-10 text-xs uppercase text-muted-foreground sticky top-0 border-b border-border/60">
                   <tr>
                     <th className="px-4 py-3 font-semibold">Tên / Số phiên bản</th>
                     <th className="px-4 py-3 font-semibold">Minecraft</th>
@@ -415,7 +399,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
                             onClick={() => handleInstall(v)}
                             disabled={!!installing}
                             size="sm"
-                            className="h-8 text-xs font-bold px-4"
+                            className="h-8 text-xs font-bold px-4 shadow-none"
                           >
                             {installing === v.id ? (
                               <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Đang cài</>
@@ -428,6 +412,71 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Import Modal */}
+      <Modal
+        isOpen={!!importModalState?.isOpen}
+        onClose={() => setImportModalState(null)}
+        title={importModalState?.mode === 'link' ? "Nhập Modpack từ Link" : "Nhập Modpack từ File"}
+        maxWidth="max-w-md"
+      >
+        <div className="flex flex-col gap-4">
+          {importModalState?.mode === 'link' && (
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold text-foreground">Link Modrinth hoặc Version ID:</label>
+              <Input
+                placeholder="https://modrinth.com/modpack/.../version/..."
+                value={importInputValue}
+                onChange={(e) => setImportInputValue(e.target.value)}
+                className="bg-card"
+              />
+            </div>
+          )}
+          <div className="flex flex-col gap-1.5">
+            <label className="text-sm font-semibold text-foreground">Tên cấu hình mới:</label>
+            <Input
+              placeholder="VD: Fabulously Optimized"
+              value={importProfileName}
+              onChange={(e) => setImportProfileName(e.target.value)}
+              className="bg-card"
+            />
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-4">
+            <Button variant="ghost" onClick={() => setImportModalState(null)}>Hủy</Button>
+            <Button variant="primary" disabled={loading || !importProfileName || (importModalState?.mode === 'link' && !importInputValue)} onClick={async () => {
+              const state = importModalState;
+              if (!state) return;
+              
+              setImportModalState(null);
+              setLoading(true);
+
+              try {
+                let taskId;
+                if (state.mode === 'link') {
+                  let versionId = importInputValue;
+                  const match = importInputValue.match(/version\/([a-zA-Z0-9]+)/);
+                  if (match) {
+                    versionId = match[1];
+                  }
+                  showToast('info', `Đã thêm vào Tiến trình...`);
+                  taskId = await window.launcherApi.installModrinthModpack(versionId, importProfileName);
+                } else {
+                  if (!state.filePath) throw new Error("Không có đường dẫn file");
+                  showToast('info', `Đã thêm vào Tiến trình...`);
+                  taskId = await window.launcherApi.installLocalModrinthModpack(state.filePath, importProfileName);
+                }
+              } catch (e: any) {
+                showToast('error', `Lỗi: ${e.message}`);
+              } finally {
+                setLoading(false);
+              }
+            }}>
+              Xác nhận
+            </Button>
           </div>
         </div>
       </Modal>

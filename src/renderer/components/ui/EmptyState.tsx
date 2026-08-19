@@ -5,11 +5,12 @@ export interface EmptyStateProps {
   title: string
   description?: string
   action?: ReactNode
+  showBorder?: boolean
 }
 
-export const EmptyState = ({ icon, title, description, action }: EmptyStateProps) => {
+export const EmptyState = ({ icon, title, description, action, showBorder = true }: EmptyStateProps) => {
   return (
-    <div className="flex flex-1 flex-col items-center justify-center p-12 text-center border-2 border-dashed border-border/50 rounded-2xl bg-muted/10">
+    <div className={`flex flex-1 flex-col items-center justify-center p-12 text-center rounded-2xl bg-muted/10 ${showBorder ? 'border-2 border-dashed border-border/50' : ''}`}>
       {icon && (
         <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-border bg-muted/50 text-muted-foreground mb-4">
           {icon}

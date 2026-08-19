@@ -341,6 +341,24 @@ const launcherApi = {
 
   uninstallStoreItem(projectId: string, gameDir: string): Promise<boolean> {
     return ipcRenderer.invoke('store:uninstall-item', { projectId, gameDir })
+  },
+
+  getAllTasks(): Promise<import('../shared/types').BackgroundTask[]> {
+    return ipcRenderer.invoke('tasks:get-all')
+  },
+
+  clearCompletedTasks(): Promise<void> {
+    return ipcRenderer.invoke('tasks:clear-completed')
+  },
+
+  onTasksUpdate(callback: (events: import('../shared/types').TaskManagerEvent) => void): () => void {
+    const listener = (_event: Electron.IpcRendererEvent, events: import('../shared/types').TaskManagerEvent) => {
+      callback(events)
+    }
+    ipcRenderer.on('tasks:on-update', listener)
+    return () => {
+      ipcRenderer.removeListener('tasks:on-update', listener)
+    }
   }
 }
 

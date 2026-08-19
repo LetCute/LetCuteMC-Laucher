@@ -680,6 +680,26 @@ export interface StoreInstallation {
   files: string[] // Paths of installed files relative to gameDir
 }
 
+// ─── Background Tasks (Task Manager) ──────────────────────────────────────────
+
+export type BackgroundTaskStatus = 'running' | 'success' | 'error' | 'cancelled'
+
+export interface BackgroundTask {
+  id: string
+  name: string
+  status: BackgroundTaskStatus
+  percent: number
+  message: string
+  createdAt: string
+  updatedAt: string
+  taskType?: 'install-modpack' | 'install-mod'
+  result?: any
+}
+
+export type TaskManagerEvent =
+  | { type: 'tasks-updated'; tasks: BackgroundTask[] }
+  | { type: 'task-completed'; task: BackgroundTask }
+
 // ─── Mojang API Types ────────────────────────────────────────────────────────
 
 export interface MojangSkin {

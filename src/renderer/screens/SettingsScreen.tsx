@@ -285,82 +285,34 @@ export const SettingsScreen = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Sparkles className="h-5 w-5 text-amber-400" />
-              Tối ưu hiệu năng
+              <Cpu className="h-5 w-5 text-amber-400" />
+              Bộ nhớ (RAM)
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-muted/40 border border-border">
-              <button
-                type="button"
-                onClick={() => handleChange('performanceMode', 'auto')}
-                className={`h-10 rounded-lg text-sm font-medium transition-colors ${isAuto ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-              >
-                Tự động (Khuyên dùng)
-              </button>
-              <button
-                type="button"
-                onClick={() => handleChange('performanceMode', 'manual')}
-                className={`h-10 rounded-lg text-sm font-medium transition-colors ${!isAuto ? 'bg-primary text-primary-foreground shadow' : 'text-muted-foreground hover:text-foreground'
-                  }`}
-              >
-                Nâng cao (Thủ công)
-              </button>
+            <div className="space-y-6 pt-2">
+              <div className="space-y-3">
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-sm font-semibold text-foreground">Dung lượng cấp phát</label>
+                  <span className="text-xs font-mono px-2 py-1 bg-accent/20 rounded text-primary">
+                    {formData.defaultMaxMemoryMb} MB
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min={1024}
+                  max={Math.max(8192, (sysInfo?.totalRamGb || 8) * 1024)}
+                  step={512}
+                  value={formData.defaultMaxMemoryMb}
+                  onChange={(e) => handleChange('defaultMaxMemoryMb', parseInt(e.target.value) || 1024)}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-primary/30 accent-primary"
+                />
+                <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
+                  <span>1024 MB</span>
+                  <span>{Math.max(8192, (sysInfo?.totalRamGb || 8) * 1024)} MB</span>
+                </div>
+              </div>
             </div>
-
-            {sysInfo && (
-              <div className="flex items-start gap-3 rounded-xl border border-border bg-accent/20 p-3.5">
-                <Cpu className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                <div className="text-xs space-y-1">
-                  <p className="font-semibold text-foreground">
-                    Máy: {sysInfo.totalRamGb}GB RAM · {sysInfo.cpuCores} cores
-                    {sysInfo.isLowEnd ? ' · Yếu' : sysInfo.isHighEnd ? ' · Mạnh' : ' · Trung bình'}
-                  </p>
-                  {recommendation && <p className="text-muted-foreground">{recommendation.reason}</p>}
-                </div>
-              </div>
-            )}
-
-            {isAuto && recommendation && (
-              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-2 text-sm">
-                <p className="font-semibold text-foreground">Cấu hình đang áp dụng (tự động)</p>
-                <ul className="text-xs text-muted-foreground space-y-1 list-disc pl-4">
-                  <li>RAM mặc định: {recommendation.recommendedMinRam}–{recommendation.recommendedMaxRam} MB</li>
-                  <li>Download concurrency: {recommendation.recommendedConcurrency} luồng</li>
-
-                  <li>Auto Prepare: {sysInfo?.isLowEnd ? 'tắt (máy yếu)' : 'bật'}</li>
-                </ul>
-                <p className="text-[11px] text-muted-foreground/80 pt-1">
-                  Không dùng Realtime priority. Auto concurrency ≤ 10.
-                </p>
-              </div>
-            )}
-
-            {!isAuto && (
-              <div className="space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <Input
-                    label="RAM tối thiểu (MB)"
-                    type="number"
-                    value={formData.defaultMinMemoryMb}
-                    min={1024}
-                    max={32768}
-                    step={512}
-                    onChange={(e) => handleChange('defaultMinMemoryMb', parseInt(e.target.value) || 1024)}
-                  />
-                  <Input
-                    label="RAM tối đa (MB)"
-                    type="number"
-                    value={formData.defaultMaxMemoryMb}
-                    min={1024}
-                    max={32768}
-                    step={512}
-                    onChange={(e) => handleChange('defaultMaxMemoryMb', parseInt(e.target.value) || 1024)}
-                  />
-                </div>
-              </div>
-            )}
           </CardContent>
         </Card>
 

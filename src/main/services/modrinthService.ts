@@ -8,6 +8,7 @@ import { downloadTasks } from './download-manager'
 import { createProfile, updateProfile } from './profileService'
 import { installFabric, installQuilt } from './modLoaderService'
 import { ModrinthV2Client } from '@xmcl/modrinth'
+import { taskManagerService } from './taskManagerService.js'
 
 const client = new ModrinthV2Client()
 
@@ -40,34 +41,54 @@ async function downloadFileToTemp(url: string, filename: string): Promise<string
   return dest
 }
 
-export async function installModrinthModpack(versionId: string, profileName: string, gameDataDir: string, appendLog: (level: any, msg: string) => void): Promise<string> {
-  appendLog('info', `Đang lấy thông tin Modpack phiên bản ${versionId}...`)
+export async function installModrinthModpack(versionId: string, profileName: string, gameDataDir: string): Promise<string> {
+  const taskId = taskManagerService.createTask(`Cài đặt Modpack: ${profileName}`)
   
-  // 1. Fetch version details
-  let versionInfo: any;
-  try {
-    versionInfo = await client.getProjectVersion(versionId)
-  } catch(e) {
-    throw new Error('Không thể lấy thông tin phiên bản Modpack')
-  }
+  // Run async
+  Promise.resolve().then(async () => {
+    try {
+      taskManagerService.updateTaskProgress(taskId, 5, `Đang lấy thông tin Modpack phiên bản ${versionId}...`)
+      
+      let versionInfo: any;
+      try {
+        versionInfo = await client.getProjectVersion(versionId)
+      } catch(e) {
+        throw new Error('Không thể lấy thông tin phiên bản Modpack')
+      }
+      
+      const mrpackFile = versionInfo.files.find((f: any) => f.filename.endsWith('.mrpack'))
+      if (!mrpackFile) throw new Error('Không tìm thấy file .mrpack trong phiên bản này')
+      
+      taskManagerService.updateTaskProgress(taskId, 10, `Đang tải file .mrpack...`)
+      const mrpackPath = await downloadFileToTemp(mrpackFile.url, mrpackFile.filename)
+      
+      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true)
+    } catch (e: any) {
+      taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+    }
+  })
   
-  const mrpackFile = versionInfo.files.find((f: any) => f.filename.endsWith('.mrpack'))
-  if (!mrpackFile) throw new Error('Không tìm thấy file .mrpack trong phiên bản này')
-  
-  // 2. Download .mrpack
-  appendLog('info', `Đang tải file .mrpack...`)
-  const mrpackPath = await downloadFileToTemp(mrpackFile.url, mrpackFile.filename)
-  
-  return await _installMrpack(mrpackPath, profileName, gameDataDir, appendLog, true)
+  return taskId
 }
 
-export async function installLocalModrinthModpack(mrpackPath: string, profileName: string, gameDataDir: string, appendLog: (level: any, msg: string) => void): Promise<string> {
-  return await _installMrpack(mrpackPath, profileName, gameDataDir, appendLog, false)
+export async function installLocalModrinthModpack(mrpackPath: string, profileName: string, gameDataDir: string): Promise<string> {
+  const taskId = taskManagerService.createTask(`Cài đặt Modpack từ tệp: ${profileName}`)
+  
+  // Run async
+  Promise.resolve().then(async () => {
+    try {
+      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, false)
+    } catch (e: any) {
+      taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+    }
+  })
+  
+  return taskId
 }
 
-async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, appendLog: (level: any, msg: string) => void, cleanupZip: boolean): Promise<string> {
+async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, taskId: string, cleanupZip: boolean): Promise<string> {
   // 3. Extract and parse modrinth.index.json
-  appendLog('info', `Đang phân tích cấu trúc Modpack...`)
+  taskManagerService.updateTaskProgress(taskId, 15, `Đang phân tích cấu trúc Modpack...`)
   const zip = new AdmZip(mrpackPath)
   const zipEntries = zip.getEntries()
   
@@ -97,30 +118,30 @@ async function _installMrpack(mrpackPath: string, profileName: string, gameDataD
     minMemoryMb: 2048,
     maxMemoryMb: 4096,
   })
-  appendLog('success', `Đã tạo Cấu hình game riêng biệt: ${profileName}`)
+  taskManagerService.updateTaskProgress(taskId, 20, `Đã tạo Cấu hình game riêng biệt: ${profileName}`)
   
   // Install Modloader if needed
   let finalMinecraftVersion = minecraftVersion;
   if (indexData.dependencies) {
     if (indexData.dependencies['fabric-loader']) {
-      appendLog('info', `Đang cài đặt Fabric Loader ${indexData.dependencies['fabric-loader']}...`)
+      taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Fabric Loader ${indexData.dependencies['fabric-loader']}...`)
       // Cài Fabric vào mcRootDir (thư mục .minecraft chính) để versions/ và libraries/ được tạo đúng chỗ
       finalMinecraftVersion = await installFabric(minecraftVersion, indexData.dependencies['fabric-loader'], mcRootDir)
       await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
-      appendLog('success', 'Cài đặt Fabric thành công.')
+      taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Fabric thành công.')
     } else if (indexData.dependencies['quilt-loader']) {
-      appendLog('info', `Đang cài đặt Quilt Loader ${indexData.dependencies['quilt-loader']}...`)
+      taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Quilt Loader ${indexData.dependencies['quilt-loader']}...`)
       // Cài Quilt vào mcRootDir (thư mục .minecraft chính)
       finalMinecraftVersion = await installQuilt(minecraftVersion, indexData.dependencies['quilt-loader'], mcRootDir)
       await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
-      appendLog('success', 'Cài đặt Quilt thành công.')
+      taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Quilt thành công.')
     }
     // Note: Forge/NeoForge is not currently fully implemented in the launcher API for one-click install
   }
   
   // 6. Download mods to profileGameDir (thư mục mods/ nằm trong profile riêng)
   if (indexData.files && indexData.files.length > 0) {
-    appendLog('info', `Bắt đầu tải ${indexData.files.length} tệp mods/resourcepacks...`)
+    taskManagerService.updateTaskProgress(taskId, 35, `Bắt đầu tải ${indexData.files.length} tệp mods/resourcepacks...`)
     
     const tasks = indexData.files
       .filter((file: any) => file.env?.client !== 'unsupported')
@@ -141,18 +162,21 @@ async function _installMrpack(mrpackPath: string, profileName: string, gameDataD
       concurrency: 8,
       onProgress: (prog) => {
         if (prog.current % 10 === 0 || prog.current === prog.total) {
-           appendLog('info', `Tiến trình tải: ${prog.current}/${prog.total} (${prog.percent}%)`)
+           const mappedPercent = 35 + (prog.percent * 0.45) // scale 0-100 to 35-80
+           taskManagerService.updateTaskProgress(taskId, mappedPercent, `Tiến trình tải: ${prog.current}/${prog.total} (${prog.percent}%)`)
         }
       },
       onLog: (level, msg) => {
-        if (level === 'error') appendLog('error', msg)
+        if (level === 'error') {
+           // We could log error but we let the throw handle it
+        }
       }
     })
   }
   
   // 7. Extract overrides & client-overrides to profileGameDir
   const overrideFolders = [indexData.overrides || 'overrides', 'client-overrides']
-  appendLog('info', `Đang giải nén tệp cấu hình (overrides)...`)
+  taskManagerService.updateTaskProgress(taskId, 85, `Đang giải nén tệp cấu hình (overrides)...`)
   
   for (const entry of zipEntries) {
     for (const folderName of overrideFolders) {
@@ -172,7 +196,7 @@ async function _installMrpack(mrpackPath: string, profileName: string, gameDataD
     }
   }
   
-  appendLog('success', `Cài đặt Modpack hoàn tất thành công! Bạn có thể chọn cấu hình ${profileName} để chơi.`)
+  taskManagerService.completeTask(taskId, `Cài đặt Modpack hoàn tất thành công! Đã tạo cấu hình ${profileName}.`, { profileId: createdProfile.id })
   
   // Clean up
   if (cleanupZip) {
@@ -216,15 +240,27 @@ export async function uninstallStoreItem(projectId: string, gameDir: string): Pr
   return true
 }
 
-export async function installModrinthMod(versionId: string, gameDir: string, appendLog?: (level: any, msg: string) => void): Promise<void> {
-  await _installModrinthModRecursive(versionId, gameDir, appendLog, new Set())
+export async function installModrinthMod(versionId: string, gameDir: string): Promise<string> {
+  const taskId = taskManagerService.createTask(`Cài đặt Mod: ${versionId}`, 'install-mod')
+  
+  taskManagerService.updateTaskProgress(taskId, 10, 'Đang chuẩn bị tải...')
+  Promise.resolve().then(async () => {
+    try {
+      await _installModrinthModRecursive(versionId, gameDir, taskId, new Set())
+      taskManagerService.completeTask(taskId, 'Cài đặt Mod hoàn tất.', { gameDir })
+    } catch (e: any) {
+      taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+    }
+  })
+  
+  return taskId
 }
 
-async function _installModrinthModRecursive(versionId: string, gameDir: string, appendLog: ((level: any, msg: string) => void) | undefined, installedSet: Set<string>): Promise<void> {
+async function _installModrinthModRecursive(versionId: string, gameDir: string, taskId: string, installedSet: Set<string>): Promise<void> {
   if (installedSet.has(versionId)) return
   installedSet.add(versionId)
 
-  if (appendLog) appendLog('info', `Đang lấy thông tin Mod...`)
+  taskManagerService.updateTaskProgress(taskId, 10, `Đang lấy thông tin Mod...`)
   
   const versionInfo = await client.getProjectVersion(versionId) as any
   const primaryFile = versionInfo.files.find((f: any) => f.primary) || versionInfo.files[0]
@@ -242,7 +278,7 @@ async function _installModrinthModRecursive(versionId: string, gameDir: string, 
   await fs.mkdir(targetDir, { recursive: true })
 
   const destFile = path.join(targetDir, primaryFile.filename)
-  if (appendLog) appendLog('info', `Đang tải ${primaryFile.filename}...`)
+  taskManagerService.updateTaskProgress(taskId, 50, `Đang tải ${primaryFile.filename}...`)
   
   const res = await fetch(primaryFile.url)
   if (!res.ok) throw new Error(`Failed to download ${primaryFile.url}`)
@@ -275,27 +311,24 @@ async function _installModrinthModRecursive(versionId: string, gameDir: string, 
 
   await saveStoreInstallations(gameDir, installations)
   
-  if (appendLog) appendLog('success', `Đã cài đặt: ${projectInfo.title}`)
+  taskManagerService.updateTaskProgress(taskId, 80, `Đã cài đặt: ${projectInfo.title}`)
 
   // Install required dependencies
   if (versionInfo.dependencies && versionInfo.dependencies.length > 0) {
     for (const dep of versionInfo.dependencies) {
       if (dep.dependency_type === 'required') {
         if (dep.version_id) {
-          if (appendLog) appendLog('info', `Phát hiện mod lõi/phụ thuộc bắt buộc, đang tải...`)
-          await _installModrinthModRecursive(dep.version_id, gameDir, appendLog, installedSet)
+          taskManagerService.updateTaskProgress(taskId, 85, `Đang tải mod phụ thuộc...`)
+          await _installModrinthModRecursive(dep.version_id, gameDir, taskId, installedSet)
         } else if (dep.project_id) {
-          if (appendLog) appendLog('info', `Phát hiện mod lõi/phụ thuộc bắt buộc, đang tải...`)
-          // we need the latest version of this project that matches our game version and loader
-          // Since we might not have game version context here easily, we just try to get the latest version overall.
-          // In a perfect world, we'd pass down mcVersion and loader to filter properly.
+          taskManagerService.updateTaskProgress(taskId, 85, `Đang tải mod phụ thuộc...`)
           try {
              const projVersions = await client.getProjectVersions(dep.project_id)
              if (projVersions && projVersions.length > 0) {
-                 await _installModrinthModRecursive((projVersions[0] as any).id, gameDir, appendLog, installedSet)
+                 await _installModrinthModRecursive((projVersions[0] as any).id, gameDir, taskId, installedSet)
              }
           } catch(e) {
-             if (appendLog) appendLog('warn', `Không thể tải dependency dự án ${dep.project_id}`)
+             console.warn(`Không thể tải dependency dự án ${dep.project_id}`)
           }
         }
       }

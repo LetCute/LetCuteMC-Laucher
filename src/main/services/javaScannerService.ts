@@ -867,8 +867,8 @@ export async function selectBestJavaRuntime(
       candidates,
       isExactMatch: false,
       isFallback: false,
-      warning: `Cần Java ${requiredMajor}. Có trên máy: ${available || 'không có'}. Không tự chọn bản mới hơn.`,
-      message: `❌ Không có Java ${requiredMajor}. Minecraft ${minecraftVersion} yêu cầu đúng major ${requiredMajor}. Các runtime phát hiện: ${available || 'không có'}.`,
+      warning: null,
+      message: `❌ Không tìm thấy Java ${requiredMajor}. Minecraft ${minecraftVersion} yêu cầu đúng Java ${requiredMajor}. Các runtime hiện có: ${available || 'Không có'}.`,
     }
   }
 

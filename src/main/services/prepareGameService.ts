@@ -189,6 +189,12 @@ export async function prepareGameFiles(
       console.log('[PrepareService] Worker finished ok=', msg.ok, 'msg=', msg.message)
       if (msg.ok && msg.state) {
         void savePreparedProfileState(msg.state)
+        if (msg.state.autoInstalledJavaPath) {
+          console.log('[PrepareService] Auto-installed Java detected, updating profile:', msg.state.autoInstalledJavaPath)
+          import('./profileService.js').then(({ updateProfile }) => {
+            void updateProfile(msg.state.profileId, { javaPath: msg.state.autoInstalledJavaPath })
+          })
+        }
       }
       // prepareWorker already dumps failures to log_error
       currentWorker = null

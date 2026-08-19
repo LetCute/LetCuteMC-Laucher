@@ -5,7 +5,6 @@ import {
   List,
   PackageOpen,
   Settings,
-  TerminalSquare,
   Zap,
   Play,
   Loader2,
@@ -14,6 +13,7 @@ import {
   Heart,
   ChevronDown,
   Settings2,
+  Activity,
 } from 'lucide-react'
 import { useToast } from '../ui/Toast'
 import logoImg from '../../assets/logo.png'
@@ -39,7 +39,7 @@ import {
   DropdownMenuTrigger,
 } from '../ui/DropdownMenu'
 
-export type TabId = 'store' | 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'logs' | 'about'
+export type TabId = 'store' | 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'tasks' | 'about'
 
 interface SidebarProps {
   activeTab: TabId
@@ -56,19 +56,23 @@ interface SidebarProps {
 }
 
 import { ModrinthIcon } from '../icons/ModrinthIcon'
-
 const MENU_ITEMS = [
   { id: 'store', label: 'Cửa hàng', icon: ModrinthIcon },
+
   { id: 'profiles', label: 'Cấu hình game', icon: Layers },
   { id: 'versions', label: 'Phiên bản', icon: List },
-  { id: 'accounts', label: 'Tài khoản', icon: User },
+
   { id: 'mods', label: 'Mods', icon: Box },
   { id: 'resourcepacks', label: 'Resource Packs', icon: PackageOpen },
   { id: 'shaderpacks', label: 'Shader Packs', icon: Zap },
+
+  { id: 'accounts', label: 'Tài khoản', icon: User },
+  { id: 'tasks', label: 'Tiến trình', icon: Activity },
+
   { id: 'settings', label: 'Cài đặt', icon: Settings },
-  { id: 'logs', label: 'Nhật ký', icon: TerminalSquare },
   { id: 'about', label: 'Giới thiệu', icon: Heart },
-] as const
+] as const;
+
 
 export function Sidebar({
   activeTab,

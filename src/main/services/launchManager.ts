@@ -35,11 +35,13 @@ let currentWorker: Worker | null = null
 let currentState: LaunchJobState = createIdleState()
 let eventQueue: LauncherEvent[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
+let currentVersion: string = ''
+let currentProfileName: string = ''
+let currentProfileId: string = ''
+let activeJobId: string | null = null
 /** True while launcher is hidden because Minecraft is running */
 let hiddenForGame = false
 
-let currentProfileName = 'Unknown Profile'
-let currentVersion = 'Unknown Version'
 
 import { getProfiles } from './profileService.js'
 import { setPlaying, setIdle } from './discordRpcService.js'
@@ -274,6 +276,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     console.error('Failed to get profile name for RPC:', err)
   }
   currentVersion = input.version
+  currentProfileId = input.profileId
 
   // Deduplicate and block if prepare worker is running for the same profile
   const { isPrepareActiveForProfile } = await import('./prepareGameService.js')

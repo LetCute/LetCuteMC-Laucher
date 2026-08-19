@@ -10,7 +10,7 @@ import { ResourcePacksScreen } from './screens/ResourcePacksScreen';
 import { ShaderPacksScreen } from './screens/ShaderPacksScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { AccountsScreen } from './screens/AccountsScreen';
-import { LogsScreen } from './screens/LogsScreen';
+import TasksScreen from './screens/TasksScreen';
 import { AboutScreen } from './screens/AboutScreen';
 import { StoreScreen } from './screens/StoreScreen';
 import { ProfileModal } from './components/profiles/ProfileModal';
@@ -204,6 +204,24 @@ function App() {
 
   useEffect(() => {
     void initializeAppData();
+
+    // Listen for task completion to reload app data
+    const unsubscribe = window.launcherApi.onTasksUpdate(async (event) => {
+      if (event.type === 'task-completed') {
+        const { task } = event;
+        if (task.taskType === 'install-modpack' && task.result?.profileId) {
+          // A modpack was just installed, reload profiles
+          await initializeAppData();
+          await handleSetActiveProfile(task.result.profileId);
+          setActiveTab('mods');
+        } else if (task.taskType === 'install-mod') {
+          // Optionally, reload mods list or store installations if needed
+          // For now, doing nothing is fine as StoreScreen can reload its own state
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   // ── Java selection (after critical ready + profile known) ─────────────────
@@ -457,13 +475,8 @@ function App() {
                       />
                     )}
 
-                    {activeTab === 'logs' && (
-                      <LogsScreen
-                        logs={launchJobState?.logs ?? []}
-                        onClear={clearLaunchLogs}
-                        onCopy={() => {/* copy handled inside LogsScreen */ }}
-                        onExport={() => {/* export handled inside LogsScreen */ }}
-                      />
+                    {activeTab === 'tasks' && (
+                      <TasksScreen />
                     )}
 
                     {activeTab === 'about' && (

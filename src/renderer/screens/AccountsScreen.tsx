@@ -3,8 +3,7 @@ import type { AccountState } from '@/shared/types.ts'
 import { Input } from '../components/ui/Input'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
-import { SkinViewer3D, LazySkinViewer3D, type SkinModel } from '../components/ui/SkinViewer3D'
-import { SkinHead } from '../components/ui/SkinHead'
+import { SkinViewer3D, type SkinModel } from '../components/ui/SkinViewer3D'
 import { CapePreview } from '../components/ui/CapePreview'
 import {
   Key,

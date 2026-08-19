@@ -62,13 +62,13 @@ export function LaunchPanel({
 
   const accounts = accountState?.accounts || []
   const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
-  const isVirtual      = !activeAccount || activeAccount.type === 'local'
-  const isMicrosoft    = activeAccount?.type === 'microsoft'
+  const isVirtual = !activeAccount || activeAccount.type === 'local'
+  const isMicrosoft = activeAccount?.type === 'microsoft'
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
 
   // Java installer state (local UI only)
   type JavaInstallState = 'idle' | 'installing' | 'success' | 'error'
-  const [javaInstallState, setJavaInstallState]     = useState<JavaInstallState>('idle')
+  const [javaInstallState, setJavaInstallState] = useState<JavaInstallState>('idle')
   const [javaInstallMessage, setJavaInstallMessage] = useState('')
 
   const handleInstallJava = async () => {
@@ -98,18 +98,18 @@ export function LaunchPanel({
 
     const auth: LaunchInput['auth'] = isVirtual
       ? {
-          type: 'virtual',
-          username,
-          uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
-          accessToken: 'offline-token-placeholder',
-        }
+        type: 'virtual',
+        username,
+        uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
+        accessToken: 'offline-token-placeholder',
+      }
       : {
-          type: 'microsoft',
-          username: activeAccount.username,
-          uuid: activeAccount.uuid,
-          accessToken: activeAccount.accessToken || '',
-          expiresAt: activeAccount.expiresAt,
-        }
+        type: 'microsoft',
+        username: activeAccount.username,
+        uuid: activeAccount.uuid,
+        accessToken: activeAccount.accessToken || '',
+        expiresAt: activeAccount.expiresAt,
+      }
 
     await startLaunch({
       profileId: activeProfile.id,
@@ -146,7 +146,7 @@ export function LaunchPanel({
 
   // Progress from job state
   const jobProgress = state?.progress
-  const percent     = clamp(jobProgress?.percent ?? 0)
+  const percent = clamp(jobProgress?.percent ?? 0)
   const showProgress = isBusy && percent > 0
 
   // Cancel is available when preparing/downloading/launching (not running)
