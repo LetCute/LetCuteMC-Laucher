@@ -123,7 +123,9 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
           {phase === 'downloading' && (
             <div className="flex items-center gap-2 text-primary">
               <Download className="animate-bounce" size={18} />
-              <span className="font-medium text-sm">{message}</span>
+              <span className="font-medium text-sm">
+                {message} {progress > 0 ? `(${Math.round(progress)}%)` : ''}
+              </span>
             </div>
           )}
 
