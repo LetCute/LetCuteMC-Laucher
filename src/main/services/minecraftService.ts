@@ -158,9 +158,18 @@ export async function launchMinecraft(
     log('success', `Dùng Java ${javaSelection.selectedRuntime.majorVersion}: ${javaSelection.selectedRuntime.javaPath}`);
 
     // ── Version install check ─────────────────────────────────────────────
-    const versionDir = path.join(input.gameDir, 'versions', input.version);
-    const versionJson = path.join(versionDir, `${input.version}.json`);
-    const isInstalled = await pathExists(versionJson);
+    // Version JSON có thể nằm ở gameDir (modpack) hoặc mcRoot (Forge/NeoForge/Fabric/Quilt)
+    const mcRoot = settings.minecraftDirectory;
+    const versionDirInGameDir = path.join(input.gameDir, 'versions', input.version);
+    const versionJsonInGameDir = path.join(versionDirInGameDir, `${input.version}.json`);
+    const versionDirInMcRoot = path.join(mcRoot, 'versions', input.version);
+    const versionJsonInMcRoot = path.join(versionDirInMcRoot, `${input.version}.json`);
+
+    const existsInGameDir = await pathExists(versionJsonInGameDir);
+    const existsInMcRoot = await pathExists(versionJsonInMcRoot);
+    const isInstalled = existsInGameDir || existsInMcRoot;
+    // Dùng gameDir nếu version JSON ở đó, ngược lại dùng mcRoot
+    const versionParseRoot = existsInGameDir ? input.gameDir : mcRoot;
 
     if (!isInstalled) {
       log('info', `Phiên bản ${input.version} chưa được cài. Sẽ tải vào .minecraft...`);
@@ -181,7 +190,7 @@ export async function launchMinecraft(
     }
 
     // XMCL: resolve version (auto inheritance, guarantees downloads.client)
-    const resolved: ResolvedVersion = await Version.parse(input.gameDir, input.version);
+    const resolved: ResolvedVersion = await Version.parse(versionParseRoot, input.version);
 
     // XMCL launch (auto inheritance, no downloads.client crash)
     log('info', 'Đang mở Minecraft...');

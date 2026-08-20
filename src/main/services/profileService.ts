@@ -99,7 +99,7 @@ export async function createProfile(
   const rec = recommendPerformance();
 
   const { getDefaultMinecraftDirectory, getLauncherDataDirectory } = await import('./storageService.js');
-  
+
   let finalGameDir = input.gameDir || '';
   if (finalGameDir.trim() === '') {
     // Dùng chung thư mục gốc
@@ -174,16 +174,19 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   const store = await getProfiles();
   const index = store.profiles.findIndex(p => p.id === profileId);
   if (index === -1) return false;
-  
+
   const profile = store.profiles[index];
   const { getLauncherDataDirectory } = await import('./storageService.js');
   const rootDir = getLauncherDataDirectory();
-  
-  // Only delete directory if it's explicitly inside a 'profiles' subfolder
-  // to avoid accidentally deleting the root game directory or important folders.
+
   if (profile.gameDir && profile.gameDir.toLowerCase() !== rootDir.toLowerCase()) {
-    const fs = await import('node:fs/promises');
-    await fs.rm(profile.gameDir, { recursive: true, force: true }).catch(() => {});
+    const isProfilesDir = profile.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) || profile.gameDir.toLowerCase().includes('/profiles/');
+    if (isProfilesDir) {
+      const fs = await import('node:fs/promises');
+      await fs.rm(profile.gameDir, { recursive: true, force: true }).catch((err) => {
+        console.error('Lỗi khi xóa thư mục cấu hình:', err);
+      });
+    }
   }
 
   store.profiles.splice(index, 1);
@@ -192,7 +195,6 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   return true;
 }
 
-/** Set the active profile ID and persist */
 export async function setActiveProfile(profileId: string): Promise<boolean> {
   await ensureLauncherDataDirectory();
   const store = await getProfiles();

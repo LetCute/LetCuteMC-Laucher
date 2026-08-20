@@ -1,5 +1,5 @@
 import type { LauncherProfile } from '../../shared/types'
-import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Anvil } from 'lucide-react'
+import { Layers, Edit2, Trash2, Check, Play, PlusCircle } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
@@ -7,6 +7,8 @@ import { useEffect, useState } from 'react'
 import grassImg from '../assets/grass_block.png'
 import fabricImg from '../assets/fabric.png'
 import quiltImg from '../assets/quilt.svg'
+import forgeImg from '../assets/forge.png'
+import neoforgeImg from '../assets/neoforged.png'
 
 interface ProfilesScreenProps {
   profiles: LauncherProfile[]
@@ -24,7 +26,8 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
 
   const isFabric = profile.minecraftVersion.toLowerCase().includes('fabric')
   const isQuilt = profile.minecraftVersion.toLowerCase().includes('quilt')
-  const isForge = profile.minecraftVersion.toLowerCase().includes('forge') || profile.minecraftVersion.toLowerCase().includes('neoforge')
+  const isNeoForge = profile.minecraftVersion.toLowerCase().includes('neoforge')
+  const isForge = profile.minecraftVersion.toLowerCase().includes('forge') && !isNeoForge
   const isModpack = !!profile.mcRootDir
 
   useEffect(() => {
@@ -53,12 +56,12 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
     return <img src={quiltImg} className={imageClass} alt="Quilt" onError={(e) => { e.currentTarget.src = grassImg }} />
   }
 
+  if (isNeoForge) {
+    return <img src={neoforgeImg} className={imageClass} alt="NeoForge" onError={(e) => { e.currentTarget.src = grassImg }} />
+  }
+
   if (isForge) {
-    return (
-      <div className={`${imageClass} flex items-center justify-center bg-orange-900/30 text-orange-400 border border-orange-500/20`}>
-        <Anvil className="w-6 h-6 opacity-80" />
-      </div>
-    )
+    return <img src={forgeImg} className={imageClass} alt="Forge" onError={(e) => { e.currentTarget.src = grassImg }} />
   }
 
   return <img src={grassImg} className={imageClass} alt="Vanilla" />

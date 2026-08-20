@@ -100,12 +100,28 @@ const launcherApi = {
     return ipcRenderer.invoke('modloader:get-quilt-versions')
   },
 
+  getForgeVersions(): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-forge-versions')
+  },
+
+  getNeoForgeVersions(): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-neoforge-versions')
+  },
+
   installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
     return ipcRenderer.invoke('modloader:install-fabric', mcVersion, loaderVersion, gameDir)
   },
 
   installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
     return ipcRenderer.invoke('modloader:install-quilt', mcVersion, loaderVersion, gameDir)
+  },
+
+  installForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+    return ipcRenderer.invoke('modloader:install-forge', mcVersion, loaderVersion, gameDir)
+  },
+
+  installNeoForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+    return ipcRenderer.invoke('modloader:install-neoforge', mcVersion, loaderVersion, gameDir)
   },
 
   scanJavaRuntimes(customScanDirs?: string[], forceRefresh?: boolean): Promise<JavaScanResult> {

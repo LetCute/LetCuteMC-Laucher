@@ -72,6 +72,11 @@ export function SkinViewer3D({
     viewer.fov = 50
     viewer.camera.lookAt(0, 2, 0)
     viewer.renderer.setClearColor(0x000000, 0)
+    
+    // Disable zoom
+    if (viewer.controls) {
+      viewer.controls.enableZoom = false
+    }
 
     viewerRef.current = viewer
 

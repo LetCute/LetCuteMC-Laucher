@@ -304,15 +304,21 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     // - Với profile modpack (có mcRootDir hoặc gameDir nằm trong profiles/):
     //   version files đã được copy vào gameDir/versions/ bởi prepareWorker
     //   Nên parse tại gamePath (input.gameDir) để XMCL tìm được đúng JSON
-    // - Với profile thường: parse tại resourcePath (mcRoot)
+    // - Với profile thường (Vanilla/Fabric/Quilt/Forge/NeoForge): parse tại resourcePath (mcRoot)
+    // - Quan trọng: chỉ dùng gameDir khi version JSON thực sự tồn tại ở đó
     const hasResourcePath = input.resourcePath && input.resourcePath.trim() !== '' &&
       input.resourcePath.toLowerCase() !== input.gameDir.toLowerCase()
     const isInProfilesPath = input.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
       input.gameDir.toLowerCase().includes('/profiles/')
-    const isModpackProfile = hasResourcePath || (isInProfilesPath && input.gameDir.toLowerCase() !== resourcePath.toLowerCase())
+
+    // Kiểm tra xem version JSON có tồn tại trong gameDir không (modpack case)
+    const versionJsonInGameDir = path.join(input.gameDir, 'versions', input.version, `${input.version}.json`)
+    const hasVersionInGameDir = await pathExists(versionJsonInGameDir)
+
+    const isModpackProfile = hasVersionInGameDir && (hasResourcePath || (isInProfilesPath && input.gameDir.toLowerCase() !== resourcePath.toLowerCase()))
     const parseRoot = isModpackProfile ? input.gameDir : resourcePath
 
-    postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile})`)
+    postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile}, hasVersionInGameDir=${hasVersionInGameDir})`)
     const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
 
     // Filter out unsupported JVM flags for Java < 24 (e.g. UseCompactObjectHeaders)

@@ -63,6 +63,10 @@ export function AboutScreen() {
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
                     Hỗ trợ tài khoản Microsoft & Offline
                   </li>
+                <li className="flex items-center gap-1.5">
+                  <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
+                  Hỗ trợ Forge / NeoForge (còn đang phát triển)
+                </li>
                 </ul>
               </div>
 

@@ -253,7 +253,7 @@ export type MinecraftVersionType =
   | 'old_alpha'
   | 'unknown'
 
-export type ModLoaderType = 'vanilla' | 'fabric' | 'quilt'
+export type ModLoaderType = 'vanilla' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
 
 export interface ModLoaderVersion {
   version: string

@@ -222,23 +222,23 @@ export const AccountsScreen = ({
         const profile = await window.launcherApi.getMojangProfile(accessToken)
         const allowObj = await window.launcherApi.checkMojangNameChange(accessToken)
         setMojangProfile(profile)
-        
+
         // Name change logic for MS
         setRenameAllowed(allowObj?.nameChangeAllowed ?? true)
         if (allowObj?.nameChangeAllowed === false) {
-           if (allowObj.createdAt) {
-             const createdDate = new Date(allowObj.createdAt)
-             const availableDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000)
-             const diff = availableDate.getTime() - Date.now()
-             if (diff > 0) {
-                const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
-                setRenameCooldownMessage(`Bạn cần chờ thêm ${days} ngày nữa mới được đổi tên.`)
-             } else {
-                setRenameCooldownMessage('Chưa thể đổi tên lúc này.')
-             }
-           } else {
-             setRenameCooldownMessage('Bạn không được phép đổi tên tài khoản này.')
-           }
+          if (allowObj.createdAt) {
+            const createdDate = new Date(allowObj.createdAt)
+            const availableDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+            const diff = availableDate.getTime() - Date.now()
+            if (diff > 0) {
+              const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+              setRenameCooldownMessage(`Bạn cần chờ thêm ${days} ngày nữa mới được đổi tên.`)
+            } else {
+              setRenameCooldownMessage('Chưa thể đổi tên lúc này.')
+            }
+          } else {
+            setRenameCooldownMessage('Bạn không được phép đổi tên tài khoản này.')
+          }
         }
 
         // Find active skin
@@ -314,10 +314,10 @@ export const AccountsScreen = ({
       }
     }
 
-    const message = renameTargetType === 'microsoft' 
+    const message = renameTargetType === 'microsoft'
       ? `Bạn có chắc muốn đổi tên tài khoản thành ${trimmed} không?\n\nLưu ý: Sau khi đổi tên, bạn sẽ không thể đổi lại tên khác trong vòng 30 ngày tiếp theo theo luật của Mojang.`
       : `Bạn có chắc muốn đổi tên tài khoản thành ${trimmed} không?`
-    
+
     if (!(await confirm({ title: 'Xác nhận đổi tên', message }))) return
 
     setIsSavingRename(true)
@@ -651,7 +651,7 @@ export const AccountsScreen = ({
                     </span>
                   </div>
 
-                  <div className="relative mt-2 mb-2 group/skin cursor-pointer" onClick={(e) => { e.stopPropagation(); openSkinModal(acc.id, acc.username, acc.type, (acc as any).accessToken); }}>
+                  <div className="relative mt-2 mb-2 group/skin">
                     <SkinViewer3D
                       skinUrl={skinData?.url ? skinData.url : acc.type === 'microsoft' ? `https://mc-heads.net/skin/${acc.username}` : undefined}
                       capeUrl={capeData}
@@ -740,28 +740,28 @@ export const AccountsScreen = ({
                   {skinTab === 'name' && (
                     <div className="space-y-4 animate-in fade-in duration-200">
                       {isCheckingRename ? (
-                         <div className="flex justify-center py-6"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
+                        <div className="flex justify-center py-6"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
                       ) : (
-                         <>
-                           <div className="space-y-1">
-                             <Input 
-                               value={newProfileName}
-                               onChange={e => setNewProfileName(e.target.value)}
-                               placeholder="Nhập tên mới"
-                               maxLength={16}
-                               disabled={!renameAllowed || isSavingRename}
-                             />
-                           </div>
-                           {!renameAllowed && renameTargetType === 'microsoft' && (
-                              <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg text-xs">
-                                 {renameCooldownMessage || 'Tài khoản Premium này chưa được phép đổi tên.'}
-                              </div>
-                           )}
-                           <Button onClick={handleRenameClick} className="w-full mt-2" disabled={isSavingRename || !renameAllowed || newProfileName.trim() === '' || newProfileName.trim() === renameTargetName}>
-                             {isSavingRename ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
-                             Lưu thay đổi tên
-                           </Button>
-                         </>
+                        <>
+                          <div className="space-y-1">
+                            <Input
+                              value={newProfileName}
+                              onChange={e => setNewProfileName(e.target.value)}
+                              placeholder="Nhập tên mới"
+                              maxLength={16}
+                              disabled={!renameAllowed || isSavingRename}
+                            />
+                          </div>
+                          {!renameAllowed && renameTargetType === 'microsoft' && (
+                            <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg text-xs">
+                              {renameCooldownMessage || 'Tài khoản Premium này chưa được phép đổi tên.'}
+                            </div>
+                          )}
+                          <Button onClick={handleRenameClick} className="w-full mt-2" disabled={isSavingRename || !renameAllowed || newProfileName.trim() === '' || newProfileName.trim() === renameTargetName}>
+                            {isSavingRename ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                            Lưu thay đổi tên
+                          </Button>
+                        </>
                       )}
                     </div>
                   )}

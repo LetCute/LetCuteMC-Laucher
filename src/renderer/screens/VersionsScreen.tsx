@@ -14,20 +14,17 @@ interface VersionsScreenProps {
   isWorking?: boolean;
 }
 
-type TabKey = 'releases' | 'installed';
+type TabKey = 'releases' | 'snapshots' | 'old_beta' | 'old_alpha' | 'installed';
 
 const TABS: { key: TabKey; label: string }[] = [
-  { key: 'releases', label: 'Chính thức (Vanilla)' },
+  {
+    key: 'releases', label: 'releases'
+  },
+  { key: 'snapshots', label: 'Snapshots' },
+  { key: 'old_beta', label: 'Old Beta' },
+  { key: 'old_alpha', label: 'Old Alpha' },
   { key: 'installed', label: 'Đã cài / Thủ công' },
 ];
-
-
-
-function SourceBadge({ source }: { source: MinecraftVersionItem['source'] }) {
-  if (source === 'local') return <Badge variant="success">Cục bộ</Badge>;
-  if (source === 'local_and_online') return <Badge variant="info">Cục bộ + Online</Badge>;
-  return <Badge variant="default">Online</Badge>;
-}
 
 export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, onRefresh, isWorking }: VersionsScreenProps) {
   const [activeTab, setActiveTab] = useState<TabKey>('releases');
@@ -41,6 +38,12 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
     const timer = setTimeout(() => {
       if (activeTab === 'releases') {
         setDisplayedList(catalog.releases);
+      } else if (activeTab === 'snapshots') {
+        setDisplayedList(catalog.snapshots);
+      } else if (activeTab === 'old_beta') {
+        setDisplayedList(catalog.oldBeta);
+      } else if (activeTab === 'old_alpha') {
+        setDisplayedList(catalog.oldAlpha);
       } else {
         setDisplayedList(catalog.all.filter(v => v.isInstalled));
       }
@@ -148,14 +151,6 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
                       </span>
                     ) : (
                       <Badge variant="success">Đã cài đặt</Badge>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <SourceBadge source={v.source} />
-                    {v.releaseTime && (
-                      <span className="text-xs text-muted-foreground">
-                        {new Date(v.releaseTime).toLocaleDateString('vi-VN')}
-                      </span>
                     )}
                   </div>
                 </div>

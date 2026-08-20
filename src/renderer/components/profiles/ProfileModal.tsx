@@ -51,6 +51,7 @@ export function ProfileModal({
   })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [selectedVersionItem, setSelectedVersionItem] = useState<MinecraftVersionItem | null>(null)
+  const [versionTypeFilter, setVersionTypeFilter] = useState<'releases' | 'snapshots' | 'old_beta' | 'old_alpha'>('releases')
 
   const [modLoader, setModLoader] = useState<ModLoaderType>('vanilla')
   const [loaderVersions, setLoaderVersions] = useState<ModLoaderVersion[]>([])
@@ -114,6 +115,8 @@ export function ProfileModal({
         let versions: ModLoaderVersion[] = []
         if (modLoader === 'fabric') versions = await window.launcherApi.getFabricVersions()
         if (modLoader === 'quilt') versions = await window.launcherApi.getQuiltVersions()
+        if (modLoader === 'forge') versions = await window.launcherApi.getForgeVersions()
+        if (modLoader === 'neoforge') versions = await window.launcherApi.getNeoForgeVersions()
 
         setLoaderVersions(versions)
         if (versions.length > 0) {
@@ -143,10 +146,10 @@ export function ProfileModal({
     if (!validate()) return
 
     let finalMinecraftVersion = formData.minecraftVersion
-    
+
     let finalGameDir = formData.gameDir
     let mcRootDir = defaultGameDir
-    
+
     if (finalGameDir === defaultGameDir || !finalGameDir) {
       const safeName = formData.name.replace(/[^a-zA-Z0-9_-]/g, '_')
       const sep = defaultGameDir.includes('\\') ? '\\' : '/'
@@ -164,6 +167,18 @@ export function ProfileModal({
           )
         } else if (modLoader === 'quilt') {
           finalMinecraftVersion = await window.launcherApi.installQuilt(
+            formData.minecraftVersion,
+            selectedLoaderVersion,
+            mcRootDir!
+          )
+        } else if (modLoader === 'forge') {
+          finalMinecraftVersion = await window.launcherApi.installForge(
+            formData.minecraftVersion,
+            selectedLoaderVersion,
+            mcRootDir!
+          )
+        } else if (modLoader === 'neoforge') {
+          finalMinecraftVersion = await window.launcherApi.installNeoForge(
             formData.minecraftVersion,
             selectedLoaderVersion,
             mcRootDir!
@@ -228,23 +243,56 @@ export function ProfileModal({
         <div className="col-span-2 flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">Phiên bản</label>
           {hasVersions ? (
-            <Select
-              value={formData.minecraftVersion}
-              onChange={(val) => setFormData(p => ({ ...p, minecraftVersion: val }))}
-              options={(versionCatalog?.all ?? []).map(v => ({
-                value: v.id,
-                label: (
-                  <span className="flex items-center justify-between w-full">
-                    <span>{v.id}</span>
-                    {v.isInstalled && (
-                      <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-normal">
-                        Đã tải
+            <div className="flex items-center gap-3 w-full">
+              <div className="w-2/5">
+                <Select
+                  value={versionTypeFilter}
+                  onChange={(val) => {
+                    setVersionTypeFilter(val as any)
+                    // Optionally reset selected version when changing type
+                    let firstList = []
+                    if (val === 'snapshots') firstList = versionCatalog?.snapshots ?? []
+                    else if (val === 'old_beta') firstList = versionCatalog?.oldBeta ?? []
+                    else if (val === 'old_alpha') firstList = versionCatalog?.oldAlpha ?? []
+                    else firstList = versionCatalog?.releases ?? []
+
+                    if (firstList.length > 0) {
+                      setFormData(p => ({ ...p, minecraftVersion: firstList[0].id }))
+                    }
+                  }}
+                  options={[
+                    { value: 'releases', label: 'Releases' },
+                    { value: 'snapshots', label: 'Snapshots' },
+                    { value: 'old_beta', label: 'Old Beta' },
+                    { value: 'old_alpha', label: 'Old Alpha' },
+                  ]}
+                />
+              </div>
+              <div className="w-2/3">
+                <Select
+                  value={formData.minecraftVersion}
+                  onChange={(val) => setFormData(p => ({ ...p, minecraftVersion: val }))}
+                  options={(
+                    versionTypeFilter === 'snapshots' ? versionCatalog?.snapshots :
+                      versionTypeFilter === 'old_beta' ? versionCatalog?.oldBeta :
+                        versionTypeFilter === 'old_alpha' ? versionCatalog?.oldAlpha :
+                          versionCatalog?.releases ?? []
+                  )?.map(v => ({
+                    value: v.id,
+                    label: (
+                      <span className="flex items-center justify-between w-full">
+                        <span>{v.id}</span>
+                        {v.isInstalled && (
+                          <span className="text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded font-normal">
+                            Đã tải
+                          </span>
+                        )}
                       </span>
-                    )}
-                  </span>
-                )
-              }))}
-            />
+                    )
+                  })) ?? []}
+                />
+              </div>
+            </div>
           ) : (
             <input
               type="text"
@@ -265,31 +313,35 @@ export function ProfileModal({
         </div>
 
         {!profile && (
-          <div className={modLoader === 'vanilla' ? 'col-span-2 flex flex-col gap-1.5' : 'flex flex-col gap-1.5'}>
-            <label className="text-sm font-medium text-foreground">Cài đặt Mod Loader</label>
-            <Select
-              value={modLoader}
-              onChange={(val) => setModLoader(val as ModLoaderType)}
-              options={[
-                { value: 'vanilla', label: 'Không cài' },
-                { value: 'fabric', label: 'Fabric' },
-                { value: 'quilt', label: 'Quilt' },
-              ]}
-            />
-          </div>
-        )}
+          <div className="col-span-2 grid grid-cols-10 gap-5">
+            <div className={modLoader === 'vanilla' ? 'col-span-10 flex flex-col gap-1.5' : 'col-span-4 flex flex-col gap-1.5'}>
+              <label className="text-sm font-medium text-foreground">Cài đặt Mod</label>
+              <Select
+                value={modLoader}
+                onChange={(val) => setModLoader(val as ModLoaderType)}
+                options={[
+                  { value: 'vanilla', label: 'Không' },
+                  { value: 'fabric', label: 'Fabric' },
+                  { value: 'quilt', label: 'Quilt' },
+                  { value: 'forge', label: 'Forge' },
+                  { value: 'neoforge', label: 'NeoForge' },
+                ]}
+              />
+            </div>
 
-        {!profile && modLoader !== 'vanilla' && (
-          <div className="flex flex-col gap-1.5">
-            <label className="text-sm font-medium text-foreground">Phiên bản Loader</label>
-            <Select
-              value={selectedLoaderVersion}
-              onChange={setSelectedLoaderVersion}
-              options={isFetchingLoaders ? [{ value: selectedLoaderVersion, label: 'Đang tải danh sách...' }] : loaderVersions.map(v => ({
-                value: v.version,
-                label: v.version + (v.stable ? ' (Stable)' : ' (Beta)')
-              }))}
-            />
+            {modLoader !== 'vanilla' && (
+              <div className="col-span-6 flex flex-col gap-1.5">
+                <label className="text-sm font-medium text-foreground invisible pointer-events-none">Phiên bản Loader</label>
+                <Select
+                  value={selectedLoaderVersion}
+                  onChange={setSelectedLoaderVersion}
+                  options={isFetchingLoaders ? [{ value: selectedLoaderVersion, label: 'Đang tải danh sách...' }] : loaderVersions.map(v => ({
+                    value: v.version,
+                    label: v.version + (v.stable ? ' (Stable)' : ' (Beta)')
+                  }))}
+                />
+              </div>
+            )}
           </div>
         )}
 

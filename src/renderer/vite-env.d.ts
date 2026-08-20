@@ -152,8 +152,12 @@ declare global {
       // Mod Loader API
       getFabricVersions(): Promise<ModLoaderVersion[]>
       getQuiltVersions(): Promise<ModLoaderVersion[]>
+      getForgeVersions(): Promise<ModLoaderVersion[]>
+      getNeoForgeVersions(): Promise<ModLoaderVersion[]>
       installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
       installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
+      installForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
+      installNeoForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
 
       // Modrinth API
       searchModrinth(query: string, projectType: string, offset: number): Promise<import('../shared/types').ModrinthSearchResult>

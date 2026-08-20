@@ -64,7 +64,11 @@ import {
   getFabricVersions,
   getQuiltVersions,
   installFabric,
-  installQuilt
+  installQuilt,
+  getForgeVersions,
+  getNeoForgeVersions,
+  installForge,
+  installNeoForge
 } from './services/modLoaderService'
 import {
   getSystemPerformanceInfo,
@@ -246,8 +250,16 @@ export function registerIpcHandlers(): void {
   handleIpc('modloader:install-fabric', installFabric)
   handleIpc('modloader:install-quilt', installQuilt)
 
-  handleIpc('java:scan', (customScanDirs?: string[], forceRefresh?: boolean) =>
-    scanJavaRuntimes(customScanDirs ?? [], forceRefresh === true)
+  // Forge / NeoForge handlers
+  handleIpc('modloader:get-forge-versions', getForgeVersions)
+  handleIpc('modloader:get-neoforge-versions', getNeoForgeVersions)
+  handleIpc('modloader:install-forge', installForge)
+  handleIpc('modloader:install-neoforge', installNeoForge)
+
+  handleIpc(
+    'java:scan',
+    (customScanDirs?: string[], forceRefresh?: boolean) =>
+      scanJavaRuntimes(customScanDirs ?? [], forceRefresh === true)
   )
   handleIpc(
     'java:select-best',
