@@ -285,7 +285,6 @@ export const SettingsScreen = ({
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Cpu className="h-5 w-5 text-amber-400" />
               Bộ nhớ (RAM)
             </CardTitle>
           </CardHeader>

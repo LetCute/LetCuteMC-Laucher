@@ -38,7 +38,7 @@ export function initAutoUpdater() {
 
 export function checkForUpdates() {
   console.log('[AutoUpdater] Kiểm tra bản cập nhật mới...')
-  
+
   if (!app.isPackaged) {
     console.log('[AutoUpdater] Chế độ lập trình (Dev Mode) - Bỏ qua cập nhật.')
     sendUpdateEvent('update-not-available', 'Đang ở chế độ lập trình, bỏ qua kiểm tra.')
