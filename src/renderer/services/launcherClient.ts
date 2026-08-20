@@ -218,6 +218,10 @@ export const launcherClient = {
     return getApi().removeAccount(accountId)
   },
 
+  renameAccountLocally(accountId: string, newName: string): Promise<AccountState> {
+    return getApi().renameAccountLocally(accountId, newName)
+  },
+
   saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState> {
     return getApi().saveMicrosoftAccount(account)
   },
@@ -246,6 +250,14 @@ export const launcherClient = {
 
   changeMojangCape(accessToken: string, capeId: string): Promise<void> {
     return getApi().changeMojangCape(accessToken, capeId)
+  },
+
+  checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
+    return getApi().checkMojangNameChange(accessToken)
+  },
+
+  changeMojangName(accessToken: string, newName: string): Promise<void> {
+    return getApi().changeMojangName(accessToken, newName)
   },
 
   // ── New non-blocking launch API ────────────────────────────────────────────

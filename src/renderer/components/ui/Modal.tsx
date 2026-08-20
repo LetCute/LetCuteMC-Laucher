@@ -36,11 +36,11 @@ export const Modal = ({
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-start justify-between px-6 py-5 border-b border-border shrink-0">
+        <div className="flex items-start justify-between px-5 py-3 border-b border-border shrink-0">
           <div>
-            <h2 className="text-lg font-bold text-foreground">{title}</h2>
+            <h2 className="text-base font-bold text-foreground">{title}</h2>
             {description && (
-              <p className="text-sm text-muted-foreground mt-0.5">{description}</p>
+              <p className="text-[13px] text-muted-foreground mt-0.5">{description}</p>
             )}
           </div>
           <button
@@ -52,13 +52,13 @@ export const Modal = ({
         </div>
 
         {/* Body */}
-        <div className="overflow-y-auto flex-1 p-6">
+        <div className="overflow-y-auto flex-1 p-5">
           {children}
         </div>
 
         {/* Footer */}
         {footer && (
-          <div className="px-6 py-4 border-t border-border bg-muted/20 flex justify-end gap-3 shrink-0">
+          <div className="px-5 py-3 border-t border-border bg-muted/20 flex justify-end gap-3 shrink-0">
             {footer}
           </div>
         )}

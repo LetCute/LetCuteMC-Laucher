@@ -33,6 +33,10 @@ import type {
 } from '../shared/types'
 
 const launcherApi = {
+  readLocalImageBase64(filePath: string): Promise<string | null> {
+    return ipcRenderer.invoke('utils:read-local-image-base64', filePath)
+  },
+
   detectMinecraftDirectory(): Promise<MinecraftDirectoryResult> {
     return ipcRenderer.invoke('minecraft:detect-directory')
   },
@@ -287,6 +291,10 @@ const launcherApi = {
     return ipcRenderer.invoke('account:remove', accountId)
   },
 
+  renameAccountLocally(accountId: string, newName: string): Promise<AccountState> {
+    return ipcRenderer.invoke('account:rename-locally', accountId, newName)
+  },
+
   saveMicrosoftAccount(account: any): Promise<AccountState> {
     return ipcRenderer.invoke('account:save-microsoft', account)
   },
@@ -313,6 +321,14 @@ const launcherApi = {
 
   changeMojangCape(accessToken: string, capeId: string): Promise<void> {
     return ipcRenderer.invoke('mojang:change-cape', accessToken, capeId)
+  },
+
+  checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
+    return ipcRenderer.invoke('mojang:check-name-change', accessToken)
+  },
+
+  changeMojangName(accessToken: string, newName: string): Promise<void> {
+    return ipcRenderer.invoke('mojang:change-name', accessToken, newName)
   },
 
   searchModrinth(query: string, projectType: string, offset?: number): Promise<any> {

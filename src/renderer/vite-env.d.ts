@@ -37,6 +37,7 @@ import type {
 declare global {
   interface Window {
     launcherApi: {
+      readLocalImageBase64(filePath: string): Promise<string | null>
       detectMinecraftDirectory(): Promise<MinecraftDirectoryResult>
 
       getSettings(): Promise<LauncherSettings>
@@ -120,6 +121,7 @@ declare global {
       selectAccount(accountId: string): Promise<AccountState>
       addLocalAccount(username: string): Promise<AccountState>
       removeAccount(accountId: string): Promise<AccountState>
+      renameAccountLocally(accountId: string, newName: string): Promise<AccountState>
       saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState>
       loginMicrosoft(): Promise<MicrosoftAccount>
       refreshMicrosoftAccount(accountId?: string): Promise<AccountState>
@@ -129,6 +131,8 @@ declare global {
       fetchMojangTexture(url: string): Promise<string | null>
       uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
       changeMojangCape(accessToken: string, capeId: string): Promise<void>
+      checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }>
+      changeMojangName(accessToken: string, newName: string): Promise<void>
 
       // New non-blocking launch API
       startLaunch(input: LaunchInput): Promise<StartLaunchResult>

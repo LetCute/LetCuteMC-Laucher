@@ -1,8 +1,12 @@
 import type { LauncherProfile } from '../../shared/types'
-import { Layers, Edit2, Trash2, Check, Play, PlusCircle } from 'lucide-react'
+import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Package } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
+import { useEffect, useState } from 'react'
+import grassImg from '../assets/grass_block.png'
+import fabricImg from '../assets/fabric.png'
+import quiltImg from '../assets/quilt.svg'
 
 interface ProfilesScreenProps {
   profiles: LauncherProfile[]
@@ -13,6 +17,46 @@ interface ProfilesScreenProps {
   onDelete: (id: string) => void
   onLaunchProfile: (id: string) => Promise<void>
   isWorking?: boolean
+}
+
+function ProfileImage({ profile }: { profile: LauncherProfile }) {
+  const [iconData, setIconData] = useState<string | null>(null)
+  
+  const isFabric = profile.minecraftVersion.toLowerCase().includes('fabric')
+  const isQuilt = profile.minecraftVersion.toLowerCase().includes('quilt')
+  const isModpack = !!profile.mcRootDir
+
+  useEffect(() => {
+    let isMounted = true
+    if (isModpack && profile.gameDir) {
+      window.launcherApi.readLocalImageBase64(profile.gameDir + '\\icon.png')
+        .then(res => {
+          if (isMounted && res) setIconData(res)
+        })
+        .catch(() => {})
+    }
+    return () => { isMounted = false }
+  }, [profile.id, profile.gameDir, isModpack])
+
+  const imageClass = "w-10 h-10 rounded-lg shadow-sm object-cover bg-black/20"
+
+  if (iconData) {
+    return <img src={iconData} className={imageClass} alt="Modpack" />
+  }
+
+  if (isModpack) {
+     return <img src={grassImg} className={imageClass} alt="Vanilla (Fallback)" />
+  }
+
+  if (isFabric) {
+    return <img src={fabricImg} className={imageClass} alt="Fabric" onError={(e) => { e.currentTarget.src = grassImg }} />
+  }
+  
+  if (isQuilt) {
+    return <img src={quiltImg} className={imageClass} alt="Quilt" onError={(e) => { e.currentTarget.src = grassImg }} />
+  }
+
+  return <img src={grassImg} className={imageClass} alt="Vanilla" />
 }
 
 export const ProfilesScreen = ({
@@ -76,19 +120,19 @@ export const ProfilesScreen = ({
                     className={[
                       'group flex items-center justify-between gap-4 px-4 py-3.5 rounded-xl border transition',
                       isWorking ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
-                      'border-border bg-card hover:border-primary/30 ',
+                      'border-border bg-card hover:border-primary/30',
                     ].join(' ')}
                   >
                     {/* Left: Info */}
-                    <div className="flex items-center gap-3.5 min-w-0 flex-1">
-                      {/* Active check indicator */}
-                      <div className={[
-                        'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all duration-150',
-                        isActive
-                          ? 'border-primary bg-primary text-primary-foreground'
-                          : 'border-border bg-background group-hover:border-primary/50',
-                      ].join(' ')}>
-                        {isActive && <Check size={12} strokeWidth={3} />}
+                    <div className="flex items-center gap-4 min-w-0 flex-1">
+                      {/* Image Indicator */}
+                      <div className="relative shrink-0">
+                        <ProfileImage profile={profile} />
+                        {isActive && (
+                          <div className="absolute -bottom-1 -right-1 bg-primary text-primary-foreground rounded-full p-0.5 border-2 border-background">
+                            <Check size={10} strokeWidth={4} />
+                          </div>
+                        )}
                       </div>
 
                       <div className="flex flex-col gap-1 min-w-0 flex-1">

@@ -4,6 +4,7 @@ import { Badge } from '../components/ui/Badge';
 import { Download, FolderOpen, PlusCircle, Trash2, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { launcherClient } from '../services/launcherClient';
+import { useConfirm } from '../components/ui/ConfirmDialogContext';
 
 interface VersionsScreenProps {
   catalog: MinecraftVersionCatalog | null;
@@ -32,6 +33,7 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
   const [activeTab, setActiveTab] = useState<TabKey>('releases');
   const [displayedList, setDisplayedList] = useState<MinecraftVersionItem[]>([]);
   const [isTabLoading, setIsTabLoading] = useState(false);
+  const confirm = useConfirm();
 
   useEffect(() => {
     if (!catalog) return;
@@ -177,7 +179,7 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
                     <Button
                       title="Xóa phiên bản"
                       onClick={async () => {
-                        if (!confirm(`Xóa ${v.name}?`)) return;
+                        if (!(await confirm({ message: `Xóa ${v.name}?`, isDestructive: true }))) return;
                         await launcherClient.deleteVersion(v.path!);
                         onRefresh?.();
                       }}

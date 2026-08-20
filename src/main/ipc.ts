@@ -78,13 +78,17 @@ import {
   selectAccount,
   addLocalAccount,
   removeAccount,
-  saveMicrosoftAccount
+  saveMicrosoftAccount,
+  refreshMicrosoftAccountToken,
+  renameAccountLocally,
 } from './services/accountService'
 import { loginWithMicrosoft } from './services/microsoftAuthService'
 import {
   fetchMojangProfile,
   uploadMojangSkin,
-  changeMojangCape
+  changeMojangCape,
+  checkMojangNameChange,
+  changeMojangName
 } from './services/mojangApiService'
 
 // ─── In-memory launcher state ─────────────────────────────────────────────────
@@ -161,6 +165,18 @@ export function registerIpcHandlers(): void {
   })
   handleIpc('system:performance-info', () => getSystemPerformanceInfo())
   handleIpc('settings:effective-performance', () => getEffectivePerformanceSettings())
+
+  handleIpc('utils:read-local-image-base64', async (_, filePath: string) => {
+    try {
+      const fs = await import('node:fs/promises')
+      const path = await import('node:path')
+      const buffer = await fs.readFile(filePath)
+      const ext = path.extname(filePath).toLowerCase().substring(1) || 'png'
+      return `data:image/${ext};base64,${buffer.toString('base64')}`
+    } catch {
+      return null
+    }
+  })
 
   handleIpc('profiles:get', getProfiles)
   handleIpc('profiles:create', createProfile)
@@ -414,6 +430,7 @@ export function registerIpcHandlers(): void {
   handleIpc('account:get', getAccountState)
   handleIpc('account:select', (accountId: string) => selectAccount(accountId))
   handleIpc('account:add-local', (username: string) => addLocalAccount(username))
+  handleIpc('account:rename-locally', (accountId: string, newName: string) => renameAccountLocally(accountId, newName))
   handleIpc('account:remove', (accountId: string) => removeAccount(accountId))
   handleIpc('account:save-microsoft', (account: any) => saveMicrosoftAccount(account))
   handleIpc('account:login-microsoft', async () => {
@@ -432,6 +449,8 @@ export function registerIpcHandlers(): void {
     uploadMojangSkin(accessToken, Buffer.from(fileBuffer), variant)
   )
   handleIpc('mojang:change-cape', (accessToken: string, capeId: string) => changeMojangCape(accessToken, capeId))
+  handleIpc('mojang:check-name-change', (accessToken: string) => checkMojangNameChange(accessToken))
+  handleIpc('mojang:change-name', (accessToken: string, newName: string) => changeMojangName(accessToken, newName))
 
   // Task Manager endpoints
   handleIpc('tasks:get-all', async () => {

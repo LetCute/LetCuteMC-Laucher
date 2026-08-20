@@ -84,7 +84,9 @@ export async function downloadTasks(
 
     while (retries >= 0 && !success) {
       try {
-        const response = await fetch(task.url)
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 30000)
+        const response = await fetch(task.url, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
         if (!response.ok) throw new Error(`HTTP status ${response.status}`)
         
         const arrayBuffer = await response.arrayBuffer()
@@ -135,6 +137,9 @@ export async function downloadTasks(
       const nextTask = queue.shift()!
       const p = executeTask(nextTask).then(() => {
         activeTasks.delete(p)
+      }).catch((err) => {
+        activeTasks.delete(p)
+        throw err
       })
       activeTasks.add(p)
     }

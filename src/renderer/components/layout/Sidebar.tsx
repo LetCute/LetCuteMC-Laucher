@@ -94,7 +94,6 @@ export function Sidebar({
 
   const accounts = accountState?.accounts || []
   const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
-  const isMicrosoft = activeAccount?.type === 'microsoft'
   const displayUsername = activeAccount?.username || 'Player'
   const isVirtual = !activeAccount || activeAccount.type === 'local'
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
@@ -135,7 +134,6 @@ export function Sidebar({
         expiresAt: activeAccount.expiresAt,
       }
 
-    console.log('[Sidebar] startLaunch with profile', activeProfile.id)
     await startLaunch({
       profileId: activeProfile.id,
       version: activeProfile.minecraftVersion,
@@ -166,7 +164,7 @@ export function Sidebar({
   }, [isFailed, state?.error, showToast])
 
   const handlePlay = async () => {
-    console.log('[Sidebar] handlePlay clicked', { activeProfile: activeProfile?.id, isBusy, isStarting, isPreparing })
+
     if (!activeProfile || isBusy || isStarting || isPreparing) return
 
     if (prepareState?.isReady) {

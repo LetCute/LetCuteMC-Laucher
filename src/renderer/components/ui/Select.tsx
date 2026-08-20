@@ -30,7 +30,6 @@ export function Select({
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
-  const id = React.useId()
 
   const selectedOption = options.find((opt) => opt.value === value)
 

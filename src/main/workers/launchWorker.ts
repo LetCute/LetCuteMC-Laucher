@@ -8,6 +8,7 @@ import { parentPort } from 'node:worker_threads'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
+import { spawn } from 'node:child_process'
 import type {
   LauncherLog,
   LaunchJobProgress,
@@ -211,14 +212,51 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       ? input.resourcePath 
       : mcRoot
 
-    const javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
+    let javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
       gameDir: resourcePath,
       preferredJavaPath: input.javaPath,
       allowNewer: false,
     })
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
-      throw new Error(javaSelection.message)
+      postLog(jobId, 'warn', `[LaunchWorker] Không tìm thấy Java tương thích. Bắt đầu tự động tải Java...`)
+      
+      const { resolveRequiredJavaMajor } = await import('../services/javaScannerService')
+      const { autoInstallJava, getDefaultJavaInstallDir } = await import('../services/javaInstallerService')
+      
+      const requiredMajor = await resolveRequiredJavaMajor(input.version, resourcePath)
+      const installDir = getDefaultJavaInstallDir()
+      
+      const installResult = await autoInstallJava(
+        requiredMajor,
+        installDir,
+        (progress) => {
+          postProgress(jobId, {
+            status: 'checking_java',
+            title: `Đang tải Java ${requiredMajor}`,
+            message: progress.message,
+            percent: progress.percent,
+          })
+          postLog(jobId, 'info', `[AutoJava] ${progress.message}`)
+        }
+      )
+
+      if (installResult.success && installResult.javaPath) {
+        postLog(jobId, 'success', `[LaunchWorker] Đã tải thành công Java tại: ${installResult.javaPath}`)
+        
+        javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
+          gameDir: resourcePath,
+          preferredJavaPath: installResult.javaPath,
+          forceRefresh: true,
+          allowNewer: false,
+        })
+      } else {
+        throw new Error(installResult.message || `Lỗi không xác định khi tải Java ${requiredMajor}`)
+      }
+      
+      if (!javaSelection.found || !javaSelection.selectedRuntime) {
+        throw new Error(javaSelection.message)
+      }
     }
 
     if (javaSelection.warning) {
@@ -331,6 +369,15 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       maxMemory: input.maxMemoryMb,
       extraJVMArgs: customArgs,
       server: input.serverAddress ? { ip: input.serverAddress } : undefined,
+      spawn: (command: string, args?: readonly string[], options?: any) => {
+        // Filter out unsupported JVM args for Java <= 21
+        // (like --sun-misc-unsafe-memory-access=allow which was added in newer Java but crashes Java 21)
+        let filteredArgs = (args || []) as string[]
+        if (javaSelection!.selectedRuntime!.majorVersion <= 21) {
+          filteredArgs = filteredArgs.filter(a => a !== '--sun-misc-unsafe-memory-access=allow')
+        }
+        return spawn(command, filteredArgs, options)
+      }
     })
 
     const minecraftPid = child.pid ?? null

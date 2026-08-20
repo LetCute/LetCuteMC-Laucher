@@ -4,6 +4,7 @@ import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/button'
 import { Modal } from '../components/ui/Modal'
 import { useToast } from '../components/ui/Toast'
+import { useConfirm } from '../components/ui/ConfirmDialogContext'
 import { Badge } from '../components/ui/Badge'
 import type { ModrinthVersion, ModrinthSearchResult, StoreInstallation, LauncherProfile } from '../../shared/types'
 import { Select } from '../components/ui/Select'
@@ -16,8 +17,9 @@ interface StoreScreenProps {
   onInstallSuccess?: (profileId: string) => void
 }
 
-export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstallSuccess }: StoreScreenProps) => {
+export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreScreenProps) => {
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const [query, setQuery] = useState('')
   const [projects, setProjects] = useState<ModrinthSearchResult['hits']>([])
   const [loading, setLoading] = useState(false)
@@ -114,7 +116,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
     showToast('info', `Bắt đầu cài đặt ${selectedProject.title}... Vui lòng chờ vài phút.`)
     try {
       if (projectType === 'modpack') {
-        const taskId = await window.launcherApi.installModrinthModpack(version.id, `${selectedProject.title} (${version.version_number})`)
+        await window.launcherApi.installModrinthModpack(version.id, `${selectedProject.title} (${version.version_number})`)
         showToast('success', `Đã thêm vào Tiến trình. Bạn có thể xem trong tab Tiến trình.`)
         setSelectedProject(null)
       } else {
@@ -122,16 +124,13 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
         if (!targetProfile || !targetProfile.gameDir) throw new Error('Vui lòng chọn một cấu hình để cài đặt.')
 
         // Compatibility check
-        let isCompatible = false;
-        for (const gv of version.game_versions) {
-          if (targetProfile.minecraftVersion.includes(gv)) {
-            isCompatible = true;
-            break;
-          }
-        }
-        
-        if (!isCompatible) {
-          const proceed = window.confirm(`Cảnh báo: Mod này có thể không tương thích với phiên bản Minecraft của cấu hình (${targetProfile.minecraftVersion}).\nPhiên bản hỗ trợ: ${version.game_versions.join(', ')}.\nBạn có chắc chắn muốn cài đặt?`)
+        const compatible = version.game_versions.includes(targetProfile.minecraftVersion)
+        if (!compatible) {
+          const proceed = await confirm({
+            title: 'Cảnh báo tương thích',
+            message: `Mod này có thể không tương thích với phiên bản Minecraft của cấu hình (${targetProfile.minecraftVersion}).\nPhiên bản hỗ trợ: ${version.game_versions.join(', ')}.\nBạn có chắc chắn muốn cài đặt?`,
+            isDestructive: true
+          })
           if (!proceed) {
              setInstalling(null)
              return;
@@ -455,7 +454,6 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
               setLoading(true);
 
               try {
-                let taskId;
                 if (state.mode === 'link') {
                   let versionId = importInputValue;
                   const match = importInputValue.match(/version\/([a-zA-Z0-9]+)/);
@@ -463,11 +461,11 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId, onInstall
                     versionId = match[1];
                   }
                   showToast('info', `Đã thêm vào Tiến trình...`);
-                  taskId = await window.launcherApi.installModrinthModpack(versionId, importProfileName);
+                  await window.launcherApi.installModrinthModpack(versionId, importProfileName);
                 } else {
                   if (!state.filePath) throw new Error("Không có đường dẫn file");
                   showToast('info', `Đã thêm vào Tiến trình...`);
-                  taskId = await window.launcherApi.installLocalModrinthModpack(state.filePath, importProfileName);
+                  await window.launcherApi.installLocalModrinthModpack(state.filePath, importProfileName);
                 }
               } catch (e: any) {
                 showToast('error', `Lỗi: ${e.message}`);

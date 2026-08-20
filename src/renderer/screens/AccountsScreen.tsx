@@ -3,6 +3,7 @@ import type { AccountState } from '@/shared/types.ts'
 import { Input } from '../components/ui/Input'
 import { useToast } from '../components/ui/Toast'
 import { Modal } from '../components/ui/Modal'
+import { useConfirm } from '../components/ui/ConfirmDialogContext'
 import { SkinViewer3D, type SkinModel } from '../components/ui/SkinViewer3D'
 import { CapePreview } from '../components/ui/CapePreview'
 import {
@@ -13,10 +14,10 @@ import {
   Check,
   Upload,
   Crown,
-  ImagePlus,
   UserCircle,
   Loader2,
-  XCircle
+  XCircle,
+  Pencil
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -68,6 +69,7 @@ export const AccountsScreen = ({
   isWorking,
 }: AccountsScreenProps) => {
   const { showToast } = useToast()
+  const confirm = useConfirm()
   const [newLocalUsername, setNewLocalUsername] = useState('')
   const [showAddModal, setShowAddModal] = useState(false)
   const [showLocalInput, setShowLocalInput] = useState(false)
@@ -116,7 +118,7 @@ export const AccountsScreen = ({
   const [pendingSkinModel, setPendingSkinModel] = useState<SkinModel>('default')
   const [pendingCapeFile, setPendingCapeFile] = useState<string | null>(null)
   const [pendingCapeId, setPendingCapeId] = useState<string>('') // For Premium owned capes
-  const [skinTab, setSkinTab] = useState<'skin' | 'cape'>('skin')
+  const [skinTab, setSkinTab] = useState<'name' | 'skin' | 'cape'>('skin')
 
   const [mineskinInput, setMineskinInput] = useState('')
   const [isFetchingMineskin, setIsFetchingMineskin] = useState(false)
@@ -126,6 +128,16 @@ export const AccountsScreen = ({
   const [galleryPage, setGalleryPage] = useState(1)
   const [galleryQuery, setGalleryQuery] = useState('')
   const [activeQuery, setActiveQuery] = useState('')
+
+  const [renameAllowed, setRenameAllowed] = useState(true)
+  const [renameCooldownMessage, setRenameCooldownMessage] = useState('')
+  const [isCheckingRename, setIsCheckingRename] = useState(false)
+  const [isSavingRename, setIsSavingRename] = useState(false)
+  const [newProfileName, setNewProfileName] = useState('')
+  const [renameTargetId, setRenameTargetId] = useState('')
+  const [renameTargetName, setRenameTargetName] = useState('')
+  const [renameTargetType, setRenameTargetType] = useState<'local' | 'microsoft'>('local')
+  const [renameTargetToken, setRenameTargetToken] = useState('')
 
   const [mineskinCapes, setMineskinCapes] = useState<any[]>([])
   const [isFetchingCapes, setIsFetchingCapes] = useState(false)
@@ -181,7 +193,7 @@ export const AccountsScreen = ({
   }
 
   const handleRemoveAccount = async (id: string, name: string) => {
-    if (!confirm(`Bạn có chắc muốn xóa tài khoản "${name}"?`)) return
+    if (!(await confirm({ message: `Bạn có chắc muốn xóa tài khoản "${name}"?`, isDestructive: true }))) return
     try {
       const updated = await window.launcherApi.removeAccount(id)
       onAccountStateChange(updated)
@@ -196,6 +208,11 @@ export const AccountsScreen = ({
     setSkinModalTargetId(accountId)
     setSkinModalTargetType(accountType)
     setSkinModalTargetName(accountName)
+    setNewProfileName(accountName)
+    setRenameTargetId(accountId)
+    setRenameTargetName(accountName)
+    setRenameTargetType(accountType)
+    setRenameTargetToken(accessToken || '')
     setShowSkinModal(true)
     setMojangProfile(null)
 
@@ -203,7 +220,26 @@ export const AccountsScreen = ({
       setIsFetchingMojang(true)
       try {
         const profile = await window.launcherApi.getMojangProfile(accessToken)
+        const allowObj = await window.launcherApi.checkMojangNameChange(accessToken)
         setMojangProfile(profile)
+        
+        // Name change logic for MS
+        setRenameAllowed(allowObj?.nameChangeAllowed ?? true)
+        if (allowObj?.nameChangeAllowed === false) {
+           if (allowObj.createdAt) {
+             const createdDate = new Date(allowObj.createdAt)
+             const availableDate = new Date(createdDate.getTime() + 30 * 24 * 60 * 60 * 1000)
+             const diff = availableDate.getTime() - Date.now()
+             if (diff > 0) {
+                const days = Math.ceil(diff / (1000 * 60 * 60 * 24))
+                setRenameCooldownMessage(`Bạn cần chờ thêm ${days} ngày nữa mới được đổi tên.`)
+             } else {
+                setRenameCooldownMessage('Chưa thể đổi tên lúc này.')
+             }
+           } else {
+             setRenameCooldownMessage('Bạn không được phép đổi tên tài khoản này.')
+           }
+        }
 
         // Find active skin
         const activeSkin = profile.skins?.find((s: any) => s.state === 'ACTIVE')
@@ -211,7 +247,6 @@ export const AccountsScreen = ({
           const base64Skin = await window.launcherApi.fetchMojangTexture(activeSkin.url)
           setPendingSkinFile(base64Skin || activeSkin.url)
           setPendingSkinModel(activeSkin.variant === 'SLIM' ? 'slim' : 'default')
-          // Cache to localStorage (use original URL for storage size, base64 for preview)
           setSkinMap(prev => ({ ...prev, [accountId]: { url: base64Skin || activeSkin.url, model: activeSkin.variant === 'SLIM' ? 'slim' : 'default' } }))
           setModelMap(prev => ({ ...prev, [accountId]: activeSkin.variant === 'SLIM' ? 'slim' : 'default' }))
         } else {
@@ -225,7 +260,6 @@ export const AccountsScreen = ({
           setPendingCapeId(activeCape.id)
           const base64Cape = await window.launcherApi.fetchMojangTexture(activeCape.url)
           setPendingCapeFile(base64Cape || activeCape.url)
-          // Cache to localStorage
           setCapeMap(prev => ({ ...prev, [accountId]: base64Cape || activeCape.url }))
         } else {
           setPendingCapeId('')
@@ -234,7 +268,6 @@ export const AccountsScreen = ({
         }
       } catch (err) {
         showToast('error', 'Không thể lấy thông tin từ Mojang.')
-        // Fallback to local cache
         setPendingSkinFile(skinMap[accountId]?.url || null)
         setPendingSkinModel(modelMap[accountId] || 'default')
         setPendingCapeFile(capeMap[accountId] || null)
@@ -242,7 +275,7 @@ export const AccountsScreen = ({
         setIsFetchingMojang(false)
       }
     } else {
-      // Local account, load from cache
+      setRenameAllowed(true)
       setPendingSkinModel(modelMap[accountId] || 'default')
       setPendingSkinFile(skinMap[accountId]?.url || null)
       setPendingCapeFile(capeMap[accountId] || null)
@@ -260,6 +293,65 @@ export const AccountsScreen = ({
     setPendingCapeId('')
     setSkinTab('skin')
     setMojangProfile(null)
+    setIsCheckingRename(false)
+  }
+
+  const handleRenameClick = async () => {
+    const trimmed = newProfileName.trim()
+    if (!trimmed || trimmed === renameTargetName) {
+      setShowSkinModal(false)
+      return
+    }
+
+    if (renameTargetType === 'local') {
+      if (trimmed.length < 3 || trimmed.length > 16) {
+        showToast('error', 'Tên local phải từ 3 đến 16 ký tự')
+        return
+      }
+      if (!/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+        showToast('error', 'Tên local chỉ được chứa chữ cái, số và dấu gạch dưới')
+        return
+      }
+    }
+
+    const message = renameTargetType === 'microsoft' 
+      ? `Bạn có chắc muốn đổi tên tài khoản thành ${trimmed} không?\n\nLưu ý: Sau khi đổi tên, bạn sẽ không thể đổi lại tên khác trong vòng 30 ngày tiếp theo theo luật của Mojang.`
+      : `Bạn có chắc muốn đổi tên tài khoản thành ${trimmed} không?`
+    
+    if (!(await confirm({ title: 'Xác nhận đổi tên', message }))) return
+
+    setIsSavingRename(true)
+    try {
+      if (renameTargetType === 'microsoft') {
+        try {
+          await window.launcherApi.changeMojangName(renameTargetToken, trimmed)
+        } catch (err: any) {
+          if (err.message?.includes('TOKEN_EXPIRED') || err.message?.includes('401')) {
+            showToast('info', 'Đang tự động gia hạn phiên đăng nhập...')
+            const newState = await window.launcherApi.refreshMicrosoftAccount(renameTargetId)
+            const newAcc = newState.accounts.find((a: any) => a.id === renameTargetId)
+            if (newAcc?.accessToken) {
+              await window.launcherApi.changeMojangName(newAcc.accessToken, trimmed)
+            } else {
+              throw new Error('Gia hạn thất bại.')
+            }
+          } else if (err.message?.includes('NAME_UNAVAILABLE')) {
+            throw new Error('Tên này đã được sử dụng hoặc bạn đang bị giới hạn.')
+          } else {
+            throw err
+          }
+        }
+      }
+
+      const newState = await window.launcherApi.renameAccountLocally(renameTargetId, trimmed)
+      onAccountStateChange(newState)
+      showToast('success', 'Đổi tên thành công!')
+      setShowSkinModal(false)
+    } catch (err) {
+      showToast('error', `Lỗi đổi tên: ${(err as Error).message}`)
+    } finally {
+      setIsSavingRename(false)
+    }
   }
 
   const handleSkinFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -318,22 +410,6 @@ export const AccountsScreen = ({
     }
   }
 
-  const handleSelectGalleryCape = async (url: string) => {
-    setIsFetchingCapes(true)
-    try {
-      const base64Cape = await window.launcherApi.fetchMojangTexture(url)
-      if (base64Cape) {
-        setPendingCapeFile(base64Cape)
-      } else {
-        throw new Error('Không thể tải ảnh cape')
-      }
-    } catch (err) {
-      showToast('error', 'Lỗi tải ảnh cape từ MineSkin')
-    } finally {
-      setIsFetchingCapes(false)
-    }
-  }
-
   useEffect(() => {
     if (showSkinModal && skinModalTargetType === 'local' && skinTab === 'cape' && mineskinCapes.length === 0) {
       loadMineskinCapes()
@@ -351,6 +427,22 @@ export const AccountsScreen = ({
       loadMineskinGallery(1)
     }
   }, [showSkinModal, skinTab])
+
+  const handleSelectGalleryCape = async (url: string) => {
+    setIsFetchingCapes(true)
+    try {
+      const base64Cape = await window.launcherApi.fetchMojangTexture(url)
+      if (base64Cape) {
+        setPendingCapeFile(base64Cape)
+      } else {
+        throw new Error('Không thể tải ảnh cape')
+      }
+    } catch (err) {
+      showToast('error', 'Lỗi tải ảnh cape từ MineSkin')
+    } finally {
+      setIsFetchingCapes(false)
+    }
+  }
 
   const handleSelectGallerySkin = async (textureUrl: string) => {
     setIsFetchingMineskin(true)
@@ -379,10 +471,8 @@ export const AccountsScreen = ({
       let variant = 'default'
 
       if (identifier.startsWith('http') && !identifier.includes('mineskin.org/')) {
-        // Direct image URL
         textureUrl = identifier
       } else {
-        // Mineskin ID or URL
         let msId = identifier
         if (identifier.includes('mineskin.org/')) {
           const parts = identifier.split('/').filter(Boolean)
@@ -408,7 +498,7 @@ export const AccountsScreen = ({
           setPendingSkinFile(base64Skin)
           setPendingSkinModel(variant === 'slim' ? 'slim' : 'default')
         } else {
-          throw new Error('Không thể tải ảnh từ link này (có thể do lỗi CORS hoặc link chết)')
+          throw new Error('Không thể tải ảnh từ link này')
         }
       } else {
         throw new Error('Dữ liệu skin không hợp lệ')
@@ -421,11 +511,16 @@ export const AccountsScreen = ({
     }
   }
 
-  const handleSkinConfirm = async () => {
+  const handleSkinClick = async () => {
+    const message = skinModalTargetType === 'microsoft'
+      ? `Bạn có chắc muốn lưu thay đổi ngoại hình cho tài khoản ${skinModalTargetName} không?\n\nLưu ý: Ngoại hình mới sẽ được cập nhật trực tiếp lên hệ thống Mojang và có thể mất một ít thời gian để hiển thị trong game.`
+      : `Bạn có chắc muốn lưu thay đổi ngoại hình cho tài khoản ${skinModalTargetName} không?`
+
+    if (!(await confirm({ title: 'Xác nhận lưu thay đổi', message }))) return
+
     if (!skinModalTargetId) return
 
     if (skinModalTargetType === 'microsoft') {
-      // Upload to Mojang Server
       const acc = accountState.accounts.find(a => a.id === skinModalTargetId)
       if (!acc || acc.type !== 'microsoft' || !acc.accessToken) return
 
@@ -433,7 +528,6 @@ export const AccountsScreen = ({
       try {
         let profileChanged = false
 
-        // Check if skin needs upload (if it's a data url, it's a new file)
         if (pendingSkinFile && pendingSkinFile.startsWith('data:image')) {
           const buffer = dataUrlToArrayBuffer(pendingSkinFile)
           const apiVariant = pendingSkinModel === 'slim' ? 'slim' : 'classic'
@@ -441,7 +535,6 @@ export const AccountsScreen = ({
           profileChanged = true
         }
 
-        // Check if cape needs change
         const currentActiveCapeId = mojangProfile?.capes?.find((c: any) => c.state === 'ACTIVE')?.id || ''
         if (pendingCapeId !== currentActiveCapeId) {
           await window.launcherApi.changeMojangCape(acc.accessToken, pendingCapeId)
@@ -450,7 +543,6 @@ export const AccountsScreen = ({
 
         if (profileChanged) {
           showToast('success', 'Đã cập nhật Skin/Cape trên Mojang!')
-          // Re-fetch to update caches
           const profile = await window.launcherApi.getMojangProfile(acc.accessToken)
           const activeSkin = profile.skins?.find((s: any) => s.state === 'ACTIVE')
           if (activeSkin) {
@@ -471,7 +563,6 @@ export const AccountsScreen = ({
         setIsSavingMojang(false)
       }
     } else {
-      // Local account: just save to localStorage
       if (pendingSkinFile) {
         setSkinMap(prev => ({
           ...prev,
@@ -502,11 +593,9 @@ export const AccountsScreen = ({
 
   return (
     <div className="px-6 pt-2 pb-6 h-full flex flex-col gap-5">
-      {/* Hidden file inputs */}
       <input ref={skinInputRef} type="file" accept="image/png" className="hidden" onChange={handleSkinFileChange} />
       <input ref={capeInputRef} type="file" accept="image/png" className="hidden" onChange={handleCapeFileChange} />
 
-      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-xl font-bold text-foreground/80">Tài khoản</h2>
@@ -520,7 +609,6 @@ export const AccountsScreen = ({
         </Button>
       </div>
 
-      {/* Account Cards Grid */}
       <div className="flex-1 overflow-y-auto pr-1 pt-2">
         {accounts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
@@ -543,14 +631,12 @@ export const AccountsScreen = ({
                       : 'border-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
                   ].join(' ')}
                 >
-                  {/* Active badge */}
                   {isActive && (
                     <div className="absolute top-0 right-0 flex h-7 w-7 items-center justify-center rounded-bl-xl rounded-tr-[15px] bg-primary text-primary-foreground z-10">
                       <Check size={13} strokeWidth={3} />
                     </div>
                   )}
 
-                  {/* Type badge */}
                   <div className="absolute top-2.5 left-2.5">
                     <span
                       className={[
@@ -565,48 +651,16 @@ export const AccountsScreen = ({
                     </span>
                   </div>
 
-                  {/* Delete button */}
-                  <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-150" onClick={e => e.stopPropagation()}>
-                    <Button
-                      variant="ghost" size="icon-sm"
-                      className="h-6 w-6 p-0 hover:bg-destructive/15 text-muted-foreground hover:text-destructive rounded-lg"
-                      title="Xóa tài khoản"
-                      onClick={() => handleRemoveAccount(acc.id, acc.username)}
-                    >
-                      <Trash2 size={12} />
-                    </Button>
-                  </div>
-
-                  {/* 3D Skin viewer area */}
-                  <div
-                    className="relative mt-2 mb-2 group/skin cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      openSkinModal(acc.id, acc.username, acc.type, (acc as any).accessToken)
-                    }}
-                    title="Đổi ngoại hình"
-                  >
+                  <div className="relative mt-2 mb-2 group/skin cursor-pointer" onClick={(e) => { e.stopPropagation(); openSkinModal(acc.id, acc.username, acc.type, (acc as any).accessToken); }}>
                     <SkinViewer3D
-                      skinUrl={
-                        skinData?.url
-                          ? skinData.url
-                          : acc.type === 'microsoft'
-                            ? `https://mc-heads.net/skin/${acc.username}`
-                            : undefined
-                      }
+                      skinUrl={skinData?.url ? skinData.url : acc.type === 'microsoft' ? `https://mc-heads.net/skin/${acc.username}` : undefined}
                       capeUrl={capeData}
                       model={accModel}
                       width={120} height={130}
                       autoRotate rotateSpeed={0.5}
                     />
-                    {/* Upload overlay on hover */}
-                    <div className="absolute inset-0 bg-black/40 rounded-xl opacity-0 group-hover/skin:opacity-100 transition-opacity duration-200 flex flex-col items-center justify-center gap-1 pointer-events-none">
-                      <ImagePlus size={16} className="text-white/80" />
-                      <span className="text-[9px] text-white/70 font-medium">Sửa ngoại hình</span>
-                    </div>
                   </div>
 
-                  {/* Account Info */}
                   <div className="text-center w-full min-w-0 px-4">
                     <p className="text-sm font-bold truncate transition-colors text-foreground group-[.border-primary\\/50]:text-primary">
                       {acc.username}
@@ -616,6 +670,14 @@ export const AccountsScreen = ({
                     </p>
                   </div>
 
+                  <div className="flex gap-2 justify-center w-full mt-4 pt-3 border-t border-border/50">
+                    <Button size="sm" variant="outline" className="h-7 px-3 hover:bg-primary/10 hover:text-primary hover:border-primary/30" title="Sửa thông tin" onClick={(e) => { e.stopPropagation(); openSkinModal(acc.id, acc.username, acc.type, (acc as any).accessToken); }}>
+                      <Pencil size={14} />
+                    </Button>
+                    <Button size="sm" variant="outline" className="h-7 px-3 text-destructive hover:bg-destructive/10 hover:border-destructive/30" title="Xóa tài khoản" onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.id, acc.username); }}>
+                      <Trash2 size={14} />
+                    </Button>
+                  </div>
                 </div>
               )
             })}
@@ -631,7 +693,6 @@ export const AccountsScreen = ({
         )}
       </div>
 
-      {/* ── Skin/Cape Change Modal ── */}
       <Modal
         isOpen={showSkinModal}
         onClose={closeSkinModal}
@@ -641,7 +702,7 @@ export const AccountsScreen = ({
         footer={
           <>
             <Button variant="outline" onClick={closeSkinModal} disabled={isSavingMojang || isFetchingMojang}>Hủy</Button>
-            <Button variant="primary" onClick={handleSkinConfirm} disabled={isSavingMojang || isFetchingMojang || (!pendingSkinFile && !pendingCapeFile && skinModalTargetType === 'local')}>
+            <Button variant="primary" onClick={handleSkinClick} disabled={isSavingMojang || isFetchingMojang || (!pendingSkinFile && !pendingCapeFile && skinModalTargetType === 'local')}>
               {isSavingMojang ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Check size={14} className="mr-1" />}
               {isSavingMojang ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
@@ -657,7 +718,6 @@ export const AccountsScreen = ({
           ) : (
             <>
               <div className="flex items-stretch gap-6">
-                {/* 3D preview */}
                 <div className="shrink-0 rounded-xl border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
                   <SkinViewer3D
                     skinUrl={pendingSkinFile || undefined}
@@ -670,30 +730,42 @@ export const AccountsScreen = ({
                   />
                 </div>
 
-                {/* Controls */}
                 <div className="flex-1 flex flex-col gap-4">
-
-                  {/* Tabs */}
                   <div className="flex gap-2 bg-muted/30 p-1 rounded-xl border border-border">
-                    <Button
-                      variant={skinTab === 'skin' ? 'primary' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => setSkinTab('skin')}
-                    >
-                      Skin (Giao diện)
-                    </Button>
-                    <Button
-                      variant={skinTab === 'cape' ? 'primary' : 'ghost'}
-                      size="sm"
-                      className="flex-1"
-                      onClick={() => setSkinTab('cape')}
-                    >
-                      Cape (Áo choàng)
-                    </Button>
+                    <Button variant={skinTab === 'name' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('name')}>Tên</Button>
+                    <Button variant={skinTab === 'skin' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('skin')}>Skin</Button>
+                    <Button variant={skinTab === 'cape' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('cape')}>Cape</Button>
                   </div>
 
-                  {/* 1. Skin Section */}
+                  {skinTab === 'name' && (
+                    <div className="space-y-4 animate-in fade-in duration-200">
+                      {isCheckingRename ? (
+                         <div className="flex justify-center py-6"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
+                      ) : (
+                         <>
+                           <div className="space-y-1">
+                             <Input 
+                               value={newProfileName}
+                               onChange={e => setNewProfileName(e.target.value)}
+                               placeholder="Nhập tên mới"
+                               maxLength={16}
+                               disabled={!renameAllowed || isSavingRename}
+                             />
+                           </div>
+                           {!renameAllowed && renameTargetType === 'microsoft' && (
+                              <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg text-xs">
+                                 {renameCooldownMessage || 'Tài khoản Premium này chưa được phép đổi tên.'}
+                              </div>
+                           )}
+                           <Button onClick={handleRenameClick} className="w-full mt-2" disabled={isSavingRename || !renameAllowed || newProfileName.trim() === '' || newProfileName.trim() === renameTargetName}>
+                             {isSavingRename ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
+                             Lưu thay đổi tên
+                           </Button>
+                         </>
+                      )}
+                    </div>
+                  )}
+
                   {skinTab === 'skin' && (
                     <div className="space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">

@@ -45,6 +45,7 @@ let hiddenForGame = false
 
 import { getProfiles } from './profileService.js'
 import { setPlaying, setIdle } from './discordRpcService.js'
+import { taskManagerService } from './taskManagerService.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -196,6 +197,10 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       if (msg.status === 'running') {
         hideLauncherForGame()
         setPlaying(currentVersion, currentProfileName)
+        if (activeJobId) {
+          taskManagerService.completeTask(activeJobId, 'Game đang chạy')
+          activeJobId = null
+        }
       }
       if (msg.status === 'closed' || msg.status === 'failed' || msg.status === 'cancelled') {
         showLauncherAfterGame()
@@ -208,7 +213,16 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       currentState.progress = msg.progress
       currentState.status = msg.progress.status
       enqueueEvent({ type: 'progress', jobId: msg.jobId, progress: msg.progress })
-      if (msg.progress.status === 'running') hideLauncherForGame()
+      if (activeJobId) {
+        taskManagerService.updateTaskProgress(activeJobId, msg.progress.percent || 0, msg.progress.message || msg.progress.title)
+      }
+      if (msg.progress.status === 'running') {
+        hideLauncherForGame()
+        if (activeJobId) {
+          taskManagerService.completeTask(activeJobId, 'Game đang chạy')
+          activeJobId = null
+        }
+      }
       break
     }
 
@@ -221,6 +235,10 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
     case 'error': {
       currentState.error = msg.message
       currentState.status = 'failed'
+      if (activeJobId) {
+        taskManagerService.failTask(activeJobId, msg.message)
+        activeJobId = null
+      }
       // worker already dumps to log_error
       showLauncherAfterGame()
       break
@@ -238,6 +256,15 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       // If the game closed normally, mark it
       if (msg.ok && currentState.status !== 'cancelled') {
         currentState.status = 'closed'
+      }
+
+      if (activeJobId) {
+        if (msg.ok) {
+           taskManagerService.completeTask(activeJobId, 'Hoàn tất khởi động')
+        } else {
+           taskManagerService.failTask(activeJobId, msg.message)
+        }
+        activeJobId = null
       }
 
       enqueueEvent({ type: 'finished', jobId: msg.jobId, state: currentState })
@@ -325,6 +352,8 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     error: null,
   }
 
+  activeJobId = taskManagerService.createTask(`Khởi động: ${currentProfileName || input.version}`)
+
   // Broadcast initial state immediately
   enqueueEvent({ type: 'state', state: getLaunchState() })
 
@@ -337,6 +366,10 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     console.error('[LaunchManager] ensureGameDirectoryStructure failed:', errMsg)
     currentState.status = 'failed'
     currentState.error = errMsg
+    if (activeJobId) {
+      taskManagerService.failTask(activeJobId, errMsg)
+      activeJobId = null
+    }
     enqueueEvent({ type: 'state', state: getLaunchState() })
     return {
       ok: false,
@@ -358,7 +391,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Create worker
   const workerPath = getWorkerPath()
   console.log('[LaunchManager] Spawning launchWorker at', workerPath)
-  
+
   // Assert dependencies exist
   assertLaunchWorkerDependencies()
 
@@ -372,6 +405,10 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     currentState.status = 'failed'
     currentState.error = err.message
     currentState.endedAt = now()
+    if (activeJobId) {
+      taskManagerService.failTask(activeJobId, err.message)
+      activeJobId = null
+    }
     void writeErrorLog('launchManager:worker', err, { jobId, status: currentState.status })
     enqueueEvent({ type: 'finished', jobId, state: getLaunchState() })
     currentWorker = null
@@ -382,6 +419,10 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
       currentState.status = 'failed'
       currentState.error = `Launch worker exited with code ${code}.`
       currentState.endedAt = now()
+      if (activeJobId) {
+        taskManagerService.failTask(activeJobId, currentState.error)
+        activeJobId = null
+      }
       void writeErrorLog('launchManager:workerExit', new Error(`exit ${code}`), { jobId, code, status: currentState.status })
     }
     currentWorker = null
@@ -418,7 +459,7 @@ export async function safeStartLaunchJob(input: LaunchInput): Promise<StartLaunc
   try {
     return await startLaunchJob(input)
   } catch (err) {
-    await writeErrorLog('launchManager:startLaunchJob', err, { profileId: input.profileId, version: input.version })
+    // await writeErrorLog('launchManager:startLaunchJob', err, { profileId: input.profileId, version: input.version })
     return { ok: false, jobId: null, message: err instanceof Error ? err.message : String(err) }
   }
 }
@@ -428,6 +469,10 @@ export async function cancelLaunchJob(): Promise<CancelLaunchResult> {
     return { ok: false, message: 'Không có launch job nào đang chạy.' }
   }
   showLauncherAfterGame()
+  if (activeJobId) {
+    taskManagerService.failTask(activeJobId, 'Đã hủy')
+    activeJobId = null
+  }
 
   currentWorker.postMessage({ type: 'cancel', jobId: currentState.jobId })
 

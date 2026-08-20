@@ -5,7 +5,7 @@ const BASE_URL = 'https://api.minecraftservices.com/minecraft/profile'
 /**
  * Lấy thông tin profile (bao gồm skin và capes)
  */
-export async function fetchMojangProfile(accessToken: string): Promise<MojangProfile> {
+export async function fetchMojangProfile(accessToken: string): Promise<MojangProfile | null> {
   const res = await fetch(BASE_URL, {
     method: 'GET',
     headers: {
@@ -14,6 +14,12 @@ export async function fetchMojangProfile(accessToken: string): Promise<MojangPro
   })
 
   if (!res.ok) {
+    if (res.status === 404) {
+      return null
+    }
+    if (res.status === 401) {
+      throw new Error('TOKEN_EXPIRED')
+    }
     const text = await res.text()
     throw new Error(`Failed to fetch Mojang profile: ${text}`)
   }
@@ -85,5 +91,45 @@ export async function uploadMojangSkin(
   if (!res.ok) {
     const text = await res.text()
     throw new Error(`Failed to upload skin: ${text}`)
+  }
+}
+
+/**
+ * Kiểm tra xem tài khoản có được phép đổi tên không
+ */
+export async function checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
+  const res = await fetch(`${BASE_URL}/namechange`, {
+    method: 'GET',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!res.ok) {
+    if (res.status === 404) return { createdAt: '', nameChangeAllowed: false }
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED')
+    const text = await res.text()
+    throw new Error(`Failed to check name change: ${text}`)
+  }
+
+  return (await res.json()) as { createdAt: string; nameChangeAllowed: boolean }
+}
+
+/**
+ * Gửi yêu cầu đổi tên profile lên Mojang
+ */
+export async function changeMojangName(accessToken: string, newName: string): Promise<void> {
+  const res = await fetch(`${BASE_URL}/name/${encodeURIComponent(newName)}`, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+  })
+
+  if (!res.ok) {
+    if (res.status === 401) throw new Error('TOKEN_EXPIRED')
+    if (res.status === 403) throw new Error('NAME_UNAVAILABLE_OR_COOLDOWN')
+    const text = await res.text()
+    throw new Error(`Failed to change name: ${text}`)
   }
 }

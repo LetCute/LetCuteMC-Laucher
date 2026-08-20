@@ -32,7 +32,9 @@ async function downloadFileToTemp(url: string, filename: string): Promise<string
   await fs.mkdir(tempDir, { recursive: true })
   
   const dest = path.join(tempDir, filename)
-  const res = await fetch(url)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
+  const res = await fetch(url, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
   if (!res.ok) throw new Error(`Failed to download ${url}`)
   
   const arrayBuffer = await res.arrayBuffer()
@@ -42,7 +44,7 @@ async function downloadFileToTemp(url: string, filename: string): Promise<string
 }
 
 export async function installModrinthModpack(versionId: string, profileName: string, gameDataDir: string): Promise<string> {
-  const taskId = taskManagerService.createTask(`Cài đặt Modpack: ${profileName}`)
+  const taskId = taskManagerService.createTask(`Cài đặt Modpack: ${profileName}`, 'install-modpack')
   
   // Run async
   Promise.resolve().then(async () => {
@@ -61,8 +63,15 @@ export async function installModrinthModpack(versionId: string, profileName: str
       
       taskManagerService.updateTaskProgress(taskId, 10, `Đang tải file .mrpack...`)
       const mrpackPath = await downloadFileToTemp(mrpackFile.url, mrpackFile.filename)
+      let iconUrl: string | null = null
+      try {
+        const projectInfo = await client.getProject(versionInfo.project_id)
+        iconUrl = (projectInfo as any).icon_url || null
+      } catch (e) {
+        // Ignore icon fetch error
+      }
       
-      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true)
+      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true, iconUrl)
     } catch (e: any) {
       taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
     }
@@ -72,7 +81,7 @@ export async function installModrinthModpack(versionId: string, profileName: str
 }
 
 export async function installLocalModrinthModpack(mrpackPath: string, profileName: string, gameDataDir: string): Promise<string> {
-  const taskId = taskManagerService.createTask(`Cài đặt Modpack từ tệp: ${profileName}`)
+  const taskId = taskManagerService.createTask(`Cài đặt Modpack từ tệp: ${profileName}`, 'install-modpack')
   
   // Run async
   Promise.resolve().then(async () => {
@@ -86,7 +95,7 @@ export async function installLocalModrinthModpack(mrpackPath: string, profileNam
   return taskId
 }
 
-async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, taskId: string, cleanupZip: boolean): Promise<string> {
+async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, taskId: string, cleanupZip: boolean, iconUrl?: string | null): Promise<string> {
   // 3. Extract and parse modrinth.index.json
   taskManagerService.updateTaskProgress(taskId, 15, `Đang phân tích cấu trúc Modpack...`)
   const zip = new AdmZip(mrpackPath)
@@ -119,6 +128,21 @@ async function _installMrpack(mrpackPath: string, profileName: string, gameDataD
     maxMemoryMb: 4096,
   })
   taskManagerService.updateTaskProgress(taskId, 20, `Đã tạo Cấu hình game riêng biệt: ${profileName}`)
+  
+  if (iconUrl) {
+    try {
+      const iconPath = path.join(profileGameDir, 'icon.png')
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 10000)
+      const res = await fetch(iconUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
+      if (res.ok) {
+        const buffer = Buffer.from(await res.arrayBuffer())
+        await fs.writeFile(iconPath, buffer)
+      }
+    } catch (e) {
+      // Ignore icon download error
+    }
+  }
   
   // Install Modloader if needed
   let finalMinecraftVersion = minecraftVersion;
@@ -280,7 +304,9 @@ async function _installModrinthModRecursive(versionId: string, gameDir: string, 
   const destFile = path.join(targetDir, primaryFile.filename)
   taskManagerService.updateTaskProgress(taskId, 50, `Đang tải ${primaryFile.filename}...`)
   
-  const res = await fetch(primaryFile.url)
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 60000)
+  const res = await fetch(primaryFile.url, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
   if (!res.ok) throw new Error(`Failed to download ${primaryFile.url}`)
   
   const arrayBuffer = await res.arrayBuffer()

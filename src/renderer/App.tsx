@@ -17,6 +17,7 @@ import { ProfileModal } from './components/profiles/ProfileModal';
 import { UpdaterScreen } from './screens/UpdaterScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/ui/Toast';
+import { ConfirmDialogProvider, useConfirm } from './components/ui/ConfirmDialogContext';
 import { launcherClient } from './services/launcherClient';
 import { useLauncherJob } from './hooks/useLauncherJob';
 import { usePrepareGame } from './hooks/usePrepareGame';
@@ -45,8 +46,9 @@ interface BootstrapProgress {
   message: string;
 }
 
-function App() {
+function MainApp() {
   const { showToast } = useToast()
+  const confirm = useConfirm()
 
   // ── Core state ───────────────────────────────────────────────────────────
   const [appPhase, setAppPhase] = useState<'updater' | 'client'>('updater');
@@ -103,7 +105,7 @@ function App() {
   }, [activeTab]);
 
   // ── Launch job state (Worker Thread based, no polling) ─────────────────
-  const { state: launchJobState, clearLogs: clearLaunchLogs, startLaunch, isBusy, isStarting } = useLauncherJob();
+  const { state: launchJobState, startLaunch, isBusy, isStarting } = useLauncherJob();
 
   const activeProfile = profiles.find(p => p.id === activeProfileId) ?? null;
   const { isPreparing } = usePrepareGame(activeProfile, settings);
@@ -219,7 +221,7 @@ function App() {
           // A modpack was just installed, reload profiles
           await initializeAppData();
           await handleSetActiveProfile(task.result.profileId);
-          setActiveTab('mods');
+          setActiveTab('profiles');
         } else if (task.taskType === 'install-mod') {
           // Optionally, reload mods list or store installations if needed
           // For now, doing nothing is fine as StoreScreen can reload its own state
@@ -303,7 +305,7 @@ function App() {
   };
 
   const handleDeleteProfile = async (id: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa cấu hình này không?')) return;
+    if (!(await confirm({ message: 'Bạn có chắc chắn muốn xóa cấu hình này không?', isDestructive: true }))) return;
     try {
       const ok = await launcherClient.deleteProfile(id);
       if (ok) {
@@ -353,7 +355,6 @@ function App() {
   // Hard error only when critical path failed before shell usable
   if (appError && !criticalReady) {
     return (
-      <ToastProvider>
         <div className="flex h-screen w-screen flex-col items-center justify-center bg-background text-foreground font-sans p-6 text-center">
           <h2 className="text-xl font-bold text-destructive mb-2">Không thể tải dữ liệu launcher.</h2>
           <p className="text-sm text-muted-foreground mb-6 max-w-md">{appError}</p>
@@ -364,7 +365,6 @@ function App() {
             Thử lại
           </button>
         </div>
-      </ToastProvider>
     );
   }
 
@@ -373,7 +373,6 @@ function App() {
   }
 
   return (
-    <ToastProvider>
       <div
         className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans bg-cover bg-center bg-no-repeat relative"
         style={{ backgroundImage: 'url(./background.jpg)' }}
@@ -536,8 +535,15 @@ function App() {
           />
         </div>
       </div>
-    </ToastProvider>
   );
 }
 
-export default App;
+export default function App() {
+  return (
+    <ToastProvider>
+      <ConfirmDialogProvider>
+        <MainApp />
+      </ConfirmDialogProvider>
+    </ToastProvider>
+  );
+}

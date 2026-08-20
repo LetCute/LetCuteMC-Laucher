@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input'
 import { launcherClient } from '../services/launcherClient'
 import { Button } from '../components/ui/button'
 import { DropZone } from '../components/ui/DropZone'
+import { useConfirm } from '../components/ui/ConfirmDialogContext'
 
 interface ModsScreenProps {
   gameDir: string
@@ -23,6 +24,7 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
   const [operatingMods, setOperatingMods] = useState<Set<string>>(new Set())
   const [loadingMeta, setLoadingMeta] = useState<Set<string>>(new Set())
   const metaGen = useRef(0)
+  const confirm = useConfirm()
 
   const loadMetadataProgressive = (list: GameContentItem[]) => {
     const gen = ++metaGen.current
@@ -106,7 +108,7 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
   }
 
   const handleDelete = async (mod: GameContentItem) => {
-    if (!confirm('Bạn chắc chắn muốn xóa?')) return
+    if (!(await confirm({ message: 'Bạn chắc chắn muốn xóa?', isDestructive: true }))) return
     setOperatingMods((prev) => new Set(prev).add(mod.path))
     try {
       await launcherClient.deleteGameContent(gameDir, mod.path)

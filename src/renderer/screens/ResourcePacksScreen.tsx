@@ -7,6 +7,7 @@ import { Input } from '../components/ui/Input'
 import { launcherClient } from '../services/launcherClient'
 import { Button } from '../components/ui/button'
 import { DropZone } from '../components/ui/DropZone'
+import { useConfirm } from '../components/ui/ConfirmDialogContext'
 
 interface ResourcePacksScreenProps {
   gameDir: string
@@ -18,6 +19,7 @@ export const ResourcePacksScreen = ({ gameDir, profileName }: ResourcePacksScree
   const [searchTerm, setSearchTerm] = useState('')
   const [loading, setLoading] = useState(false)
   const [operatingPacks, setOperatingPacks] = useState<Set<string>>(new Set())
+  const confirm = useConfirm()
 
   const fetchPacks = async () => {
     if (!gameDir) return
@@ -36,7 +38,7 @@ export const ResourcePacksScreen = ({ gameDir, profileName }: ResourcePacksScree
   }, [gameDir])
 
   const handleDelete = async (pack: GameContentItem) => {
-    if (!confirm('Bạn chắc chắn muốn xóa?')) return
+    if (!(await confirm({ message: 'Bạn chắc chắn muốn xóa?', isDestructive: true }))) return
     setOperatingPacks((prev) => new Set(prev).add(pack.path))
     try {
       await launcherClient.deleteGameContent(gameDir, pack.path)

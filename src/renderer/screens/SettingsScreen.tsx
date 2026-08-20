@@ -4,15 +4,13 @@ import type {
   LauncherProfile,
   AccountState,
   SystemPerformanceInfo,
-  AutoPerformanceRecommendation,
   JavaRuntimeSelectionResult,
   DetectedJavaRuntime,
 } from '@/shared/types.ts'
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
-import { CheckCircle2, AlertTriangle, Save, ShieldAlert, Sparkles, Cpu, RefreshCw, MessageSquare } from 'lucide-react'
+import { CheckCircle2, AlertTriangle, Save, ShieldAlert, RefreshCw } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
-import { Input } from '@/components/ui/Input'
 
 function sourceLabel(source: DetectedJavaRuntime['source']): string {
   switch (source) {
@@ -49,10 +47,7 @@ export const SettingsScreen = ({
   activeProfile,
   onSave,
   onSaveJavaPath,
-  accountState: _accountState,
   gameDir,
-  onAccountStateChange: _onAccountStateChange,
-  appendLog: _appendLog,
   isWorking,
 }: SettingsScreenProps) => {
   const [formData, setFormData] = useState<LauncherSettings>({
@@ -63,12 +58,10 @@ export const SettingsScreen = ({
   const [javaScanning, setJavaScanning] = useState(false)
   const [saved, setSaved] = useState(false)
   const [sysInfo, setSysInfo] = useState<SystemPerformanceInfo | null>(null)
-  const [recommendation, setRecommendation] = useState<AutoPerformanceRecommendation | null>(null)
 
   // Manual Java selection
   const [selectedJavaPath, setSelectedJavaPath] = useState<string>('')
 
-  const isAuto = (formData.performanceMode ?? 'auto') === 'auto'
   const requiredMajor = javaSelection?.requiredMajor ?? javaSelection?.requiredVersion
 
   // Prefer profile-saved path, then auto-selected runtime
@@ -120,8 +113,6 @@ export const SettingsScreen = ({
       try {
         const info = await window.launcherApi.getSystemPerformanceInfo()
         setSysInfo(info)
-        const eff = await window.launcherApi.getEffectivePerformanceSettings()
-        setRecommendation(eff.recommendation)
       } catch {
         /* ignore */
       }

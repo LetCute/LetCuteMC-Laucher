@@ -321,67 +321,11 @@ export function getKnownJavaRoots(customScanDirs: string[] = []): string[] {
   }
 
   for (const dir of customScanDirs) add(dir)
-  if (process.env.JAVA_HOME) add(process.env.JAVA_HOME)
 
   try {
     add(getDefaultJavaInstallDir())
   } catch {
     /* ignore */
-  }
-
-  if (process.platform === 'win32') {
-    const pf = process.env.ProgramFiles || 'C:\\Program Files'
-    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-    const localAppData = process.env.LOCALAPPDATA || ''
-    const userProfile = process.env.USERPROFILE || process.env.HOME || ''
-    const appData = process.env.APPDATA || ''
-
-    add(path.join(pf, 'Java'))
-    add(path.join(pf86, 'Java'))
-    add(path.join(pf, 'Eclipse Adoptium'))
-    add(path.join(pf, 'Microsoft'))
-    add(path.join(pf, 'Zulu'))
-    add(path.join(pf, 'Amazon Corretto'))
-    add(path.join(pf, 'BellSoft'))
-    add(path.join(pf, 'Semeru'))
-    add(path.join(pf, 'AdoptOpenJDK'))
-    add(path.join(pf86, 'Common Files', 'Oracle', 'Java', 'javapath'))
-
-    if (localAppData) {
-      add(path.join(localAppData, 'Programs', 'Eclipse Adoptium'))
-      add(path.join(localAppData, 'Programs', 'Java'))
-      add(path.join(localAppData, 'Programs', 'Microsoft'))
-    }
-    if (userProfile) {
-      add(path.join(userProfile, '.jdks'))
-      add(path.join(userProfile, '.gradle', 'jdks'))
-    }
-    if (appData) {
-      add(path.join(appData, '.minecraft', 'runtime'))
-      add(path.join(appData, 'LetCuteMC', 'java'))
-    }
-  } else if (process.platform === 'darwin') {
-    add('/Library/Java/JavaVirtualMachines')
-    add(path.join(process.env.HOME || '', '.jdks'))
-    add(path.join(process.env.HOME || '', 'Library/Java/JavaVirtualMachines'))
-  } else {
-    add('/usr/lib/jvm')
-    add('/usr/java')
-    add(path.join(process.env.HOME || '', '.jdks'))
-  }
-
-  try {
-    add(path.join(getDefaultMinecraftDirectory(), 'runtime'))
-  } catch {
-    /* ignore */
-  }
-
-  // PATH: only deep-scan entries that look like Java installs (never C:\Windows etc.)
-  const pathEnv = process.env.PATH || process.env.Path || ''
-  for (const entry of pathEnv.split(path.delimiter)) {
-    if (!entry || !looksLikeJavaRoot(entry)) continue
-    add(entry)
-    if (path.basename(entry).toLowerCase() === 'bin') add(path.dirname(entry))
   }
 
   return [...roots]
@@ -714,7 +658,8 @@ export async function scanJavaRuntimes(
         const cacheStat = await fs.stat(cachePath)
         if (Date.now() - cacheStat.mtimeMs < CACHE_TTL_MS) {
           const cacheContent = await fs.readFile(cachePath, 'utf8')
-          return JSON.parse(cacheContent) as JavaScanResult
+          const parsed = JSON.parse(cacheContent) as JavaScanResult
+          return parsed
         }
       }
     } catch {
@@ -737,15 +682,11 @@ export async function scanJavaRuntimes(
     const found = await scanJavaRoot(root)
     for (const p of found) candidatePaths.add(p)
   }
+  const sysPath = await collectPathJavaExecutables()
+  for (const p of sysPath) candidatePaths.add(p)
 
-  for (const fromPath of await collectPathJavaExecutables()) {
-    candidatePaths.add(fromPath)
-  }
-
-  for (const fromWhere of await collectWhereJava()) {
-    candidatePaths.add(fromWhere)
-  }
-
+  const sysWhere = await collectWhereJava()
+  for (const p of sysWhere) candidatePaths.add(p)
   // Resolve realpaths early for dedupe of candidates
   const uniqueCandidates: string[] = []
   const seenReal = new Set<string>()
