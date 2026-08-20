@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.0.404",
+  "version": "1.0.405",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -108,9 +108,8 @@
       "artifactName": "${productName}-${version}-windows-${arch}.${ext}"
     },
     "nsis": {
-      "oneClick": false,
-      "allowToChangeInstallationDirectory": true,
-      "perMachine": true,
+      "oneClick": true,
+      "perMachine": false,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "LetCuteMC",
