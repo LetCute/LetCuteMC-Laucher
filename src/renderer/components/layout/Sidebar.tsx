@@ -184,7 +184,7 @@ export function Sidebar({
   const canCancel = isBusy && !isRunning
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
+    <aside className="flex h-full w-64 shrink-0 flex-col bg-background/50 backdrop-blur-sm border-r border-border/30 shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
       {/* Logo */}
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
@@ -216,7 +216,7 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px]">
+          <DropdownMenuContent align="center" className="w-[220px] border-zinc-800/80" style={{ backgroundColor: '#1c2127', backdropFilter: 'none' }}>
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
@@ -316,7 +316,7 @@ export function Sidebar({
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuContent align="end" className="w-56 border-zinc-800/80" style={{ backgroundColor: '#1c2127', backdropFilter: 'none' }}>
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-48 overflow-y-auto">

@@ -86,10 +86,10 @@
   --foreground: oklch(0.965 0.006 140);
 
   /* Surfaces - Solid for better readability */
-  --card: oklch(0.15 0 0);
+  --card: oklch(0.15 0 0 / 0.55);
   --card-foreground: oklch(0.965 0.006 140);
 
-  --popover: oklch(0.12 0 0);
+  --popover: oklch(0.12 0 0 / 0.95);
   --popover-foreground: oklch(0.965 0.006 140);
 
   /* Primary - Minecraft grass / emerald */
@@ -98,14 +98,14 @@
   --primary-foreground: oklch(0.967 0 0);
 
   /* Secondary - dark stone */
-  --secondary: oklch(0.270 0.015 240);
+  --secondary: oklch(0.270 0.015 240 / 0.5);
   --secondary-foreground: oklch(0.965 0.006 140);
 
-  /* Interactive states - Solid */
-  --muted: oklch(0.240 0.010 240);
+  /* Interactive states - Translucent */
+  --muted: oklch(0.240 0.010 240 / 0.5);
   --muted-foreground: oklch(0.700 0.010 240);
 
-  --accent: oklch(0.270 0.015 240);
+  --accent: oklch(0.270 0.015 240 / 0.5);
   --accent-foreground: oklch(0.940 0.010 140);
 
   /* Destructive - redstone */
@@ -208,7 +208,25 @@ body {
 }
 
 @layer components {
-  /* Disabled glassmorphism (backdrop-filter) for better cross-platform compatibility */
+
+  /* Global glassmorphism for all surface elements */
+  .bg-card,
+  .bg-popover,
+  .bg-accent,
+  .bg-muted,
+  .bg-secondary,
+  .bg-background {
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+  }
+
+  /* Remove blur from elements that shouldn't have it */
+  input,
+  select,
+  textarea {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
 }
 
 .bg-dot-pattern {
