@@ -139,7 +139,7 @@ export function VersionsScreen({ catalog, gameDir: _gameDir, onCreateProfile, on
             {displayedList.map(v => (
               <div
                 key={v.id}
-                className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 transition"
+                className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:bg-background/70 hover:border-primary/50 transition"
               >
                 <div className="flex flex-col gap-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
