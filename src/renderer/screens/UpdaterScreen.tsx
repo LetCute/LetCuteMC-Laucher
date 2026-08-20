@@ -41,16 +41,19 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
           setMessage(status.message);
           break;
         case 'update-available':
+          clearTimeout(timeoutId);
           setPhase('downloading');
           setMessage(status.message);
           setProgress(0);
           break;
         case 'update-progress':
+          clearTimeout(timeoutId);
           setPhase('downloading');
           setMessage(status.message);
           setProgress(status.data?.percent || 0);
           break;
         case 'update-downloaded':
+          clearTimeout(timeoutId);
           setPhase('ready');
           setMessage(status.message);
           setProgress(100);
@@ -61,12 +64,14 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
           }, 2000);
           break;
         case 'update-error':
+          clearTimeout(timeoutId);
           setPhase('error');
           setMessage(status.message);
           setErrorInfo(status.data?.toString() || 'Lỗi mạng hoặc không thể kết nối tới máy chủ cập nhật.');
           completeAndProceed();
           break;
         case 'update-not-available':
+          clearTimeout(timeoutId);
           setPhase('checking');
           setMessage(status.message);
           completeAndProceed();
