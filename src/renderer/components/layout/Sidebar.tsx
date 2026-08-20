@@ -184,7 +184,7 @@ export function Sidebar({
   const canCancel = isBusy && !isRunning
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-background/50 backdrop-blur-sm border-r border-border/30 shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
+    <aside className="flex h-full w-64 shrink-0 flex-col bg-sidebar border-r border-sidebar-border shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
       {/* Logo */}
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
