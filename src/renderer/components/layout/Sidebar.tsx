@@ -111,7 +111,7 @@ export function Sidebar({
     return {
       url: accType === 'microsoft'
         ? `https://minotar.net/helm/${accUsername}/64.png`
-        : steveImg,
+        : './assets/steve.png',
       isFullSkin: false
     }
   }
