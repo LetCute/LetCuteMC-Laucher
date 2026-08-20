@@ -32,7 +32,7 @@ export function initAutoUpdater() {
   })
 
   autoUpdater.on('update-downloaded', (info) => {
-    sendUpdateEvent('update-downloaded', 'Tải bản cập nhật hoàn tất. Launcher sẽ khởi động lại để cài đặt.', info)
+    sendUpdateEvent('update-downloaded', 'Đang cài đặt bản cập nhật...', info)
   })
 }
 
