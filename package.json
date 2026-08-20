@@ -126,7 +126,8 @@
       "icon": "public/logo_square.png",
       "category": "Game",
       "target": [
-        "AppImage"
+        "AppImage",
+        "deb"
       ],
       "artifactName": "${productName}-${version}-ubuntu-${arch}.${ext}"
     }
