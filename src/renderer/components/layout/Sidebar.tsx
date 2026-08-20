@@ -16,7 +16,7 @@ import {
   Activity,
 } from 'lucide-react'
 import { useToast } from '../ui/Toast'
-import steveImg from '../../assets/steve.png'
+// Images now loaded directly from public/assets
 import type {
   LauncherProfile,
   JavaRuntimeSelectionResult,
@@ -280,7 +280,7 @@ export function Sidebar({
                   {(() => {
                     const avatarData = activeAccount
                       ? getAccountAvatar(activeAccount.id, activeAccount.type, activeAccount.username)
-                      : { url: steveImg, isFullSkin: false }
+                      : { url: './assets/steve.png', isFullSkin: false }
 
                     if (avatarData.isFullSkin) {
                       return <SkinHead skinUrl={avatarData.url} size={36} className="h-full w-full object-cover" />
@@ -291,7 +291,7 @@ export function Sidebar({
                         alt={displayUsername}
                         className="h-full w-full object-cover"
                         onError={(e) => {
-                          e.currentTarget.src = steveImg
+                          e.currentTarget.src = './assets/steve.png'
                         }}
                       />
                     )

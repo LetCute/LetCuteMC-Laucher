@@ -1,8 +1,7 @@
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Code2, HelpCircle, Heart } from 'lucide-react'
 import { Button } from '../components/ui/button'
-import logoImg from '../assets/avatarv2-modified.png'
-import qrDonateImg from '../assets/qr_donate.png'
+// Images now loaded directly from public/assets
 import pkg from '../../../package.json'
 
 export function AboutScreen() {
@@ -70,7 +69,7 @@ export function AboutScreen() {
               <div className="mt-4 pt-2.5 border-t border-border/40 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2">
                   <img
-                    src={logoImg}
+                    src="./assets/avatarv2-modified.png"
                     alt="LetCuteMC"
                     className="h-8 w-auto rounded-lg object-contain drop-shadow-md transition-transform duration-300 hover:scale-[1.02]"
                   />
@@ -111,7 +110,7 @@ export function AboutScreen() {
 
               <div className="relative p-2 bg-white rounded-xl shadow-lg group">
                 <img
-                  src={qrDonateImg}
+                  src="./assets/qr_donate.png"
                   alt="QR Donate"
                   className="w-32 h-32 object-contain transition-transform duration-300 group-hover:scale-105"
                 />

@@ -4,11 +4,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
-import grassImg from '../assets/grass_block.png'
-import fabricImg from '../assets/fabric.png'
-import quiltImg from '../assets/quilt.svg'
-import forgeImg from '../assets/forge.png'
-import neoforgeImg from '../assets/neoforged.png'
+// Images now loaded directly from public/assets
 
 interface ProfilesScreenProps {
   profiles: LauncherProfile[]
@@ -49,22 +45,22 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
   }
 
   if (isFabric) {
-    return <img src={fabricImg} className={imageClass} alt="Fabric" onError={(e) => { e.currentTarget.src = grassImg }} />
+    return <img src="./assets/fabric.png" className={imageClass} alt="Fabric" onError={(e) => { e.currentTarget.src = "./assets/grass_block.png" }} />
   }
 
   if (isQuilt) {
-    return <img src={quiltImg} className={imageClass} alt="Quilt" onError={(e) => { e.currentTarget.src = grassImg }} />
+    return <img src="./assets/quilt.svg" className={imageClass} alt="Quilt" onError={(e) => { e.currentTarget.src = "./assets/grass_block.png" }} />
   }
 
   if (isNeoForge) {
-    return <img src={neoforgeImg} className={imageClass} alt="NeoForge" onError={(e) => { e.currentTarget.src = grassImg }} />
+    return <img src="./assets/neoforged.png" className={imageClass} alt="NeoForge" onError={(e) => { e.currentTarget.src = "./assets/grass_block.png" }} />
   }
 
   if (isForge) {
-    return <img src={forgeImg} className={imageClass} alt="Forge" onError={(e) => { e.currentTarget.src = grassImg }} />
+    return <img src="./assets/forge.png" className={imageClass} alt="Forge" onError={(e) => { e.currentTarget.src = "./assets/grass_block.png" }} />
   }
 
-  return <img src={grassImg} className={imageClass} alt="Vanilla" />
+  return <img src="./assets/grass_block.png" className={imageClass} alt="Vanilla" />
 }
 
 export const ProfilesScreen = ({
