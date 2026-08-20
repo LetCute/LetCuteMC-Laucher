@@ -16,7 +16,6 @@ import {
   Activity,
 } from 'lucide-react'
 import { useToast } from '../ui/Toast'
-import logoImg from '../../assets/logo.png'
 import steveImg from '../../assets/steve.png'
 import type {
   LauncherProfile,
@@ -188,7 +187,7 @@ export function Sidebar({
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/15 text-primary shrink-0 overflow-hidden">
-            <img src={logoImg} alt="LetCuteMC Logo" className="h-full w-full object-cover" />
+            <img src="./logo.png" alt="LetCuteMC Logo" className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0">
             <h1 className="text-base font-bold tracking-tight text-sidebar-foreground leading-tight">
