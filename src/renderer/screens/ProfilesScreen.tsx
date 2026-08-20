@@ -1,5 +1,5 @@
 import type { LauncherProfile } from '../../shared/types'
-import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Package } from 'lucide-react'
+import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Anvil } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
@@ -21,9 +21,10 @@ interface ProfilesScreenProps {
 
 function ProfileImage({ profile }: { profile: LauncherProfile }) {
   const [iconData, setIconData] = useState<string | null>(null)
-  
+
   const isFabric = profile.minecraftVersion.toLowerCase().includes('fabric')
   const isQuilt = profile.minecraftVersion.toLowerCase().includes('quilt')
+  const isForge = profile.minecraftVersion.toLowerCase().includes('forge') || profile.minecraftVersion.toLowerCase().includes('neoforge')
   const isModpack = !!profile.mcRootDir
 
   useEffect(() => {
@@ -33,7 +34,7 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
         .then(res => {
           if (isMounted && res) setIconData(res)
         })
-        .catch(() => {})
+        .catch(() => { })
     }
     return () => { isMounted = false }
   }, [profile.id, profile.gameDir, isModpack])
@@ -44,16 +45,20 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
     return <img src={iconData} className={imageClass} alt="Modpack" />
   }
 
-  if (isModpack) {
-     return <img src={grassImg} className={imageClass} alt="Vanilla (Fallback)" />
-  }
-
   if (isFabric) {
     return <img src={fabricImg} className={imageClass} alt="Fabric" onError={(e) => { e.currentTarget.src = grassImg }} />
   }
-  
+
   if (isQuilt) {
     return <img src={quiltImg} className={imageClass} alt="Quilt" onError={(e) => { e.currentTarget.src = grassImg }} />
+  }
+
+  if (isForge) {
+    return (
+      <div className={`${imageClass} flex items-center justify-center bg-orange-900/30 text-orange-400 border border-orange-500/20`}>
+        <Anvil className="w-6 h-6 opacity-80" />
+      </div>
+    )
   }
 
   return <img src={grassImg} className={imageClass} alt="Vanilla" />

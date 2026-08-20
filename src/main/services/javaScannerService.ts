@@ -767,7 +767,13 @@ export async function selectBestJavaRuntime(
 ): Promise<JavaRuntimeSelectionResult> {
   const gameDir = options?.gameDir
   const requiredMajor = await resolveRequiredJavaMajor(minecraftVersion, gameDir)
-  const scanResult = await scanJavaRuntimes(customScanDirs, options?.forceRefresh === true)
+
+  const scanDirsToUse = [...customScanDirs]
+  if (options?.preferredJavaPath) {
+    scanDirsToUse.push(options.preferredJavaPath)
+  }
+
+  const scanResult = await scanJavaRuntimes(scanDirsToUse, options?.forceRefresh === true)
   const candidates = scanResult.runtimes.filter((r) => r.valid || r.isValid)
 
   if (candidates.length === 0) {

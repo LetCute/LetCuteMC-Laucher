@@ -264,20 +264,22 @@ export function ProfileModal({
           )}
         </div>
 
-        <div className={modLoader === 'vanilla' ? 'col-span-2 flex flex-col gap-1.5' : 'flex flex-col gap-1.5'}>
-          <label className="text-sm font-medium text-foreground">Cài đặt Mod Loader</label>
-          <Select
-            value={modLoader}
-            onChange={(val) => setModLoader(val as ModLoaderType)}
-            options={[
-              { value: 'vanilla', label: 'Không cài' },
-              { value: 'fabric', label: 'Fabric' },
-              { value: 'quilt', label: 'Quilt' },
-            ]}
-          />
-        </div>
+        {!profile && (
+          <div className={modLoader === 'vanilla' ? 'col-span-2 flex flex-col gap-1.5' : 'flex flex-col gap-1.5'}>
+            <label className="text-sm font-medium text-foreground">Cài đặt Mod Loader</label>
+            <Select
+              value={modLoader}
+              onChange={(val) => setModLoader(val as ModLoaderType)}
+              options={[
+                { value: 'vanilla', label: 'Không cài' },
+                { value: 'fabric', label: 'Fabric' },
+                { value: 'quilt', label: 'Quilt' },
+              ]}
+            />
+          </div>
+        )}
 
-        {modLoader !== 'vanilla' && (
+        {!profile && modLoader !== 'vanilla' && (
           <div className="flex flex-col gap-1.5">
             <label className="text-sm font-medium text-foreground">Phiên bản Loader</label>
             <Select
@@ -291,7 +293,7 @@ export function ProfileModal({
           </div>
         )}
 
-        {modLoader !== 'vanilla' && (
+        {!profile && modLoader !== 'vanilla' && (
           <div className="col-span-2 flex items-start gap-2 text-xs text-primary/90 bg-primary/10 border border-primary/20 rounded-lg p-2.5">
             <Info size={13} className="mt-0.5 shrink-0" />
             <span>

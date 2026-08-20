@@ -117,13 +117,13 @@ export const ResourcePacksScreen = ({ gameDir, profileName }: ResourcePacksScree
       <DropZone accept={['zip']} onDropFiles={handleDropImport} label="Thả file .zip">
         {filteredPacks.length > 0 ? (
           <div className="flex-1 overflow-y-auto pr-1">
-            <div className="flex flex-col gap-2">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
               {filteredPacks.map((pack) => {
                 const isOperating = operatingPacks.has(pack.path)
                 return (
                   <div
                     key={pack.path}
-                    className="group flex items-center justify-between gap-4 px-4 py-3 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
+                    className="group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
                   >
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">

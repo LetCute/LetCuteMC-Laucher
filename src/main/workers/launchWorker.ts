@@ -208,8 +208,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     // resourcePath: thư mục chứa versions/, libraries/, assets/
     // Với profile modpack có gameDir riêng: dùng input.resourcePath (mcRootDir của profile)
     // Với profile thường: dùng mcRoot từ settings
-    const resourcePath = (input.resourcePath && input.resourcePath.trim() !== '') 
-      ? input.resourcePath 
+    const resourcePath = (input.resourcePath && input.resourcePath.trim() !== '')
+      ? input.resourcePath
       : mcRoot
 
     let javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
@@ -220,13 +220,13 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
       postLog(jobId, 'warn', `[LaunchWorker] Không tìm thấy Java tương thích. Bắt đầu tự động tải Java...`)
-      
+
       const { resolveRequiredJavaMajor } = await import('../services/javaScannerService')
       const { autoInstallJava, getDefaultJavaInstallDir } = await import('../services/javaInstallerService')
-      
+
       const requiredMajor = await resolveRequiredJavaMajor(input.version, resourcePath)
       const installDir = getDefaultJavaInstallDir()
-      
+
       const installResult = await autoInstallJava(
         requiredMajor,
         installDir,
@@ -243,7 +243,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
       if (installResult.success && installResult.javaPath) {
         postLog(jobId, 'success', `[LaunchWorker] Đã tải thành công Java tại: ${installResult.javaPath}`)
-        
+
         javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
           gameDir: resourcePath,
           preferredJavaPath: installResult.javaPath,
@@ -253,7 +253,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       } else {
         throw new Error(installResult.message || `Lỗi không xác định khi tải Java ${requiredMajor}`)
       }
-      
+
       if (!javaSelection.found || !javaSelection.selectedRuntime) {
         throw new Error(javaSelection.message)
       }
@@ -305,19 +305,19 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     //   version files đã được copy vào gameDir/versions/ bởi prepareWorker
     //   Nên parse tại gamePath (input.gameDir) để XMCL tìm được đúng JSON
     // - Với profile thường: parse tại resourcePath (mcRoot)
-    const hasResourcePath = input.resourcePath && input.resourcePath.trim() !== '' && 
+    const hasResourcePath = input.resourcePath && input.resourcePath.trim() !== '' &&
       input.resourcePath.toLowerCase() !== input.gameDir.toLowerCase()
     const isInProfilesPath = input.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
       input.gameDir.toLowerCase().includes('/profiles/')
     const isModpackProfile = hasResourcePath || (isInProfilesPath && input.gameDir.toLowerCase() !== resourcePath.toLowerCase())
     const parseRoot = isModpackProfile ? input.gameDir : resourcePath
-    
+
     postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile})`)
     const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
 
     // Filter out unsupported JVM flags for Java < 24 (e.g. UseCompactObjectHeaders)
     if (javaVer < 24 && (resolved as any).arguments?.jvm) {
-      ;(resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
+      ; (resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
         if (typeof arg === 'string') {
           return !arg.includes('UseCompactObjectHeaders')
         }

@@ -2,6 +2,7 @@ import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/Card'
 import { Code2, HelpCircle } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import logoImg from '../assets/avatarv2-modified.png'
+import pkg from '../../../package.json'
 
 export function AboutScreen() {
 
@@ -40,27 +41,27 @@ export function AboutScreen() {
                 <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 text-[11px]">
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Tự động chọn Java tương thích
+                    Quét & tự động tải Java tương thích
                   </li>
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Chế độ Tối ưu hiệu năng tự động
+                    Cài đặt Mods/Modpacks từ Modrinth
                   </li>
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Quản lý Mods / Shaders / Resources
+                    Tự động cài đặt Fabric & Quilt
                   </li>
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Launch Boost (Tăng tốc game)
+                    Quản lý Mods, Shaders & Resources
                   </li>
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Tài khoản Microsoft & Local
+                    Tối ưu hiệu năng & Launch Boost
                   </li>
                   <li className="flex items-center gap-1.5">
                     <span className="w-1 h-1 rounded-full bg-primary shrink-0" />
-                    Tải trước thư viện game nền
+                    Hỗ trợ tài khoản Microsoft & Offline
                   </li>
                 </ul>
               </div>
@@ -87,7 +88,7 @@ export function AboutScreen() {
               </div>
 
               <div className="pt-2 border-t border-border/20 flex items-center justify-between text-[10px] text-muted-foreground/80">
-                <span>Phiên bản: <strong className="text-foreground font-medium">1.0.0 (Stable)</strong></span>
+                <span>Phiên bản: <strong className="text-foreground font-medium">{pkg.version} </strong></span>
                 <span>Bản quyền © 2026 LetCute</span>
               </div>
             </CardContent>
