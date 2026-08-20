@@ -123,10 +123,9 @@
       "artifactName": "${productName}-${version}-mac-${arch}.${ext}"
     },
     "linux": {
-      "icon": "public/logo_square.png",
+      "icon": "build/icon.png",
       "category": "Game",
       "target": [
-        "AppImage",
         "deb"
       ],
       "artifactName": "${productName}-${version}-ubuntu-${arch}.${ext}"
