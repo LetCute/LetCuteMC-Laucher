@@ -75,7 +75,7 @@ function TaskCard({ task }: { task: BackgroundTask }) {
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className={`relative overflow-hidden flex items-center justify-between gap-4 px-4 py-4 rounded-xl border transition-all duration-200 border-border bg-card hover:border-primary/40 shadow-sm`}
+      className={`relative overflow-hidden flex items-center justify-between gap-4 px-4 py-4 rounded-xl border transition-all duration-200 border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40 shadow-sm`}
     >
       {/* Background Progress Bar (if running) */}
       {isRunning && (

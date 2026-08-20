@@ -88,7 +88,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button onClick={fetchPacks} disabled={loading} variant="outline" size="sm" className="h-9 px-3 bg-card">
+          <Button onClick={fetchPacks} disabled={loading} variant="outline" size="sm" className="h-9 px-3 bg-background/50 backdrop-blur-sm">
             <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </Button>
@@ -96,7 +96,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
             onClick={() => gameDir && launcherClient.openContentFolder(gameDir, 'shader_pack')}
             variant="outline"
             size="sm"
-            className="h-9 px-3 bg-card"
+            className="h-9 px-3 bg-background/50 backdrop-blur-sm"
           >
             <Zap className="h-3.5 w-3.5" />
             Thư mục
@@ -110,7 +110,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         icon={<Search className="h-4 w-4" />}
-        className='bg-card'
+        className='bg-background/50 backdrop-blur-sm'
       />
 
       <DropZone accept={['zip']} onDropFiles={handleDropImport} label="Thả file .zip">
@@ -122,7 +122,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
                 return (
                   <div
                     key={pack.path}
-                    className="group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-primary/50 hover:bg-accent/40 transition"
+                    className="group flex items-center justify-between gap-3 px-3 py-2.5 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/50 hover:bg-accent/40 transition"
                   >
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <span className="text-sm font-semibold text-foreground truncate">{pack.name}</span>

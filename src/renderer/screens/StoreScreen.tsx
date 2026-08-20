@@ -236,7 +236,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Nhập tên modpack (VD: Fabulously Optimized, RLcraft...)"
-              className="pl-10 h-11 text-base bg-card border-accent rounded-xl "
+              className="pl-10 h-11 text-base bg-background/50 backdrop-blur-sm border-accent rounded-xl "
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -264,7 +264,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
               <div
                 key={project.project_id}
                 onClick={() => openProject(project)}
-                className="group relative flex flex-col bg-card border border-border/50 rounded-sm overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)] transition-all cursor-pointer"
+                className="group relative flex flex-col bg-background/50 backdrop-blur-sm border border-border/50 rounded-sm overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)] transition-all cursor-pointer"
               >
                 {/* Banner / Icon area */}
                 <div className="h-32 bg-zinc-900 flex items-center justify-center overflow-hidden border-b border-border/50 relative">
@@ -276,7 +276,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
                   <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
 
                   {project.icon_url && (
-                    <img src={project.icon_url} className="absolute h-16 w-16 rounded-xl shadow-lg border border-border/50 z-10 bg-card" />
+                    <img src={project.icon_url} className="absolute h-16 w-16 rounded-xl shadow-lg border border-border/50 z-10 bg-background/50 backdrop-blur-sm" />
                   )}
 
                   {installations.some(i => i.projectId === project.project_id) && (
@@ -430,7 +430,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
                 placeholder="https://modrinth.com/modpack/.../version/..."
                 value={importInputValue}
                 onChange={(e) => setImportInputValue(e.target.value)}
-                className="bg-card"
+                className="bg-background/50 backdrop-blur-sm"
               />
             </div>
           )}
@@ -440,7 +440,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
               placeholder="VD: Fabulously Optimized"
               value={importProfileName}
               onChange={(e) => setImportProfileName(e.target.value)}
-              className="bg-card"
+              className="bg-background/50 backdrop-blur-sm"
             />
           </div>
           

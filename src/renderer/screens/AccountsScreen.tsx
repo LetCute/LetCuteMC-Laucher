@@ -52,7 +52,7 @@ const GallerySkinItem = ({ skin, onSelect }: { skin: any, onSelect: () => void }
     <button
       type="button"
       onClick={onSelect}
-      className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-card/50 transition-all group"
+      className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-background/50 backdrop-blur-sm/50 transition-all group"
       title={skin.name || 'Skin'}
     >
       <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
@@ -624,7 +624,7 @@ export const AccountsScreen = ({
                   key={acc.id}
                   onClick={() => !isActive && !isWorking && handleSelectAccount(acc.id)}
                   className={[
-                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer bg-card',
+                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer bg-background/50 backdrop-blur-sm',
                     isWorking ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
                       ? 'border-primary/50'
@@ -793,7 +793,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('default')}
-                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'default' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'default' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -809,7 +809,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('slim')}
-                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'slim' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'slim' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -879,7 +879,7 @@ export const AccountsScreen = ({
                           <button
                             type="button"
                             onClick={() => { setPendingCapeId(''); setPendingCapeFile(null) }}
-                            className={['flex items-center gap-2 p-2 rounded-lg border transition-all', pendingCapeId === '' ? 'border-primary bg-primary/10' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                            className={['flex items-center gap-2 p-2 rounded-lg border transition-all', pendingCapeId === '' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
                           >
                             <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
                               <XCircle size={14} className="text-muted-foreground" />
@@ -892,7 +892,7 @@ export const AccountsScreen = ({
                               key={cape.id}
                               type="button"
                               onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url) }}
-                              className={['flex items-center gap-3 p-2 rounded-lg border transition-all', pendingCapeId === cape.id ? 'border-primary bg-primary/10 shadow-[0_0_8px_rgba(var(--primary),0.2)]' : 'border-border bg-card hover:border-primary/40'].join(' ')}
+                              className={['flex items-center gap-3 p-2 rounded-lg border transition-all', pendingCapeId === cape.id ? 'border-primary bg-primary/10 shadow-[0_0_8px_rgba(var(--primary),0.2)]' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
                             >
                               <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
                               <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
@@ -994,7 +994,7 @@ export const AccountsScreen = ({
                             key={cape.uuid}
                             type="button"
                             onClick={() => handleSelectGalleryCape(cape.url)}
-                            className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-card/50 transition-all group"
+                            className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-background/50 backdrop-blur-sm/50 transition-all group"
                             title={cape.alias || 'Cape'}
                           >
                             <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
@@ -1024,7 +1024,7 @@ export const AccountsScreen = ({
           {/* Microsoft Option */}
           <button
             onClick={handleMicrosoftLogin} disabled={isWorking}
-            className="group flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all text-left disabled:opacity-50"
+            className="group flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all text-left disabled:opacity-50"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20">
               <Key size={20} />
@@ -1042,7 +1042,7 @@ export const AccountsScreen = ({
           {!showLocalInput ? (
             <button
               onClick={() => setShowLocalInput(true)} disabled={isWorking}
-              className="group flex items-center gap-4 p-4 rounded-xl border border-border bg-card hover:border-amber-500/40 hover:bg-amber-500/5 transition-all text-left disabled:opacity-50"
+              className="group flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-amber-500/40 hover:bg-amber-500/5 transition-all text-left disabled:opacity-50"
             >
               <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20">
                 <FlaskConical size={20} />
