@@ -2,6 +2,11 @@ import { app, BrowserWindow, Menu } from 'electron'
 import path from 'node:path'
 import isDev from 'electron-is-dev'
 
+// Vô hiệu hóa Hardware Acceleration trên Linux để tránh lỗi WebGL (đặc biệt khi chạy trên máy ảo hoặc thiếu driver GPU)
+if (process.platform === 'linux') {
+  app.disableHardwareAcceleration()
+}
+
 let mainWindow: BrowserWindow | null = null
 let isGameRunningFn: (() => boolean) | null = null
 let isLauncherHiddenForGameFn: (() => boolean) | null = null
