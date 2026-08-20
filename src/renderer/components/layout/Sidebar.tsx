@@ -38,6 +38,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../ui/DropdownMenu'
+import pkg from '../../../../package.json'
 
 export type TabId = 'store' | 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'tasks' | 'about'
 
@@ -194,7 +195,7 @@ export function Sidebar({
               LetCuteMC
             </h1>
             <p className="text-[11px] font-medium uppercase tracking-widest text-muted-foreground mt-0.5">
-              Launcher
+              Launcher <strong className="text-gray-600 text-[9px]">V</strong><strong className="text-gray-600 text-[7px]">{pkg.version} </strong>
             </p>
           </div>
         </div>
