@@ -205,7 +205,7 @@ export function Sidebar({
       <div className="px-3 pb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-card p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
+            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-background/50 backdrop-blur-sm p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
               <div className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
                 <span className="truncate text-sm font-semibold text-sidebar-foreground">
@@ -215,7 +215,7 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px] border-zinc-800/80" style={{ backgroundColor: '#1c2127', backdropFilter: 'none' }}>
+          <DropdownMenuContent align="center" className="w-[220px] border-zinc-800/80 bg-background/50 backdrop-blur-md">
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
@@ -315,7 +315,7 @@ export function Sidebar({
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 border-zinc-800/80" style={{ backgroundColor: '#1c2127', backdropFilter: 'none' }}>
+            <DropdownMenuContent align="end" className="w-56 border-zinc-800/80 bg-background/50 backdrop-blur-md">
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-48 overflow-y-auto">
