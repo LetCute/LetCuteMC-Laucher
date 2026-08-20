@@ -375,11 +375,8 @@ function App() {
   return (
     <ToastProvider>
       <div
-        className="flex h-screen w-screen flex-col overflow-hidden bg-background text-foreground font-sans bg-cover bg-center bg-no-repeat relative"
-        style={{ backgroundImage: 'url(./background.jpg)' }}
+        className="flex h-screen w-screen flex-col overflow-hidden bg-[#1c2127] text-foreground font-sans relative"
       >
-        {/* Dark overlay to ensure text remains readable */}
-        <div className="absolute inset-0 bg-black/70 pointer-events-none" />
 
         {/* Content container - must have z-index to stay above the overlay */}
         <div className="relative z-10 flex h-full w-full flex-col overflow-hidden">

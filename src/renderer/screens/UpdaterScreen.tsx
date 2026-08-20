@@ -103,8 +103,7 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
   }, []);
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#1c2127] text-white font-sans bg-cover bg-center bg-no-repeat relative">
-      <div className="absolute inset-0 bg-black/60 pointer-events-none" />
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#1c2127] text-white font-sans relative">
       
       <div className="relative z-10 flex flex-col items-center max-w-md w-full px-6 py-10 bg-zinc-900/80 border border-zinc-800/80 shadow-2xl rounded-2xl backdrop-blur-md">
         <img src="./logo.png" alt="LetCuteMC" className="w-24 h-24 mb-6 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)] animate-pulse" />
