@@ -2,9 +2,10 @@ import { app, BrowserWindow, Menu } from 'electron'
 import path from 'node:path'
 import isDev from 'electron-is-dev'
 
-// Vô hiệu hóa Hardware Acceleration trên Linux để tránh lỗi WebGL (đặc biệt khi chạy trên máy ảo hoặc thiếu driver GPU)
+// Trên Linux (đặc biệt là máy ảo), việc tắt hẳn Hardware Acceleration có thể gây lỗi trong suốt cửa sổ.
+// Thay vào đó, ta dùng cờ ignore-gpu-blocklist để ép bật WebGL bằng software rendering (SwiftShader).
 if (process.platform === 'linux') {
-  app.disableHardwareAcceleration()
+  app.commandLine.appendSwitch('ignore-gpu-blocklist')
 }
 
 let mainWindow: BrowserWindow | null = null
