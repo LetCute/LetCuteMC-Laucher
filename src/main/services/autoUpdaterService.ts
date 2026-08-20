@@ -54,7 +54,7 @@ export function checkForUpdates() {
 
 export function quitAndInstallUpdate() {
   console.log('[AutoUpdater] Cài đặt bản cập nhật và khởi động lại...')
-  autoUpdater.quitAndInstall()
+  autoUpdater.quitAndInstall(true, true)
 }
 
 function sendUpdateEvent(type: string, message: string, data?: any) {
