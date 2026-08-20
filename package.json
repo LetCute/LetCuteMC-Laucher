@@ -96,7 +96,7 @@
       "main": "dist-electron/main/main.js"
     },
     "win": {
-      "icon": "public/logo.ico",
+      "icon": "public/logo_256.png",
       "target": [
         {
           "target": "nsis",
