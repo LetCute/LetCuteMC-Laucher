@@ -94,9 +94,6 @@ export function AboutScreen() {
             </CardContent>
           </Card>
         </div>
-
-
-
       </div>
     </div >
   )
