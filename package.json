@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.0.414",
+  "version": "1.0.415",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -84,14 +84,7 @@
       "dist-electron/**",
       "package.json"
     ],
-    "asarUnpack": [
-      "dist-electron/main/**/*",
-      "node_modules/@xmcl/**/*",
-      "node_modules/yauzl/**/*",
-      "node_modules/fd-slicer/**/*",
-      "node_modules/pend/**/*",
-      "node_modules/buffer-crc32/**/*"
-    ],
+    "asarUnpack": [],
     "extraMetadata": {
       "main": "dist-electron/main/main.js"
     },

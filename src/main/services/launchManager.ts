@@ -9,7 +9,7 @@
 import { BrowserWindow } from 'electron'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import { Worker } from 'node:worker_threads'
+import { utilityProcess, type UtilityProcess } from 'electron'
 import { createRequire } from 'node:module'
 import {
   CancelLaunchResult,
@@ -31,7 +31,7 @@ const FLUSH_INTERVAL_MS = 150
 
 // ─── Module-level state ───────────────────────────────────────────────────────
 
-let currentWorker: Worker | null = null
+let currentWorker: UtilityProcess | null = null
 let currentState: LaunchJobState = createIdleState()
 let eventQueue: LauncherEvent[] = []
 let flushTimer: ReturnType<typeof setTimeout> | null = null
@@ -107,14 +107,8 @@ function createIdleState(): LaunchJobState {
 }
 
 function resolveWorkerPath(fileName: string): string {
-  // Workers must load from asar.unpacked in packaged builds
-  let p = path.join(__dirname, '../workers', fileName)
-  if (p.includes(`${path.sep}app.asar${path.sep}`) || p.includes('/app.asar/')) {
-    p = p
-      .replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`)
-      .replace('/app.asar/', '/app.asar.unpacked/')
-  }
-  return p
+  // UtilityProcess supports asar natively
+  return path.join(__dirname, '../workers', fileName)
 }
 
 function getWorkerPath(): string {
@@ -260,9 +254,9 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
 
       if (activeJobId) {
         if (msg.ok) {
-           taskManagerService.completeTask(activeJobId, 'Hoàn tất khởi động')
+          taskManagerService.completeTask(activeJobId, 'Hoàn tất khởi động')
         } else {
-           taskManagerService.failTask(activeJobId, msg.message)
+          taskManagerService.failTask(activeJobId, msg.message)
         }
         activeJobId = null
       }
@@ -271,7 +265,7 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       showLauncherAfterGame()
 
       // Don't terminate here if game is 'running' — 'close' event already fired from worker
-      currentWorker?.terminate().catch(() => {/* ignore */ })
+      currentWorker?.kill()
       currentWorker = null
       break
     }
@@ -329,7 +323,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Terminate stale worker if any
   if (currentWorker) {
     console.log('[LaunchManager] Terminating stale worker')
-    await currentWorker.terminate().catch(() => {/* ignore */ })
+    currentWorker.kill()
     currentWorker = null
   }
 
@@ -395,21 +389,21 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Assert dependencies exist
   assertLaunchWorkerDependencies()
 
-  currentWorker = new Worker(workerPath)
+  currentWorker = utilityProcess.fork(workerPath)
 
-  currentWorker.on('message', (msg: WorkerOutputMessage) => {
-    handleWorkerMessage(msg)
+  currentWorker.on('message', (e: any) => {
+    handleWorkerMessage(e as WorkerOutputMessage)
   })
 
   currentWorker.on('error', (err) => {
     currentState.status = 'failed'
-    currentState.error = err.message
+    currentState.error = err
     currentState.endedAt = now()
     if (activeJobId) {
-      taskManagerService.failTask(activeJobId, err.message)
+      taskManagerService.failTask(activeJobId, err)
       activeJobId = null
     }
-    void writeErrorLog('launchManager:worker', err, { jobId, status: currentState.status })
+    void writeErrorLog('launchManager:worker', new Error(err), { jobId, status: currentState.status })
     enqueueEvent({ type: 'finished', jobId, state: getLaunchState() })
     currentWorker = null
   })
@@ -481,7 +475,7 @@ export async function cancelLaunchJob(): Promise<CancelLaunchResult> {
 
   enqueueEvent({ type: 'state', state: getLaunchState() })
 
-  await currentWorker.terminate().catch(() => {/* ignore */ })
+  currentWorker.kill()
   currentWorker = null
 
   return { ok: true, message: 'Launch job đã bị hủy.' }

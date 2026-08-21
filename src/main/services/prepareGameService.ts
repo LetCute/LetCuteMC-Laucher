@@ -1,7 +1,7 @@
 import { app, BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs/promises'
-import { Worker } from 'node:worker_threads'
+import { utilityProcess, type UtilityProcess } from 'electron'
 import type {
   LauncherProfile,
   LauncherSettings,
@@ -12,7 +12,7 @@ import type {
 import { writeErrorLog } from './errorLogService'
 import { getPreparedProfilesCachePath } from './storageService.js'
 
-let currentWorker: Worker | null = null
+let currentWorker: UtilityProcess | null = null
 let activeProfileId: string | null = null
 
 async function pathExists(p: string): Promise<boolean> {
@@ -30,25 +30,8 @@ function getCachePath(): string {
 
 /** Resolve prepareWorker path for both dev and packaged builds. */
 function resolvePrepareWorkerPath(): string {
-  // Prefer relative path next to this service (works in dev + asar)
-  let workerPath = path.join(__dirname, '../workers/prepareWorker.js')
-  // Worker threads cannot execute from inside app.asar — use unpacked twin
-  if (workerPath.includes(`${path.sep}app.asar${path.sep}`) || workerPath.includes('/app.asar/')) {
-    workerPath = workerPath.replace(`${path.sep}app.asar${path.sep}`, `${path.sep}app.asar.unpacked${path.sep}`)
-      .replace('/app.asar/', '/app.asar.unpacked/')
-  }
-  // Fallback for unusual pack layouts
-  if (app.isPackaged && !workerPath.includes('app.asar.unpacked')) {
-    workerPath = path.join(
-      process.resourcesPath,
-      'app.asar.unpacked',
-      'dist-electron',
-      'main',
-      'workers',
-      'prepareWorker.js'
-    )
-  }
-  return workerPath
+  // UtilityProcess can execute directly from app.asar!
+  return path.join(__dirname, '../workers/prepareWorker.js')
 }
 
 function getMainWindow(): BrowserWindow | null {
@@ -167,14 +150,14 @@ export async function prepareGameFiles(
     }
     // Cancel old active worker
     console.log('[PrepareService] Terminating old prepare worker')
-    await currentWorker.terminate().catch(() => { })
+    currentWorker.kill()
     currentWorker = null
   }
 
   activeProfileId = profile.id
   const workerPath = resolvePrepareWorkerPath()
   console.log('[PrepareService] Spawning prepareWorker at', workerPath)
-  currentWorker = new Worker(workerPath)
+  currentWorker = utilityProcess.fork(workerPath)
 
   currentWorker.on('message', (msg: any) => {
     const win = getMainWindow()
@@ -204,7 +187,7 @@ export async function prepareGameFiles(
 
   currentWorker.on('error', (err) => {
     console.error('[Prepare Service] Worker error:', err)
-    void writeErrorLog('prepareService:worker', err, { activeProfileId })
+    void writeErrorLog('prepareService:worker', new Error(err), { activeProfileId })
     currentWorker = null
     activeProfileId = null
   })
@@ -226,7 +209,7 @@ export async function prepareGameFiles(
 
 export async function cancelPrepareGame(): Promise<boolean> {
   if (currentWorker) {
-    await currentWorker.terminate().catch(() => { })
+    currentWorker.kill()
     currentWorker = null
     activeProfileId = null
     return true

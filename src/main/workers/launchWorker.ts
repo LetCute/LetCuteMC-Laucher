@@ -4,7 +4,7 @@
  * Process and UI Renderer are never blocked by the heavy launch I/O.
  */
 
-import { parentPort } from 'node:worker_threads'
+
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
@@ -24,8 +24,9 @@ import { selectBestJavaRuntime } from '../services/javaScannerService'
 import { getSettings } from '../services/settingsService'
 import { writeErrorLog } from '../services/errorLogService'
 
+const parentPort = process.parentPort
 if (!parentPort) {
-  throw new Error('launchWorker must run inside a worker thread.')
+  throw new Error('launchWorker must run inside a utilityProcess.')
 }
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -459,7 +460,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
 // ─── Message handler ──────────────────────────────────────────────────────────
 
-parentPort.on('message', (message: WorkerInputMessage) => {
+parentPort.on('message', (e: any) => {
+  const message = e.data as WorkerInputMessage
   if (message.type === 'cancel') {
     if (message.jobId === activeJobId) {
       isCancelled = true

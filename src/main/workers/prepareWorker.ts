@@ -7,7 +7,7 @@ import type {
 } from '../../shared/types'
 import { downloadTasks, DownloadTask } from '../services/download-manager'
 
-import { parentPort } from 'node:worker_threads'
+
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
@@ -98,8 +98,9 @@ async function downloadAssetsConcurrently(
   await Promise.all(workers)
 }
 
+const parentPort = process.parentPort
 if (!parentPort) {
-  throw new Error('prepareWorker must run inside a worker thread.')
+  throw new Error('prepareWorker must run inside a utilityProcess.')
 }
 
 async function pathExists(p: string): Promise<boolean> {
@@ -511,8 +512,8 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
   }
 }
 
-// Lắng nghe tín hiệu từ main thread
-parentPort.on('message', (message: any) => {
+parentPort.on('message', (e: any) => {
+  const message = e.data
   if (message.type === 'start') {
     void startPrepare(message.profile, message.settings, message.forceRepair)
   }
