@@ -229,6 +229,9 @@ export interface AccountItem {
   username: string
   uuid: string
   avatarUrl?: string
+  skinUrl?: string
+  capeUrl?: string
+  skinModel?: string
   accessToken?: string
   refreshToken?: string
   expiresAt?: string

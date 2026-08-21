@@ -99,18 +99,14 @@ export function Sidebar({
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
 
   // Read custom skin from localStorage (shared with AccountsScreen)
-  const getAccountAvatar = (accId: string, accType: string, accUsername: string): { url: string, isFullSkin: boolean } => {
-    try {
-      const saved = localStorage.getItem('letcutemc_skinMap')
-      if (saved) {
-        const skinMap = JSON.parse(saved)
-        if (skinMap[accId]?.url) return { url: skinMap[accId].url, isFullSkin: true }
-      }
-    } catch { /* ignore */ }
+  const getAccountAvatar = (account: any): { url: string, isFullSkin: boolean } => {
+    if (account.skinUrl) {
+      return { url: account.skinUrl, isFullSkin: true }
+    }
     // Fallback: Microsoft uses minotar, local uses steve
     return {
-      url: accType === 'microsoft'
-        ? `https://minotar.net/helm/${accUsername}/64.png`
+      url: account.type === 'microsoft'
+        ? `https://minotar.net/helm/${account.username}/64.png`
         : './assets/steve.png',
       isFullSkin: false
     }
@@ -291,7 +287,7 @@ export function Sidebar({
                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
                   {(() => {
                     const avatarData = activeAccount
-                      ? getAccountAvatar(activeAccount.id, activeAccount.type, activeAccount.username)
+                      ? getAccountAvatar(activeAccount)
                       : { url: './assets/steve.png', isFullSkin: false }
 
                     if (avatarData.isFullSkin) {
@@ -348,7 +344,7 @@ export function Sidebar({
                       className="cursor-pointer"
                     >
                       {(() => {
-                        const avatarData = getAccountAvatar(acc.id, acc.type, acc.username)
+                        const avatarData = getAccountAvatar(acc)
                         if (avatarData.isFullSkin) {
                           return <SkinHead skinUrl={avatarData.url} size={20} className="h-5 w-5 rounded-sm mr-2 object-cover border border-border" />
                         }

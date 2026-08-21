@@ -312,6 +312,10 @@ const launcherApi = {
     return ipcRenderer.invoke('account:rename-locally', accountId, newName)
   },
 
+  saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState> {
+    return ipcRenderer.invoke('account:save-local-skin', accountId, skinUrl, skinModel, capeUrl)
+  },
+
   saveMicrosoftAccount(account: any): Promise<AccountState> {
     return ipcRenderer.invoke('account:save-microsoft', account)
   },

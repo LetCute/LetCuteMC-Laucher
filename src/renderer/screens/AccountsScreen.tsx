@@ -77,37 +77,6 @@ export const AccountsScreen = ({
   const skinInputRef = useRef<HTMLInputElement>(null)
   const capeInputRef = useRef<HTMLInputElement>(null)
 
-  // Persist skin and cape data in localStorage
-  const [skinMap, setSkinMap] = useState<Record<string, SkinData>>(() => {
-    try {
-      const saved = localStorage.getItem('letcutemc_skinMap')
-      return saved ? JSON.parse(saved) : {}
-    } catch { return {} }
-  })
-  const [modelMap, setModelMap] = useState<Record<string, SkinModel>>(() => {
-    try {
-      const saved = localStorage.getItem('letcutemc_modelMap')
-      return saved ? JSON.parse(saved) : {}
-    } catch { return {} }
-  })
-  const [capeMap, setCapeMap] = useState<Record<string, string>>(() => {
-    try {
-      const saved = localStorage.getItem('letcutemc_capeMap')
-      return saved ? JSON.parse(saved) : {}
-    } catch { return {} }
-  })
-
-  // Save to localStorage when they change
-  useEffect(() => {
-    localStorage.setItem('letcutemc_skinMap', JSON.stringify(skinMap))
-  }, [skinMap])
-  useEffect(() => {
-    localStorage.setItem('letcutemc_modelMap', JSON.stringify(modelMap))
-  }, [modelMap])
-  useEffect(() => {
-    localStorage.setItem('letcutemc_capeMap', JSON.stringify(capeMap))
-  }, [capeMap])
-
   // Skin change modal state
   const [showSkinModal, setShowSkinModal] = useState(false)
   const [skinModalTargetId, setSkinModalTargetId] = useState<string | null>(null)
@@ -247,8 +216,6 @@ export const AccountsScreen = ({
           const base64Skin = await window.launcherApi.fetchMojangTexture(activeSkin.url)
           setPendingSkinFile(base64Skin || activeSkin.url)
           setPendingSkinModel(activeSkin.variant === 'SLIM' ? 'slim' : 'default')
-          setSkinMap(prev => ({ ...prev, [accountId]: { url: base64Skin || activeSkin.url, model: activeSkin.variant === 'SLIM' ? 'slim' : 'default' } }))
-          setModelMap(prev => ({ ...prev, [accountId]: activeSkin.variant === 'SLIM' ? 'slim' : 'default' }))
         } else {
           setPendingSkinFile(null)
           setPendingSkinModel('default')
@@ -257,28 +224,27 @@ export const AccountsScreen = ({
         // Find active cape
         const activeCape = profile.capes?.find((c: any) => c.state === 'ACTIVE')
         if (activeCape) {
-          setPendingCapeId(activeCape.id)
           const base64Cape = await window.launcherApi.fetchMojangTexture(activeCape.url)
           setPendingCapeFile(base64Cape || activeCape.url)
-          setCapeMap(prev => ({ ...prev, [accountId]: base64Cape || activeCape.url }))
+          setPendingCapeId(activeCape.id)
         } else {
-          setPendingCapeId('')
           setPendingCapeFile(null)
-          setCapeMap(prev => { const nm = { ...prev }; delete nm[accountId]; return nm })
         }
-      } catch (err) {
-        showToast('error', 'Không thể lấy thông tin từ Mojang.')
-        setPendingSkinFile(skinMap[accountId]?.url || null)
-        setPendingSkinModel(modelMap[accountId] || 'default')
-        setPendingCapeFile(capeMap[accountId] || null)
+      } catch (err: any) {
+        showToast('error', `Lỗi tải thông tin Mojang: ${err.message}`)
+        const acc = accountState.accounts.find(a => a.id === accountId)
+        setPendingSkinFile(acc?.skinUrl || null)
+        setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
+        setPendingCapeFile(acc?.capeUrl || null)
       } finally {
         setIsFetchingMojang(false)
       }
     } else {
       setRenameAllowed(true)
-      setPendingSkinModel(modelMap[accountId] || 'default')
-      setPendingSkinFile(skinMap[accountId]?.url || null)
-      setPendingCapeFile(capeMap[accountId] || null)
+      const acc = accountState.accounts.find(a => a.id === accountId)
+      setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
+      setPendingSkinFile(acc?.skinUrl || null)
+      setPendingCapeFile(acc?.capeUrl || null)
     }
   }
 
@@ -543,18 +509,8 @@ export const AccountsScreen = ({
 
         if (profileChanged) {
           showToast('success', 'Đã cập nhật Skin/Cape trên Mojang!')
-          const profile = await window.launcherApi.getMojangProfile(acc.accessToken)
-          const activeSkin = profile.skins?.find((s: any) => s.state === 'ACTIVE')
-          if (activeSkin) {
-            setSkinMap(prev => ({ ...prev, [skinModalTargetId]: { url: activeSkin.url, model: activeSkin.variant === 'SLIM' ? 'slim' : 'default' } }))
-            setModelMap(prev => ({ ...prev, [skinModalTargetId]: activeSkin.variant === 'SLIM' ? 'slim' : 'default' }))
-          }
-          const activeCape = profile.capes?.find((c: any) => c.state === 'ACTIVE')
-          if (activeCape) {
-            setCapeMap(prev => ({ ...prev, [skinModalTargetId]: activeCape.url }))
-          } else {
-            setCapeMap(prev => { const nm = { ...prev }; delete nm[skinModalTargetId]; return nm })
-          }
+          // Re-fetch profile to refresh
+          await window.launcherApi.getMojangProfile(acc.accessToken)
         }
         closeSkinModal()
       } catch (err) {
@@ -563,20 +519,11 @@ export const AccountsScreen = ({
         setIsSavingMojang(false)
       }
     } else {
-      if (pendingSkinFile) {
-        setSkinMap(prev => ({
-          ...prev,
-          [skinModalTargetId]: { url: pendingSkinFile, model: pendingSkinModel },
-        }))
-        setModelMap(prev => ({
-          ...prev,
-          [skinModalTargetId]: pendingSkinModel,
-        }))
-      }
-      if (pendingCapeFile) {
-        setCapeMap(prev => ({ ...prev, [skinModalTargetId]: pendingCapeFile }))
-      } else {
-        setCapeMap(prev => { const nm = { ...prev }; delete nm[skinModalTargetId]; return nm })
+      try {
+        const updated = await window.launcherApi.saveLocalSkin(skinModalTargetId, pendingSkinFile, pendingSkinModel, pendingCapeFile)
+        onAccountStateChange(updated)
+      } catch (e: any) {
+        showToast('error', `Lỗi khi lưu skin local: ${e.message}`)
       }
       showToast('success', 'Đã cập nhật ngoại hình Local!')
       closeSkinModal()
@@ -615,9 +562,9 @@ export const AccountsScreen = ({
             {accounts.map(acc => {
               const isActive = acc.id === accountState?.activeAccountId
               const isLocal = acc.type === 'local'
-              const skinData = skinMap[acc.id]
-              const capeData = capeMap[acc.id]
-              const accModel = modelMap[acc.id] || 'default'
+              const skinData = { url: acc.skinUrl || '', model: (acc.skinModel as SkinModel) || 'default' }
+              const capeData = acc.capeUrl || ''
+              const accModel = (acc.skinModel as SkinModel) || 'default'
 
               return (
                 <div

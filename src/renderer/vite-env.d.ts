@@ -123,6 +123,7 @@ declare global {
       addLocalAccount(username: string): Promise<AccountState>
       removeAccount(accountId: string): Promise<AccountState>
       renameAccountLocally(accountId: string, newName: string): Promise<AccountState>
+      saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState>
       saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState>
       loginMicrosoft(): Promise<MicrosoftAccount>
       refreshMicrosoftAccount(accountId?: string): Promise<AccountState>

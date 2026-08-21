@@ -444,6 +444,10 @@ export function registerIpcHandlers(): void {
   handleIpc('account:select', (accountId: string) => selectAccount(accountId))
   handleIpc('account:add-local', (username: string) => addLocalAccount(username))
   handleIpc('account:rename-locally', (accountId: string, newName: string) => renameAccountLocally(accountId, newName))
+  handleIpc('account:save-local-skin', async (accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null) => {
+    const { saveLocalSkin } = await import('./services/accountService')
+    return saveLocalSkin(accountId, skinUrl, skinModel, capeUrl)
+  })
   handleIpc('account:remove', (accountId: string) => removeAccount(accountId))
   handleIpc('account:save-microsoft', (account: any) => saveMicrosoftAccount(account))
   handleIpc('account:login-microsoft', async () => {

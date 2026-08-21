@@ -200,6 +200,25 @@ export async function renameAccountLocally(accountId: string, newName: string): 
   return state
 }
 
+export async function saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState> {
+  const state = await getAccountState()
+  
+  const accIndex = state.accounts.findIndex(a => a.id === accountId)
+  if (accIndex === -1) {
+    throw new Error('Không tìm thấy tài khoản để lưu skin.')
+  }
+
+  const acc = state.accounts[accIndex]
+  if (skinUrl !== undefined) acc.skinUrl = skinUrl || undefined
+  if (skinModel !== undefined) acc.skinModel = skinModel || undefined
+  if (capeUrl !== undefined) acc.capeUrl = capeUrl || undefined
+  
+  acc.updatedAt = new Date().toISOString()
+
+  await saveAccountState(state)
+  return state
+}
+
 export async function selectAccount(
   accountId: string
 ): Promise<AccountState> {
