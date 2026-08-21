@@ -79,7 +79,12 @@ export function AboutScreen() {
                   </div>
                 </div>
                 <div className="flex gap-1.5">
-                  <Button variant="outline" size="sm" className="h-6.5 px-2 gap-1 text-[10px]">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="h-6.5 px-2 gap-1 text-[10px]"
+                    onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
+                  >
                     <HelpCircle className="h-3 w-3" />
                     Báo lỗi
                   </Button>

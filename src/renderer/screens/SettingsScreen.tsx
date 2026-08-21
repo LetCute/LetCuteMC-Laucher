@@ -171,7 +171,7 @@ export const SettingsScreen = ({
 
       <div className="space-y-4">
 
-        <Card>
+        <Card className=''>
           <CardHeader className="flex flex-row items-center justify-between gap-3">
             <CardTitle>Java Runtime</CardTitle>
             <Button

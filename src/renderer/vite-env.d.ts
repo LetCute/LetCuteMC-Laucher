@@ -97,6 +97,7 @@ declare global {
       importGameContent(input: ImportGameContentInput): Promise<GameContentItem>
       openContentFolder(gameDir: string, type: GameContentType): Promise<boolean>
 
+      openExternal(url: string): Promise<void>
       minimizeWindow(): Promise<void>
       closeWindow(): Promise<void>
       maximizeWindow(): Promise<void>

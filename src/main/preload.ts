@@ -189,6 +189,7 @@ const launcherApi = {
     return ipcRenderer.invoke('content:open-folder', gameDir, type)
   },
 
+  openExternal(url: string): Promise<void> { return ipcRenderer.invoke('window:open-external', url) },
   minimizeWindow(): Promise<void> { return ipcRenderer.invoke('window:minimize') },
   closeWindow(): Promise<void> { return ipcRenderer.invoke('window:close') },
   maximizeWindow(): Promise<void> { return ipcRenderer.invoke('window:maximize') },

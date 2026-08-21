@@ -290,6 +290,7 @@ export function registerIpcHandlers(): void {
   handleIpc('content:enable', async (_gameDir: string, itemPath: string) => enableGameContent(itemPath))
 
   // Window controls (frameless)
+  handleIpc('window:open-external', async (url: string) => { await shell.openExternal(url) })
   handleIpc('window:minimize', () => { BrowserWindow.getAllWindows()[0]?.minimize() })
   handleIpc('window:close', () => { BrowserWindow.getAllWindows()[0]?.close() })
   handleIpc('window:maximize', () => {
