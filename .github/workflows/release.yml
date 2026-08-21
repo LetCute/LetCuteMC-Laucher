@@ -15,7 +15,7 @@ jobs:
   build:
     strategy:
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
+        os: [windows-latest, ubuntu-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -54,14 +54,7 @@ jobs:
             release/*.deb
             release/*.yml
 
-      - name: Upload Mac Artifacts
-        uses: actions/upload-artifact@v4
-        if: matrix.os == 'macos-latest'
-        with:
-          name: mac-artifacts
-          path: |
-            release/*.dmg
-            release/*.yml
+
 
   publish-release:
     needs: build
