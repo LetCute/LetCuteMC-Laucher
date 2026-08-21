@@ -31,8 +31,8 @@ function createWindow(): void {
     : path.join(__dirname, 'logo.png')
 
   mainWindow = new BrowserWindow({
-    width: 1100,
-    height: 700,
+    width: 1024,
+    height: 720,
     resizable: false,
     maximizable: false,
     title: 'LetCuteMC',
