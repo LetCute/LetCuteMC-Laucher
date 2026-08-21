@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.0.416",
+  "version": "1.0.417",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -107,16 +107,6 @@
       "createStartMenuShortcut": true,
       "shortcutName": "LetCuteMC",
       "deleteAppDataOnUninstall": false
-    },
-    "mac": {
-      "icon": "public/logo.png",
-      "target": [
-        {
-          "target": "dmg",
-          "arch": ["universal"]
-        }
-      ],
-      "artifactName": "${productName}-${version}-mac-universal.${ext}"
     },
     "linux": {
       "icon": "build/icon.png",
