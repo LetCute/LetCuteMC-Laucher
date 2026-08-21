@@ -4,8 +4,8 @@ import { SkinViewer, IdleAnimation } from 'skinview3d'
 export type SkinModel = 'default' | 'slim'
 
 /** Local default skins bundled in public/skins/ */
-const DEFAULT_STEVE = '/skins/steve.png'
-const DEFAULT_ALEX = '/skins/alex.png'
+const DEFAULT_STEVE = './skins/steve.png'
+const DEFAULT_ALEX = './skins/alex.png'
 
 interface SkinViewer3DProps {
   /** URL or data-URL of the skin PNG */
