@@ -183,7 +183,7 @@ export async function addLocalAccount(
 
 export async function renameAccountLocally(accountId: string, newName: string): Promise<AccountState> {
   const state = await getAccountState()
-  
+
   const accIndex = state.accounts.findIndex(a => a.id === accountId)
   if (accIndex === -1) {
     throw new Error('Không tìm thấy tài khoản để đổi tên.')
@@ -191,18 +191,18 @@ export async function renameAccountLocally(accountId: string, newName: string): 
 
   // Update username
   state.accounts[accIndex].username = newName
-  
+
   // Note: For local accounts, we don't change the ID (it stays local_oldname) 
   // because changing the ID would break activeAccountId and local caches.
   // It's perfectly fine to just change the display username.
-  
+
   await saveAccountState(state)
   return state
 }
 
 export async function saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState> {
   const state = await getAccountState()
-  
+
   const accIndex = state.accounts.findIndex(a => a.id === accountId)
   if (accIndex === -1) {
     throw new Error('Không tìm thấy tài khoản để lưu skin.')
@@ -212,7 +212,7 @@ export async function saveLocalSkin(accountId: string, skinUrl: string | null, s
   if (skinUrl !== undefined) acc.skinUrl = skinUrl || undefined
   if (skinModel !== undefined) acc.skinModel = skinModel || undefined
   if (capeUrl !== undefined) acc.capeUrl = capeUrl || undefined
-  
+
   acc.updatedAt = new Date().toISOString()
 
   await saveAccountState(state)
