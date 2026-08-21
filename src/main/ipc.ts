@@ -40,6 +40,11 @@ import {
   getModMetadata,
 } from './services/gameContentService'
 import {
+  inspectModDependencies,
+  autoFixModDependencies,
+} from './services/modDependencyService'
+
+import {
   launchMinecraft as coreLaunch
 } from './services/minecraftService'
 import {
@@ -288,6 +293,9 @@ export function registerIpcHandlers(): void {
   handleIpc('content:scan-shaderpacks', async (gameDir: string) => (await scanShaderPacks(gameDir)))
   handleIpc('content:get-mod-metadata', async (_gameDir: string, jarPath: string) => getModMetadata(jarPath))
   handleIpc('content:enable', async (_gameDir: string, itemPath: string) => enableGameContent(itemPath))
+  handleIpc('mods:inspect-dependencies', async (gameDir: string, mcVersion: string, loader?: string) => inspectModDependencies(gameDir, mcVersion, loader))
+  handleIpc('mods:auto-fix-dependencies', async (gameDir: string, mcVersion: string, loader?: string) => autoFixModDependencies(gameDir, mcVersion, loader))
+
 
   // Window controls (frameless)
   handleIpc('window:open-external', async (url: string) => { await shell.openExternal(url) })

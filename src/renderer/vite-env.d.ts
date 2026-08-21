@@ -32,7 +32,10 @@ import type {
   PreparedProfileState,
   PrepareGameProgress,
   ModLoaderVersion,
+  ModDependencyScanResult,
+  AutoFixDependenciesResult,
 } from '../shared/types'
+
 
 declare global {
   interface Window {
@@ -96,6 +99,9 @@ declare global {
       deleteGameContent(gameDir: string, itemPath: string): Promise<boolean>
       importGameContent(input: ImportGameContentInput): Promise<GameContentItem>
       openContentFolder(gameDir: string, type: GameContentType): Promise<boolean>
+      inspectModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<ModDependencyScanResult>
+      autoFixModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<AutoFixDependenciesResult>
+
 
       openExternal(url: string): Promise<void>
       minimizeWindow(): Promise<void>

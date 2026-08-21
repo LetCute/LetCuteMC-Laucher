@@ -28,6 +28,8 @@ import type {
   PrepareGameResult,
   PreparedProfileState,
   PrepareGameProgress,
+  ModDependencyScanResult,
+  AutoFixDependenciesResult,
 } from '@/shared/types'
 
 function getApi() {
@@ -159,6 +161,15 @@ export const launcherClient = {
   openContentFolder(gameDir: string, type: GameContentType): Promise<boolean> {
     return getApi().openContentFolder(gameDir, type)
   },
+
+  inspectModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<ModDependencyScanResult> {
+    return getApi().inspectModDependencies(gameDir, mcVersion, loader)
+  },
+
+  autoFixModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<AutoFixDependenciesResult> {
+    return getApi().autoFixModDependencies(gameDir, mcVersion, loader)
+  },
+
 
   minimizeWindow(): Promise<void> { return getApi().minimizeWindow() },
   closeWindow(): Promise<void> { return getApi().closeWindow() },

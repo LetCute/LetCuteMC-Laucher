@@ -461,7 +461,11 @@ function MainApp() {
                     {/* Keep mounted after first open — avoid re-scan every tab switch */}
                     {(activeTab === 'mods' || contentVisited.mods) && (
                       <div className={activeTab === 'mods' ? 'h-full' : 'hidden'}>
-                        <ModsScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
+                        <ModsScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profileName={activeProfile?.name}
+                          minecraftVersion={activeProfile?.minecraftVersion}
+                        />
                       </div>
                     )}
 

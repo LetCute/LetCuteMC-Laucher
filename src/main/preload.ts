@@ -30,6 +30,8 @@ import type {
   PrepareGameResult,
   PreparedProfileState,
   PrepareGameProgress,
+  ModDependencyScanResult,
+  AutoFixDependenciesResult,
 } from '../shared/types'
 
 const launcherApi = {
@@ -162,6 +164,13 @@ const launcherApi = {
   getModMetadata(jarPath: string): Promise<import('../shared/types').GameContentMetadata> {
     return ipcRenderer.invoke('content:get-mod-metadata', '', jarPath)
   },
+  inspectModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<ModDependencyScanResult> {
+    return ipcRenderer.invoke('mods:inspect-dependencies', gameDir, mcVersion, loader)
+  },
+  autoFixModDependencies(gameDir: string, mcVersion: string, loader?: string): Promise<AutoFixDependenciesResult> {
+    return ipcRenderer.invoke('mods:auto-fix-dependencies', gameDir, mcVersion, loader)
+  },
+
 
   enableGameContent(
     gameDir: string,

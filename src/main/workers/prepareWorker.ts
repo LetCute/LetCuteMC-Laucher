@@ -16,6 +16,8 @@ import { getCachedVersionManifest } from '../services/versionManifestCacheServic
 import { selectBestJavaRuntime, extractMinecraftVersion, resolveRequiredJavaMajor } from '../services/javaScannerService'
 import { autoInstallJava, getDefaultJavaInstallDir } from '../services/javaInstallerService'
 import { writeErrorLog } from '../services/errorLogService'
+import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/modDependencyService'
+
 
 async function checkFileHash(filePath: string, expectedHash: string): Promise<boolean> {
   try {
@@ -425,6 +427,60 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
       }
     }
 
+    // ── Bước kiểm tra và tự động tải mod phụ thuộc (Mod Dependency Auto-Fixer) ──
+    const modsFolder = path.join(gameDir, 'mods')
+    const loaderType = detectLoaderFromVersion(version)
+    const hasModsFolder = await pathExists(modsFolder)
+
+    if (loaderType !== 'unknown' || hasModsFolder) {
+      postLog('info', `[ModInspector] Đang quét kiểm tra các mod phụ thuộc trong ${modsFolder}...`)
+      postProgress(profileId, version, {
+        status: 'checking',
+        title: 'Kiểm tra Mod',
+        message: 'Đang kiểm tra tính toàn vẹn của các mod phụ thuộc...',
+        percent: 94,
+      })
+
+      try {
+        const scanResult = await inspectModDependencies(gameDir, version, loaderType)
+        if (scanResult.missingDependencies.length > 0) {
+          postLog('warn', `[ModInspector] Phát hiện ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu: ${scanResult.missingDependencies.map(d => d.modId).join(', ')}`)
+          postProgress(profileId, version, {
+            status: 'downloading',
+            title: 'Tự động tải Mod thiếu',
+            message: `Đang tự động tải ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu...`,
+            percent: 95,
+          })
+
+          const fixResult = await autoFixModDependencies(
+            gameDir,
+            version,
+            loaderType,
+            (msg) => {
+              postLog('info', `[ModInspector] ${msg}`)
+              postProgress(profileId, version, {
+                status: 'downloading',
+                title: 'Tải Mod phụ thuộc',
+                message: msg,
+                percent: 96,
+              })
+            }
+          )
+
+          if (fixResult.downloadedMods.length > 0) {
+            postLog('success', `[ModInspector] ${fixResult.message}`)
+          }
+          if (fixResult.unresolvedMods.length > 0) {
+            postLog('warn', `[ModInspector] Không thể tự động tải các mod sau từ Modrinth: ${fixResult.unresolvedMods.join(', ')}`)
+          }
+        } else {
+          postLog('info', `[ModInspector] Tất cả ${scanResult.totalMods} mod và phụ thuộc đều đầy đủ và hợp lệ.`)
+        }
+      } catch (modErr) {
+        postLog('warn', `[ModInspector] Lỗi khi kiểm tra mod dependencies: ${modErr instanceof Error ? modErr.message : String(modErr)}`)
+      }
+    }
+
     // Log detailed summary
     postLog('info', `[PrepareWorker] HOÀN TẤT CHUẨN BỊ GAME:`)
     postLog('info', ` - Phiên bản game con (child version): ${version}`)
@@ -432,6 +488,7 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
     postLog('info', ` - Resolved Client Jar: ${clientJarPath}`)
     postLog('info', ` - Asset Index ID: ${resolvedVersion.assetIndex?.id || 'None'}`)
     postLog('info', ` - Tổng số thư viện (libraries): ${resolvedVersion.libraries?.length || 0}`)
+
 
     // Check Java Selection status
     let javaSelection = await selectBestJavaRuntime(version, settings.customJavaScanDirs, {

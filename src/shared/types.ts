@@ -725,3 +725,58 @@ export interface MojangProfile {
   skins: MojangSkin[]
   capes: MojangCape[]
 }
+
+// ─── Mod Dependency Inspector & Auto-Fixer Types ─────────────────────────────
+
+export interface ModDependencyInfo {
+  modId: string
+  versionRange?: string
+  optional?: boolean
+}
+
+export interface ScannedModInfo {
+  fileName: string
+  filePath: string
+  loader: 'fabric' | 'quilt' | 'forge' | 'neoforge' | 'unknown'
+  modId: string
+  name: string
+  version: string
+  provides: string[]
+  dependencies: ModDependencyInfo[]
+}
+
+export interface MissingModDependency {
+  modId: string
+  requiredBy: string
+  requiredByFileName: string
+  versionRange?: string
+  optional?: boolean
+  resolvedProject?: {
+    id: string
+    slug: string
+    title: string
+    iconUrl?: string | null
+    description?: string
+    versionId: string
+    versionNumber: string
+    downloadUrl: string
+    fileName: string
+    fileSize: number
+  } | null
+}
+
+export interface ModDependencyScanResult {
+  totalMods: number
+  installedModIds: string[]
+  missingDependencies: MissingModDependency[]
+  hasIssues: boolean
+}
+
+export interface AutoFixDependenciesResult {
+  success: boolean
+  fixedCount: number
+  downloadedMods: Array<{ title: string; fileName: string }>
+  unresolvedMods: string[]
+  message: string
+}
+

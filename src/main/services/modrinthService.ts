@@ -6,8 +6,17 @@ import crypto from 'node:crypto'
 import type { ModrinthSearchResult, ModrinthVersion } from '../../shared/types'
 import { downloadTasks } from './download-manager'
 import { createProfile, updateProfile } from './profileService'
-import { installFabric, installQuilt } from './modLoaderService'
+import {
+  installFabric,
+  installQuilt,
+  installForge,
+  installNeoForge,
+  getForgeVersions,
+  getNeoForgeVersions,
+  getFabricVersions,
+} from './modLoaderService'
 import { ModrinthV2Client } from '@xmcl/modrinth'
+
 import { taskManagerService } from './taskManagerService.js'
 
 const client = new ModrinthV2Client()
@@ -71,7 +80,7 @@ export async function installModrinthModpack(versionId: string, profileName: str
         // Ignore icon fetch error
       }
       
-      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true, iconUrl)
+      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true, iconUrl, versionInfo.loaders)
     } catch (e: any) {
       taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
     }
@@ -95,7 +104,15 @@ export async function installLocalModrinthModpack(mrpackPath: string, profileNam
   return taskId
 }
 
-async function _installMrpack(mrpackPath: string, profileName: string, gameDataDir: string, taskId: string, cleanupZip: boolean, iconUrl?: string | null): Promise<string> {
+async function _installMrpack(
+  mrpackPath: string,
+  profileName: string,
+  gameDataDir: string,
+  taskId: string,
+  cleanupZip: boolean,
+  iconUrl?: string | null,
+  fallbackLoaders?: string[]
+): Promise<string> {
   // 3. Extract and parse modrinth.index.json
   taskManagerService.updateTaskProgress(taskId, 15, `Đang phân tích cấu trúc Modpack...`)
   const zip = new AdmZip(mrpackPath)
@@ -146,22 +163,75 @@ async function _installMrpack(mrpackPath: string, profileName: string, gameDataD
   
   // Install Modloader if needed
   let finalMinecraftVersion = minecraftVersion;
-  if (indexData.dependencies) {
-    if (indexData.dependencies['fabric-loader']) {
-      taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Fabric Loader ${indexData.dependencies['fabric-loader']}...`)
-      // Cài Fabric vào mcRootDir (thư mục .minecraft chính) để versions/ và libraries/ được tạo đúng chỗ
-      finalMinecraftVersion = await installFabric(minecraftVersion, indexData.dependencies['fabric-loader'], mcRootDir)
-      await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
-      taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Fabric thành công.')
-    } else if (indexData.dependencies['quilt-loader']) {
-      taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Quilt Loader ${indexData.dependencies['quilt-loader']}...`)
-      // Cài Quilt vào mcRootDir (thư mục .minecraft chính)
-      finalMinecraftVersion = await installQuilt(minecraftVersion, indexData.dependencies['quilt-loader'], mcRootDir)
-      await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
-      taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Quilt thành công.')
+  const deps = indexData.dependencies || {}
+
+  if (deps['fabric-loader'] || deps['fabric']) {
+    const loaderVer = deps['fabric-loader'] || deps['fabric']
+    taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Fabric Loader ${loaderVer}...`)
+    finalMinecraftVersion = await installFabric(minecraftVersion, loaderVer, mcRootDir)
+    await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+    taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Fabric thành công.')
+  } else if (deps['quilt-loader'] || deps['quilt']) {
+    const loaderVer = deps['quilt-loader'] || deps['quilt']
+    taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Quilt Loader ${loaderVer}...`)
+    finalMinecraftVersion = await installQuilt(minecraftVersion, loaderVer, mcRootDir)
+    await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+    taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Quilt thành công.')
+  } else if (deps['forge'] || deps['forge-loader']) {
+    const forgeVer = deps['forge'] || deps['forge-loader']
+    taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt Forge ${forgeVer}...`)
+    finalMinecraftVersion = await installForge(minecraftVersion, forgeVer, mcRootDir)
+    await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+    taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Forge thành công.')
+  } else if (deps['neoforge'] || deps['neoforge-loader']) {
+    const neoVer = deps['neoforge'] || deps['neoforge-loader']
+    taskManagerService.updateTaskProgress(taskId, 25, `Đang cài đặt NeoForge ${neoVer}...`)
+    finalMinecraftVersion = await installNeoForge(minecraftVersion, neoVer, mcRootDir)
+    await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+    taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt NeoForge thành công.')
+  } else if (fallbackLoaders && fallbackLoaders.length > 0) {
+    // Fallback if indexData.dependencies didn't specify loader version explicitly
+    if (fallbackLoaders.includes('forge')) {
+      taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt Forge cho ${minecraftVersion}...`)
+      try {
+        const forgeList = await getForgeVersions()
+        const forgeItem = forgeList.find(f => f.version.startsWith(minecraftVersion))
+        if (forgeItem) {
+          finalMinecraftVersion = await installForge(minecraftVersion, forgeItem.version, mcRootDir)
+          await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+          taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Forge thành công.')
+        }
+      } catch (err) {
+        console.error('Failed to fallback install Forge:', err)
+      }
+    } else if (fallbackLoaders.includes('neoforge')) {
+      taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt NeoForge cho ${minecraftVersion}...`)
+      try {
+        const neoList = await getNeoForgeVersions()
+        const neoItem = neoList[0]
+        if (neoItem) {
+          finalMinecraftVersion = await installNeoForge(minecraftVersion, neoItem.version, mcRootDir)
+          await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+          taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt NeoForge thành công.')
+        }
+      } catch (err) {
+        console.error('Failed to fallback install NeoForge:', err)
+      }
+    } else if (fallbackLoaders.includes('fabric')) {
+      taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt Fabric cho ${minecraftVersion}...`)
+      try {
+        const fabList = await getFabricVersions()
+        if (fabList.length > 0) {
+          finalMinecraftVersion = await installFabric(minecraftVersion, fabList[0].version, mcRootDir)
+          await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
+          taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Fabric thành công.')
+        }
+      } catch (err) {
+        console.error('Failed to fallback install Fabric:', err)
+      }
     }
-    // Note: Forge/NeoForge is not currently fully implemented in the launcher API for one-click install
   }
+
   
   // 6. Download mods to profileGameDir (thư mục mods/ nằm trong profile riêng)
   if (indexData.files && indexData.files.length > 0) {

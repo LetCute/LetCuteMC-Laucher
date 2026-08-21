@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { Box, Trash2, Power, PowerOff, RefreshCw, Search, Loader2 } from 'lucide-react'
-import type { GameContentItem, GameContentMetadata } from '../../shared/types'
+import { Box, Trash2, Power, PowerOff, RefreshCw, Search, Loader2, ShieldCheck, AlertCircle, CheckCircle2, Download, Sparkles } from 'lucide-react'
+import type { GameContentItem, GameContentMetadata, ModDependencyScanResult, AutoFixDependenciesResult } from '../../shared/types'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Input } from '../components/ui/Input'
@@ -8,15 +8,18 @@ import { launcherClient } from '../services/launcherClient'
 import { Button } from '../components/ui/button'
 import { DropZone } from '../components/ui/DropZone'
 import { useConfirm } from '../components/ui/ConfirmDialogContext'
+import { Modal } from '../components/ui/Modal'
 
 interface ModsScreenProps {
   gameDir: string
   profileName?: string
+  minecraftVersion?: string
 }
+
 
 const META_CONCURRENCY = 4
 
-export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
+export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScreenProps) => {
   const [mods, setMods] = useState<GameContentItem[]>([])
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<'all' | 'enabled' | 'disabled'>('all')
@@ -25,6 +28,46 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
   const [loadingMeta, setLoadingMeta] = useState<Set<string>>(new Set())
   const metaGen = useRef(0)
   const confirm = useConfirm()
+
+  // Dependency Inspector State
+  const [depModalOpen, setDepModalOpen] = useState(false)
+  const [isScanningDeps, setIsScanningDeps] = useState(false)
+  const [isFixingDeps, setIsFixingDeps] = useState(false)
+  const [depScanResult, setDepScanResult] = useState<ModDependencyScanResult | null>(null)
+  const [fixResult, setFixResult] = useState<AutoFixDependenciesResult | null>(null)
+
+  const handleOpenDepInspector = async () => {
+    if (!gameDir) return
+    setDepModalOpen(true)
+    setIsScanningDeps(true)
+    setFixResult(null)
+    try {
+      const res = await launcherClient.inspectModDependencies(gameDir, minecraftVersion || '1.20.1')
+      setDepScanResult(res)
+    } catch (e) {
+      console.error('Failed to inspect mod dependencies:', e)
+    } finally {
+      setIsScanningDeps(false)
+    }
+  }
+
+  const handleAutoFix = async () => {
+    if (!gameDir) return
+    setIsFixingDeps(true)
+    setFixResult(null)
+    try {
+      const res = await launcherClient.autoFixModDependencies(gameDir, minecraftVersion || '1.20.1')
+      setFixResult(res)
+      await fetchMods()
+      // Re-scan
+      const newScan = await launcherClient.inspectModDependencies(gameDir, minecraftVersion || '1.20.1')
+      setDepScanResult(newScan)
+    } catch (e) {
+      console.error('Failed to auto-fix mod dependencies:', e)
+    } finally {
+      setIsFixingDeps(false)
+    }
+  }
 
   const loadMetadataProgressive = (list: GameContentItem[]) => {
     const gen = ++metaGen.current
@@ -135,6 +178,7 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
     await fetchMods()
   }
 
+
   const filteredMods = mods.filter((mod) => {
     const matchesSearch = mod.name.toLowerCase().includes(searchTerm.toLowerCase())
     const matchesFilter =
@@ -157,6 +201,9 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
 
   const formatDate = (ts: string) => new Date(ts).toLocaleDateString('vi-VN')
 
+  const missingDeps = depScanResult?.missingDependencies || []
+  const hasMissing = missingDeps.length > 0
+
   return (
     <div className="px-6 pt-2 pb-6 flex flex-col h-full gap-5">
       <div className="flex items-center justify-between">
@@ -170,8 +217,17 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            onClick={handleOpenDepInspector}
+            variant="outline"
+            size="sm"
+            className="h-9 px-3 bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-colors shadow-sm"
+          >
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            Kiểm tra & Sửa Mod
+          </Button>
           <Button onClick={handleRefresh} disabled={loading} variant="outline" size="sm" className="h-9 px-3 bg-background/50 backdrop-blur-sm">
-            <RefreshCw className={`h-3.5 w-3.5  ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
             Làm mới
           </Button>
           <Button onClick={handleOpenFolder} variant="outline" size="sm" className="h-9 px-3 bg-background/50 backdrop-blur-sm">
@@ -279,6 +335,164 @@ export const ModsScreen = ({ gameDir, profileName }: ModsScreenProps) => {
           />
         )}
       </DropZone>
+
+      {/* ─── Mod Dependency Inspector Modal ────────────────────────────────────── */}
+      <Modal
+        isOpen={depModalOpen}
+        onClose={() => setDepModalOpen(false)}
+        title="Kiểm tra & Tự động sửa Mod (Inspector & Auto-Fixer)"
+        description={`Phân tích cây phụ thuộc của các mod trong cấu hình: ${profileName || 'Hiện tại'}`}
+        maxWidth="max-w-[700px]"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenDepInspector}
+              disabled={isScanningDeps || isFixingDeps}
+            >
+              <RefreshCw className={`h-3.5 w-3.5 ${isScanningDeps ? 'animate-spin' : ''}`} />
+              Quét lại
+            </Button>
+            <div className="flex items-center gap-2">
+              <Button variant="secondary" size="sm" onClick={() => setDepModalOpen(false)}>
+                Đóng
+              </Button>
+              {hasMissing && (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleAutoFix}
+                  disabled={isFixingDeps || isScanningDeps}
+                  className="shadow-md shadow-primary/20"
+                >
+                  {isFixingDeps ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang tải & sửa...
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="h-4 w-4" />
+                      Tự động tải {missingDeps.length} mod thiếu
+                    </>
+                  )}
+                </Button>
+              )}
+            </div>
+          </div>
+        }
+      >
+        <div className="flex flex-col gap-4 py-1">
+          {isScanningDeps ? (
+            <div className="flex flex-col items-center justify-center py-12 gap-3 text-muted-foreground">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              <p className="text-sm">Đang trích xuất metadata và phân tích các mod...</p>
+            </div>
+          ) : (
+            <>
+              {/* Fix Notification */}
+              {fixResult && (
+                <div
+                  className={`p-3.5 rounded-xl border flex items-start gap-3 text-sm ${fixResult.success
+                    ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
+                    : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
+                    }`}
+                >
+                  {fixResult.success ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-5 w-5 text-amber-400 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-semibold">{fixResult.message}</p>
+                    {fixResult.downloadedMods.length > 0 && (
+                      <ul className="mt-1 list-disc list-inside text-xs opacity-90">
+                        {fixResult.downloadedMods.map((dm, i) => (
+                          <li key={i}>{dm.title} ({dm.fileName})</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status Banner */}
+              {!hasMissing ? (
+                <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3.5">
+                  <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-emerald-300">Tất cả Mod đã đầy đủ</h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Đã quét {depScanResult?.totalMods || 0} mod. Toàn bộ các mod phụ thuộc (dependencies) cần thiết đều đã được cài đặt.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3.5">
+                  <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shrink-0">
+                    <AlertCircle className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-amber-300">
+                      Phát hiện {missingDeps.length} mod phụ thuộc còn thiếu
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Nếu không cài các mod này, game có thể bị crash khi khởi chạy. Bạn có thể bấm nút Tự động tải bên dưới để sửa nhanh.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Missing Dependencies List */}
+              {hasMissing && (
+                <div className="flex flex-col gap-2">
+                  <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Danh sách Mod cần bổ sung
+                  </h4>
+                  <div className="flex flex-col gap-2 max-h-[260px] overflow-y-auto pr-1">
+                    {missingDeps.map((dep, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between p-3 rounded-xl border border-border/60 bg-muted/20 hover:border-primary/40 transition"
+                      >
+                        <div className="flex flex-col gap-0.5 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-bold text-foreground">
+                              {dep.resolvedProject?.title || dep.modId}
+                            </span>
+                            <Badge variant="outline" className="text-[11px] font-mono">
+                              {dep.modId}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Yêu cầu bởi: <span className="text-foreground/80 font-medium">{dep.requiredBy}</span>
+                          </p>
+                        </div>
+
+                        <div className="shrink-0 flex items-center gap-2">
+                          {dep.resolvedProject ? (
+                            <Badge variant="success" className="gap-1">
+                              <Download className="h-3 w-3" />
+                              Sẵn sàng tải ({dep.resolvedProject.versionNumber})
+                            </Badge>
+                          ) : (
+                            <Badge variant="secondary" className="text-muted-foreground">
+                              Không tìm thấy trên Modrinth
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      </Modal>
     </div>
   )
 }
