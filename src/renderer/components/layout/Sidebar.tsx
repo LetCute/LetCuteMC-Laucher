@@ -224,23 +224,24 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px] bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
+          <DropdownMenuContent align="center" className="w-[220px] bg-zinc-900 border-zinc-700/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
               <DropdownMenuItem
                 key={p.id}
                 onSelect={() => onSetActiveProfile(p.id)}
+                onClick={() => onSetActiveProfile(p.id)}
                 className="flex items-center gap-2 py-2 cursor-pointer"
               >
                 <div className={cn("h-1.5 w-1.5 rounded-full shrink-0", activeProfile?.id === p.id ? "bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.6)]" : "bg-transparent")} />
-                <span className="truncate flex-1 font-medium">{p.name}</span>
+                <span className={cn("truncate flex-1 font-medium", activeProfile?.id === p.id ? "text-primary font-bold" : "text-foreground")}>{p.name}</span>
               </DropdownMenuItem>
             )) : (
               <div className="p-2 text-center text-xs text-muted-foreground">Không có cấu hình nào.</div>
             )}
             <DropdownMenuSeparator />
-            <DropdownMenuItem onSelect={() => onTabChange('profiles')} className="text-primary focus:text-primary cursor-pointer">
+            <DropdownMenuItem onSelect={() => onTabChange('profiles')} onClick={() => onTabChange('profiles')} className="text-primary focus:text-primary cursor-pointer">
               <Layers className="mr-2 h-4 w-4" />
               Quản lý Cấu hình
             </DropdownMenuItem>

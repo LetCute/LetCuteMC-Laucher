@@ -338,16 +338,11 @@ function MainApp() {
 
   // ── Profile Actions ───────────────────────────────────────────────────────
   const handleSetActiveProfile = async (id: string) => {
+    setActiveProfileId(id);
     try {
-      const ok = await launcherClient.setActiveProfile(id);
-      if (ok) {
-        setActiveProfileId(id);
-      } else {
-        alert('Failed to set active profile in backend');
-      }
+      await launcherClient.setActiveProfile(id);
     } catch (e) {
       console.error('Set active profile error:', e);
-      alert('Error: ' + e);
     }
   };
 
