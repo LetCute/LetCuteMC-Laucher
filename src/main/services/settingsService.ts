@@ -27,6 +27,7 @@ const DEFAULT_SETTINGS: LauncherSettings = {
   enableOptimizedJvmArgs: true,
   performanceMode: 'auto',
   enableDiscordRpc: true,
+  uiGraphicQuality: 'auto',
 }
 
 function migrateSettings(raw: Partial<LauncherSettings> & Record<string, unknown>): LauncherSettings {

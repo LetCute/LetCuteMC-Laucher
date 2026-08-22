@@ -27,6 +27,7 @@ import {
   Monitor,
   Check,
   Layers,
+  Palette,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
@@ -82,6 +83,7 @@ export const SettingsScreen = ({
     jvmPreset: settings.jvmPreset ?? 'aikar',
     customJvmArgs: settings.customJvmArgs ?? '',
     enableDedicatedGpu: settings.enableDedicatedGpu ?? true,
+    uiGraphicQuality: settings.uiGraphicQuality ?? 'auto',
   })
 
   const [jvmPresets, setJvmPresets] = useState<JvmPresetInfo[]>([])
@@ -323,8 +325,125 @@ export const SettingsScreen = ({
           </Button>
         </div>
 
+        {/* ── SECTION: UI Graphic & Effects Quality (Performance) ───────── */}
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl cv-auto">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
+            <div>
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                <Palette className="h-5 w-5 text-primary" />
+                Hiệu ứng Giao diện & Đồ họa (UI Effects Quality)
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Tự động giảm tải CSS, tắt làm mờ kính và bóng đổ để cuộn siêu mượt 60 FPS trên máy yếu
+              </p>
+            </div>
+            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+              60 FPS Scroll
+            </span>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+              {[
+                {
+                  id: 'auto' as const,
+                  name: 'Tự động theo máy',
+                  badge: 'Khuyến nghị',
+                  badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+                  tagline: 'Tự nhận diện phần cứng',
+                  detail: `Đang chạy: ${
+                    sysInfo
+                      ? sysInfo.isLowEnd || (sysInfo.totalRamGb != null && sysInfo.totalRamGb <= 6) || (sysInfo.cpuCores != null && sysInfo.cpuCores <= 4)
+                        ? 'Tối ưu máy yếu (Low)'
+                        : sysInfo.isMidEnd || (sysInfo.totalRamGb != null && sysInfo.totalRamGb <= 12)
+                          ? 'Cân bằng (Medium)'
+                          : 'Hiệu ứng cao (High)'
+                      : 'Đang kiểm tra...'
+                  }`,
+                },
+                {
+                  id: 'low' as const,
+                  name: 'Tối ưu máy yếu',
+                  badge: 'Siêu nhẹ',
+                  badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+                  tagline: 'Tắt mờ nền & bóng đổ',
+                  detail: 'Cuộn 60 FPS mượt mà cho RAM ≤ 4GB & Card onboard',
+                },
+                {
+                  id: 'medium' as const,
+                  name: 'Cân bằng',
+                  badge: 'Mượt & Đẹp',
+                  badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+                  tagline: 'Làm mờ nhẹ (Light blur)',
+                  detail: 'Giảm tải GPU, giữ phong cách kính tối hiện đại',
+                },
+                {
+                  id: 'high' as const,
+                  name: 'Hiệu ứng tối đa',
+                  badge: 'Glassmorphism',
+                  badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+                  tagline: 'Kính mờ & Ambient Glow',
+                  detail: 'Đầy đủ hiệu ứng phát sáng cho máy cấu hình mạnh',
+                },
+              ].map((opt) => {
+                const isSelected = (formData.uiGraphicQuality || 'auto') === opt.id
+                return (
+                  <div
+                    key={opt.id}
+                    onClick={() => {
+                      handleChange('uiGraphicQuality', opt.id)
+                      const targetQuality =
+                        opt.id === 'auto'
+                          ? sysInfo?.isLowEnd || (sysInfo?.totalRamGb != null && sysInfo.totalRamGb <= 6) || (sysInfo?.cpuCores != null && sysInfo.cpuCores <= 4)
+                            ? 'low'
+                            : sysInfo?.isMidEnd || (sysInfo?.totalRamGb != null && sysInfo.totalRamGb <= 12)
+                              ? 'medium'
+                              : 'high'
+                          : opt.id
+                      document.documentElement.setAttribute('data-ui-quality', targetQuality)
+                    }}
+                    className={cn(
+                      'p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-sm',
+                      isSelected
+                        ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/40'
+                        : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700'
+                    )}
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between gap-1.5">
+                        <span className={cn('text-xs font-bold truncate', isSelected ? 'text-primary' : 'text-foreground')}>
+                          {opt.name}
+                        </span>
+                        <div
+                          className={cn(
+                            'h-4 w-4 rounded-full flex items-center justify-center border text-[10px] shrink-0',
+                            isSelected
+                              ? 'bg-primary text-primary-foreground border-primary'
+                              : 'border-zinc-700 bg-zinc-800'
+                          )}
+                        >
+                          {isSelected && <Check size={10} strokeWidth={3} />}
+                        </div>
+                      </div>
+                      <span className={cn('inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border', opt.badgeColor)}>
+                        {opt.badge}
+                      </span>
+                      <p className="text-[11px] text-zinc-300 font-medium leading-tight pt-1">
+                        {opt.tagline}
+                      </p>
+                    </div>
+
+                    <p className="text-[10px] text-muted-foreground leading-tight pt-1 border-t border-zinc-800/60">
+                      {opt.detail}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          </CardContent>
+        </Card>
+
         {/* ── SECTION 1: JVM Optimizer Presets ───────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Zap className="h-5 w-5 text-primary" />

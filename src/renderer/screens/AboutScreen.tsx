@@ -234,7 +234,7 @@ export function AboutScreen() {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-4">
             <div className="h-16 w-16 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center p-2 shrink-0 shadow-inner">
-              <img src="./logo.png" alt="LetCuteMC Logo" className="h-full w-full object-contain" />
+              <img src="./logo.png" alt="LetCuteMC Logo" loading="lazy" decoding="async" className="h-full w-full object-contain" />
             </div>
 
             <div className="space-y-1 min-w-0">
@@ -350,7 +350,7 @@ export function AboutScreen() {
             return (
               <div
                 key={item.id}
-                className="p-3.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group"
+                className="p-3.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group cv-auto"
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -390,7 +390,7 @@ export function AboutScreen() {
       </div>
 
       {/* Bottom Section: Unified Developer & Donation Footer Card */}
-      <div className="p-5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden">
+      <div className="p-5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden cv-auto">
         {/* Glow ambient */}
         <div className="absolute right-0 bottom-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -400,6 +400,8 @@ export function AboutScreen() {
             <img
               src="./assets/avatarv2-modified.png"
               alt="LetCute Avatar"
+              loading="lazy"
+              decoding="async"
               className="h-12 w-12 rounded-xl object-contain drop-shadow-md border border-primary/30 p-1 bg-zinc-950 shrink-0"
             />
             <div className="space-y-0.5 min-w-0">

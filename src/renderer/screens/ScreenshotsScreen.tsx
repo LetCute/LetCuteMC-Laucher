@@ -512,7 +512,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                         key={screenshot.id}
                         onClick={(e) => handleCardClick(screenshot, fullIndex, e)}
                         className={cn(
-                          'group relative rounded-xl overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02]',
+                          'group relative rounded-xl overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02] cv-auto',
                           isSelected
                             ? 'border-primary ring-2 ring-primary/40'
                             : 'border-zinc-800/90 hover:border-primary/50'
@@ -524,6 +524,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                             src={screenshot.dataUrl}
                             alt={screenshot.fileName}
                             loading="lazy"
+                            decoding="async"
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
 

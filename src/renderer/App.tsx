@@ -36,6 +36,7 @@ import type {
   CreateProfileInput,
   MinecraftVersionItem,
   AccountState,
+  SystemPerformanceInfo,
 } from '../shared/types';
 
 // ── Bootstrap phases ────────────────────────────────────────────────────────
@@ -106,6 +107,42 @@ function MainApp() {
   });
   const [appError, setAppError] = useState<string | null>(null);
   const [criticalReady, setCriticalReady] = useState(false);
+  const [sysInfo, setSysInfo] = useState<SystemPerformanceInfo | null>(null);
+
+  // ── Load system performance info on mount ──────────────────────────────────
+  useEffect(() => {
+    launcherClient
+      .getSystemPerformanceInfo()
+      .then((info) => setSysInfo(info))
+      .catch(() => {});
+  }, []);
+
+  // ── Dynamically compute & apply UI Graphics Quality ────────────────────────
+  useEffect(() => {
+    const rawQuality = settings.uiGraphicQuality ?? 'auto';
+    let effectiveQuality: 'low' | 'medium' | 'high' = 'high';
+
+    if (rawQuality === 'auto') {
+      if (
+        sysInfo?.isLowEnd ||
+        (sysInfo?.totalRamGb != null && sysInfo.totalRamGb <= 6) ||
+        (sysInfo?.cpuCores != null && sysInfo.cpuCores <= 4)
+      ) {
+        effectiveQuality = 'low';
+      } else if (
+        sysInfo?.isMidEnd ||
+        (sysInfo?.totalRamGb != null && sysInfo.totalRamGb <= 12)
+      ) {
+        effectiveQuality = 'medium';
+      } else {
+        effectiveQuality = 'high';
+      }
+    } else {
+      effectiveQuality = rawQuality;
+    }
+
+    document.documentElement.setAttribute('data-ui-quality', effectiveQuality);
+  }, [settings.uiGraphicQuality, sysInfo]);
 
   // ── Account hook (shared with Sidebar) ───────────────────────────────────
     const {

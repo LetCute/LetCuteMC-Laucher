@@ -392,6 +392,8 @@ export interface LauncherSettings {
   jvmPreset?: JvmPresetType
   customJvmArgs?: string
   enableDedicatedGpu?: boolean
+  // UI Graphics Quality & Effects (Performance control)
+  uiGraphicQuality?: 'auto' | 'high' | 'medium' | 'low'
 }
 
 // ─── Minecraft Version Catalog ────────────────────────────────────────────────
