@@ -560,60 +560,139 @@ export class OptimizerService {
   }
 
   /**
-   * Quét và tính toán dung lượng bộ nhớ đệm có thể dọn dẹp
+   * Quét và tính toán dung lượng bộ nhớ đệm có thể dọn dẹp trên toàn bộ cấu hình và launcher
    */
   public async scanCache(gameDir?: string): Promise<CacheScanResult> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const allDirs = await this.resolveAllGameDirs(gameDir)
     const items: CacheItemDetail[] = []
-    let totalSizeBytes = 0
-    let totalFileCount = 0
+    
+    const oldLogsSet = new Set<string>()
+    let oldLogsSize = 0
 
-    if (!resolvedDir || !fs.existsSync(resolvedDir)) {
-      return { totalSizeBytes: 0, totalFileCount: 0, items: [] }
+    const crashReportsSet = new Set<string>()
+    let crashReportsSize = 0
+
+    const tempCacheSet = new Set<string>()
+    let tempCacheSize = 0
+
+    // 1. Quét logs cũ (.gz, .log.gz, các log cũ không phải latest.log) và crash logs (.hprof, hs_err_pid)
+    for (const d of allDirs) {
+      // Logs dir
+      const logsDir = path.join(d, 'logs')
+      const logsRes = this.scanFilesByPattern(
+        logsDir,
+        (f) => f.endsWith('.gz') || f.endsWith('.log.gz') || (f.endsWith('.log') && f !== 'latest.log')
+      )
+      for (const file of logsRes.files) {
+        if (!oldLogsSet.has(file)) {
+          oldLogsSet.add(file)
+          try {
+            oldLogsSize += fs.statSync(file).size
+          } catch {}
+        }
+      }
+
+      // Root directory crash dumps (hs_err_pid*.log, *.hprof)
+      const rootCrashRes = this.scanFilesByPattern(
+        d,
+        (f) => f.startsWith('hs_err_pid') || f.startsWith('replay_pid') || f.endsWith('.hprof'),
+        1
+      )
+      for (const file of rootCrashRes.files) {
+        if (!crashReportsSet.has(file)) {
+          crashReportsSet.add(file)
+          try {
+            crashReportsSize += fs.statSync(file).size
+          } catch {}
+        }
+      }
+
+      // 2. Crash Reports dir
+      const crashDir = path.join(d, 'crash-reports')
+      const crashRes = this.scanFilesByPattern(crashDir, (f) => f.endsWith('.txt') || f.endsWith('.log'))
+      for (const file of crashRes.files) {
+        if (!crashReportsSet.has(file)) {
+          crashReportsSet.add(file)
+          try {
+            crashReportsSize += fs.statSync(file).size
+          } catch {}
+        }
+      }
+
+      // 3. Temp caches (.mixin.out, webcache, .fabric, .forge, .cache)
+      const tempFolders = ['.mixin.out', 'webcache', '.fabric', '.forge', '.cache']
+      for (const tf of tempFolders) {
+        const fullTf = path.join(d, tf)
+        const tfRes = this.scanFilesByPattern(fullTf, () => true, 4)
+        for (const file of tfRes.files) {
+          if (!tempCacheSet.has(file)) {
+            tempCacheSet.add(file)
+            try {
+              tempCacheSize += fs.statSync(file).size
+            } catch {}
+          }
+        }
+      }
     }
 
-    // 1. Logs cũ (.log.gz, .log)
-    const logsDir = path.join(resolvedDir, 'logs')
-    const oldLogs = this.scanFilesByPattern(logsDir, (f) => f.endsWith('.gz') || (f.endsWith('.log') && f !== 'latest.log'))
+    // 4. Quét launcher data cache (~/.letcutemc/cache, temp)
+    try {
+      const { getLauncherDataDirectory } = await import('./storageService.js')
+      const launcherDataDir = getLauncherDataDirectory()
+      const launcherCacheDir = path.join(launcherDataDir, 'cache')
+      const launcherTempDir = path.join(launcherDataDir, 'temp')
+
+      for (const ld of [launcherCacheDir, launcherTempDir]) {
+        if (fs.existsSync(ld)) {
+          const ldRes = this.scanFilesByPattern(
+            ld,
+            (f) => !f.includes('profiles') && !f.includes('settings') && !f.includes('account'),
+            3
+          )
+          for (const file of ldRes.files) {
+            if (!tempCacheSet.has(file)) {
+              tempCacheSet.add(file)
+              try {
+                tempCacheSize += fs.statSync(file).size
+              } catch {}
+            }
+          }
+        }
+      }
+    } catch {}
+
+    const oldLogsPaths = Array.from(oldLogsSet)
     items.push({
       key: 'old_logs',
       label: 'Nhật ký cũ (Old Logs & Archives)',
       description: 'Các tệp log và tệp nén .log.gz từ những lần chơi trước',
-      sizeBytes: oldLogs.size,
-      fileCount: oldLogs.files.length,
-      paths: oldLogs.files,
+      sizeBytes: oldLogsSize,
+      fileCount: oldLogsPaths.length,
+      paths: oldLogsPaths,
     })
 
-    // 2. Crash Reports
-    const crashDir = path.join(resolvedDir, 'crash-reports')
-    const crashReports = this.scanFilesByPattern(crashDir, (f) => f.endsWith('.txt'))
+    const crashReportsPaths = Array.from(crashReportsSet)
     items.push({
       key: 'crash_reports',
       label: 'Báo cáo lỗi (Crash Reports)',
       description: 'Các tệp báo cáo crash game cũ đã được ghi nhận',
-      sizeBytes: crashReports.size,
-      fileCount: crashReports.files.length,
-      paths: crashReports.files,
+      sizeBytes: crashReportsSize,
+      fileCount: crashReportsPaths.length,
+      paths: crashReportsPaths,
     })
 
-    // 3. Web cache & temp files (.mixin.out, webcache)
-    const mixinDir = path.join(resolvedDir, '.mixin.out')
-    const mixinFiles = this.scanFilesByPattern(mixinDir, () => true)
-    
-    const webcacheDir = path.join(resolvedDir, 'webcache')
-    const webcacheFiles = this.scanFilesByPattern(webcacheDir, () => true)
-
-    const tempSize = mixinFiles.size + webcacheFiles.size
-    const tempPaths = [...mixinFiles.files, ...webcacheFiles.files]
+    const tempCachePaths = Array.from(tempCacheSet)
     items.push({
       key: 'temp_cache',
       label: 'Bộ nhớ đệm tạm thời (Temp Cache & Mixin)',
-      description: 'Tệp cache trung gian của Fabric/Forge mixin và web cache',
-      sizeBytes: tempSize,
-      fileCount: tempPaths.length,
-      paths: tempPaths,
+      description: 'Tệp cache trung gian của Fabric/Forge mixin, web cache và tệp nén tải về',
+      sizeBytes: tempCacheSize,
+      fileCount: tempCachePaths.length,
+      paths: tempCachePaths,
     })
 
+    let totalSizeBytes = 0
+    let totalFileCount = 0
     for (const item of items) {
       totalSizeBytes += item.sizeBytes
       totalFileCount += item.fileCount
@@ -627,7 +706,7 @@ export class OptimizerService {
   }
 
   /**
-   * Dọn dẹp các tệp bộ nhớ đệm được chọn
+   * Dọn dẹp an toàn các tệp bộ nhớ đệm được chọn
    */
   public async cleanCache(
     gameDir?: string,
@@ -648,8 +727,8 @@ export class OptimizerService {
                 freedBytes += stat.size
                 freedCount++
               }
-            } catch (err) {
-              console.warn('[OptimizerService] Could not delete file:', filePath, err)
+            } catch {
+              // Bỏ qua các file đang bị tiến trình khác chiếm dụng/khóa
             }
           }
         }
@@ -789,7 +868,9 @@ export class OptimizerService {
 
   private scanFilesByPattern(
     dirPath: string,
-    filterFn: (fileName: string) => boolean
+    filterFn: (fileName: string) => boolean,
+    maxDepth: number = 4,
+    currentDepth: number = 0
   ): { size: number; files: string[] } {
     let size = 0
     const files: string[] = []
@@ -808,10 +889,14 @@ export class OptimizerService {
             size += stat.size
             files.push(fullPath)
           } catch {}
-        } else if (entry.isDirectory()) {
-          const sub = this.scanFilesByPattern(fullPath, filterFn)
-          size += sub.size
-          files.push(...sub.files)
+        } else if (entry.isDirectory() && currentDepth < maxDepth) {
+          // Tránh duyệt sâu vào các thư mục game nhạy cảm như thế giới lưu (saves), mods chính
+          const skipDirs = ['saves', 'mods', 'resourcepacks', 'shaderpacks', 'screenshots', 'versions']
+          if (!skipDirs.includes(entry.name.toLowerCase())) {
+            const sub = this.scanFilesByPattern(fullPath, filterFn, maxDepth, currentDepth + 1)
+            size += sub.size
+            files.push(...sub.files)
+          }
         }
       }
     } catch {}
@@ -825,6 +910,32 @@ export class OptimizerService {
     }
     const detected = await detectMinecraftDirectory()
     return detected.path || ''
+  }
+
+  private async resolveAllGameDirs(primaryGameDir?: string): Promise<string[]> {
+    const dirs = new Set<string>()
+    if (primaryGameDir && fs.existsSync(primaryGameDir)) {
+      dirs.add(primaryGameDir)
+    }
+    const detected = await detectMinecraftDirectory()
+    if (detected.path && fs.existsSync(detected.path)) {
+      dirs.add(detected.path)
+    }
+    try {
+      const { getProfilesFilePath, readJsonFile } = await import('./storageService.js')
+      const profilesFile = getProfilesFilePath()
+      if (fs.existsSync(profilesFile)) {
+        const store = await readJsonFile<{ profiles?: Array<{ gameDir?: string }> }>(profilesFile, { profiles: [] })
+        if (store?.profiles && Array.isArray(store.profiles)) {
+          for (const p of store.profiles) {
+            if (p.gameDir && fs.existsSync(p.gameDir)) {
+              dirs.add(p.gameDir)
+            }
+          }
+        }
+      }
+    } catch {}
+    return Array.from(dirs)
   }
 }
 

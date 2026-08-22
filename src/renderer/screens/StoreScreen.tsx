@@ -264,19 +264,19 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
               <div
                 key={project.project_id}
                 onClick={() => openProject(project)}
-                className="group relative flex flex-col bg-zinc-900/85 border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cursor-pointer"
+                className="group relative flex flex-col bg-zinc-900/85 border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cursor-pointer cv-auto"
               >
                 {/* Banner / Icon area */}
                 <div className="h-32 bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/80 relative">
                   {project.icon_url ? (
-                    <img src={project.icon_url} alt={project.title} className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity blur-[2px] scale-110" />
+                    <img src={project.icon_url} alt={project.title} loading="lazy" decoding="async" className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity blur-[2px] scale-110" />
                   ) : (
                     <Layers className="h-12 w-12 text-zinc-700" />
                   )}
                   <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 to-transparent" />
 
                   {project.icon_url && (
-                    <img src={project.icon_url} className="absolute h-16 w-16 rounded-xl shadow-lg border border-zinc-700/60 z-10 bg-zinc-900" />
+                    <img src={project.icon_url} alt={project.title} loading="lazy" decoding="async" className="absolute h-16 w-16 rounded-xl shadow-lg border border-zinc-700/60 z-10 bg-zinc-900" />
                   )}
 
                   {installations.some(i => i.projectId === project.project_id) && (

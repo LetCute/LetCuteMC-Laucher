@@ -617,7 +617,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               return (
                 <div
                   key={world.folderName}
-                  className="group relative flex flex-col justify-between p-4 rounded-2xl border border-zinc-800/90 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md"
+                  className="group relative flex flex-col justify-between p-4 rounded-2xl border border-zinc-800/90 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cv-auto"
                 >
                   {/* Top Section: Thumbnail + Info */}
                   <div className="flex items-start gap-3.5">
@@ -627,6 +627,8 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                         <img
                           src={world.iconBase64}
                           alt={world.name}
+                          loading="lazy"
+                          decoding="async"
                           className="h-full w-full object-cover"
                           style={{ imageRendering: 'pixelated' }}
                         />

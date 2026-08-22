@@ -217,8 +217,9 @@ body {
 .overflow-y-auto,
 .overflow-x-auto,
 .overflow-auto {
-  scroll-behavior: auto;
+  scroll-behavior: auto !important;
   overscroll-behavior: contain;
+  contain: paint;
 }
 
 @layer components {
@@ -241,24 +242,60 @@ body {
     -webkit-backdrop-filter: blur(6px);
   }
 
-  /* Low Quality / Potato PC: Zero backdrop-filter, zero GPU raster lag */
+  /* ── Low Quality / Potato PC: MAX PERFORMANCE MODE ── */
   :root[data-ui-quality="low"] * {
+    /* 1. Triệt tiêu toàn bộ backdrop-filter gây nghẽn GPU */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
+    
+    /* 2. Loại bỏ bóng đổ nặng và bộ lọc phức tạp */
+    box-shadow: none !important;
+    text-shadow: none !important;
+    filter: none !important;
+    
+    /* 3. Loại bỏ độ trễ transition */
+    transition-duration: 0.01ms !important;
   }
 
+  /* 4. Tắt hiệu ứng phóng to (scale transform) khi rê chuột tránh tính lại layout */
+  :root[data-ui-quality="low"] .group:hover *,
+  :root[data-ui-quality="low"] *:hover {
+    transform: none !important;
+  }
+
+  /* 5. Ẩn hoàn toàn các quầng sáng lan tỏa (ambient blur orbs) */
   :root[data-ui-quality="low"] .blur-3xl,
   :root[data-ui-quality="low"] .blur-2xl,
   :root[data-ui-quality="low"] .blur-xl,
-  :root[data-ui-quality="low"] .blur-lg {
+  :root[data-ui-quality="low"] .blur-lg,
+  :root[data-ui-quality="low"] .blur-md,
+  :root[data-ui-quality="low"] .blur-sm,
+  :root[data-ui-quality="low"] .blur {
     display: none !important;
   }
 
-  :root[data-ui-quality="low"] .shadow-2xl,
-  :root[data-ui-quality="low"] .shadow-xl,
-  :root[data-ui-quality="low"] .shadow-lg,
-  :root[data-ui-quality="low"] .shadow-md {
-    box-shadow: none !important;
+  /* 6. Dừng các hiệu ứng animation vô tận không cần thiết */
+  :root[data-ui-quality="low"] .animate-pulse,
+  :root[data-ui-quality="low"] .animate-bounce,
+  :root[data-ui-quality="low"] .skeleton-shimmer {
+    animation: none !important;
+  }
+
+  /* 7. Màu nền đục chắc chắn, giảm tải alpha compositing */
+  :root[data-ui-quality="low"] .bg-zinc-900\/85,
+  :root[data-ui-quality="low"] .bg-zinc-900\/80,
+  :root[data-ui-quality="low"] .bg-zinc-900\/90,
+  :root[data-ui-quality="low"] .bg-zinc-900\/95,
+  :root[data-ui-quality="low"] .bg-card,
+  :root[data-ui-quality="low"] .bg-popover {
+    background-color: oklch(0.145 0.010 240) !important;
+  }
+
+  :root[data-ui-quality="low"] .bg-zinc-950\/60,
+  :root[data-ui-quality="low"] .bg-zinc-950\/70,
+  :root[data-ui-quality="low"] .bg-zinc-950\/80,
+  :root[data-ui-quality="low"] .bg-zinc-950\/90 {
+    background-color: oklch(0.115 0.008 240) !important;
   }
 
   /* Remove blur from inputs unconditionally */

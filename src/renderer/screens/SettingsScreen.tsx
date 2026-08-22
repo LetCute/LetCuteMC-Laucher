@@ -125,18 +125,20 @@ export const SettingsScreen = ({
       .catch((e) => console.error('Failed to load JVM presets:', e))
   }, [])
 
-  // Scan cache on mount
+  // Scan cache on mount and profile switch
+  const targetScanDir = activeProfile?.gameDir || gameDir
+
   const handleScanCache = useCallback(async () => {
     setIsScanningCache(true)
     try {
-      const res = await launcherClient.scanCache(gameDir)
+      const res = await launcherClient.scanCache(targetScanDir)
       setCacheScan(res)
     } catch (err) {
       console.error('Scan cache error:', err)
     } finally {
       setIsScanningCache(false)
     }
-  }, [gameDir])
+  }, [targetScanDir])
 
   useEffect(() => {
     void handleScanCache()
@@ -224,7 +226,7 @@ export const SettingsScreen = ({
   const handleCleanCache = async () => {
     setIsCleaningCache(true)
     try {
-      const res = await launcherClient.cleanCache(gameDir)
+      const res = await launcherClient.cleanCache(targetScanDir)
       if (res.success) {
         const freedMb = (res.freedBytes / (1024 * 1024)).toFixed(1)
         showToast(
