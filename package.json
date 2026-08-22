@@ -120,7 +120,7 @@
       "desktop": {
         "StartupWMClass": "letcutemc"
       },
-      "artifactName": "${productName}-${version}-ubuntu-x86_64.${ext}"
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     }
   }
 }
