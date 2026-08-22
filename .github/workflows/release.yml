@@ -35,50 +35,68 @@ jobs:
       - name: Build and Package
         run: npm run dist
 
-      - name: Upload Windows Artifacts
-        uses: actions/upload-artifact@v4
-        if: matrix.os == 'windows-latest'
+      - name: Release to GitHub
+        if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
         with:
-          name: windows-artifacts
-          path: |
+          files: |
             release/*.exe
-            release/*.yml
-
-      - name: Upload Linux Artifacts
-        uses: actions/upload-artifact@v4
-        if: matrix.os == 'ubuntu-latest'
-        with:
-          name: linux-artifacts
-          path: |
+            release/*.blockmap
             release/*.AppImage
             release/*.deb
             release/*.yml
+            release/*.yaml
 
-
-
-  publish-release:
-    needs: build
-    runs-on: ubuntu-latest
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
-    steps:
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: release-artifacts
-          merge-multiple: true
-
-      - name: Release to GitHub
-        uses: softprops/action-gh-release@v2
-        with:
-          files: release-artifacts/*
-
-      - name: Upload to Cloudflare R2
-        if: ${{ !contains(github.ref, '-beta') }}
+      - name: Upload to Cloudflare R2 (Windows)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && matrix.os == 'windows-latest'
+        shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
         run: |
-          aws s3 sync release-artifacts/ s3://storage-letcute/letcutemc-launcher/ \
+          aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
-            --delete
+            --recursive \
+            --exclude "*" \
+            --include "*.exe" \
+            --include "*.blockmap" \
+            --include "latest.yml"
+
+      - name: Upload to Cloudflare R2 (Linux)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && matrix.os == 'ubuntu-latest'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive \
+            --exclude "*" \
+            --include "*.AppImage" \
+            --include "*.deb" \
+            --include "latest-linux.yml"
+
+      - name: Upload Windows Artifacts (Optional)
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'windows-latest'
+        continue-on-error: true
+        with:
+          name: windows-artifacts
+          retention-days: 1
+          path: |
+            release/*.exe
+            release/*.yml
+
+      - name: Upload Linux Artifacts (Optional)
+        uses: actions/upload-artifact@v4
+        if: matrix.os == 'ubuntu-latest'
+        continue-on-error: true
+        with:
+          name: linux-artifacts
+          retention-days: 1
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.yml
