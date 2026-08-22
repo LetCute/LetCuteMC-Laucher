@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   Camera,
   Search,
@@ -623,9 +624,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
       </div>
 
       {/* ── Floating Screenshot Modal Popup ─────────────────────────────────── */}
-      {activeScreenshot && (
+      {activeScreenshot && typeof document !== 'undefined' && createPortal(
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-150 select-none"
           onClick={() => setActiveLightboxIndex(null)}
         >
           {/* Floating Dialog Card */}
@@ -743,7 +744,8 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               )}
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   )

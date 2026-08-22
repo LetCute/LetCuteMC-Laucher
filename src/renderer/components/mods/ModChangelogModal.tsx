@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom'
 import { X, ArrowUpCircle, Calendar, HardDrive, FileText, CheckCircle2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import type { ModUpdateItem } from '@/shared/types'
@@ -24,8 +25,8 @@ export const ModChangelogModal = ({
     day: 'numeric',
   })
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4 animate-in fade-in duration-200 select-none">
+  const modalNode = (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200 select-none">
       <div className="w-full max-w-lg rounded-2xl border border-zinc-800/90 bg-zinc-900 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between gap-3 bg-zinc-950/60">
@@ -112,4 +113,6 @@ export const ModChangelogModal = ({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode
 }

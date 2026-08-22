@@ -1,4 +1,5 @@
 import { ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { X } from 'lucide-react'
 
 export interface ModalProps {
@@ -22,17 +23,17 @@ export const Modal = ({
 }: ModalProps) => {
   if (!isOpen) return null
 
-  return (
+  const modalNode = (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.7)' }}
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)' }}
     >
       {/* Backdrop */}
       <div className="absolute inset-0 backdrop-blur-sm" onClick={onClose} />
 
       {/* Dialog */}
       <div
-        className={`relative w-full ${maxWidth} bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh]`}
+        className={`relative w-full ${maxWidth} bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] z-10`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -65,4 +66,6 @@ export const Modal = ({
       </div>
     </div>
   )
+
+  return typeof document !== 'undefined' ? createPortal(modalNode, document.body) : modalNode
 }
