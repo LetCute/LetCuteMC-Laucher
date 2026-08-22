@@ -23,6 +23,7 @@ import { Version, launch as xmclLaunch, type ResolvedVersion } from '@xmcl/core'
 import { selectBestJavaRuntime } from '../services/javaScannerService'
 import { getSettings } from '../services/settingsService'
 import { writeErrorLog } from '../services/errorLogService'
+import { optimizerService } from '../services/optimizerService'
 
 const parentPort = process.parentPort
 if (!parentPort) {
@@ -346,21 +347,19 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       percent: 90,
     })
 
-    const customArgs: string[] = []
-    if (javaVer >= 17) {
-      customArgs.push(
-        '--enable-native-access=ALL-UNNAMED',
-        '--add-opens=java.base/java.lang=ALL-UNNAMED',
-        '--add-opens=java.base/java.lang.invoke=ALL-UNNAMED',
-        '--add-opens=java.base/java.lang.reflect=ALL-UNNAMED',
-        '--add-opens=java.base/java.io=ALL-UNNAMED',
-        '--add-opens=java.base/java.net=ALL-UNNAMED',
-        '--add-opens=java.base/java.nio=ALL-UNNAMED',
-        '--add-opens=java.base/java.util=ALL-UNNAMED',
-        '--add-opens=java.base/java.util.concurrent=ALL-UNNAMED',
-        '--add-opens=java.base/sun.nio.ch=ALL-UNNAMED'
-      )
-    }
+    const jvmPreset = input.jvmPreset || settings.jvmPreset || 'aikar'
+    const customJvmArgs = input.customJvmArgs ?? settings.customJvmArgs ?? ''
+    const enableDedicatedGpu = input.enableDedicatedGpu ?? settings.enableDedicatedGpu ?? true
+
+    const customArgs = optimizerService.buildOptimizedJvmArgs({
+      preset: jvmPreset,
+      customJvmArgs,
+      javaMajorVersion: javaVer,
+      maxRamMb: input.maxMemoryMb,
+    })
+    const gpuEnv = optimizerService.getGpuEnvironmentVariables(enableDedicatedGpu)
+
+    postLog(jobId, 'info', `Tối ưu hóa JVM [${jvmPreset}]: Đã nạp ${customArgs.length} cờ JVM. GPU rời=${enableDedicatedGpu}`)
 
     // XMCL launch:
     // - gamePath: thư mục chứa saves/, mods/, config/ (profile riêng của modpack)
@@ -383,13 +382,21 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
         if (javaSelection!.selectedRuntime!.majorVersion <= 21) {
           filteredArgs = filteredArgs.filter(a => a !== '--sun-misc-unsafe-memory-access=allow')
         }
-        return spawn(command, filteredArgs, options)
+        const mergedEnv = {
+          ...(options?.env || process.env),
+          ...gpuEnv,
+        }
+        return spawn(command, filteredArgs, { ...options, env: mergedEnv })
       }
     })
 
     const minecraftPid = child.pid ?? null
     if (minecraftPid) {
       postLog(jobId, 'info', `Minecraft process started with PID ${minecraftPid}.`)
+      const boosted = optimizerService.applyGameProcessBoost(minecraftPid)
+      if (boosted) {
+        postLog(jobId, 'info', 'Đã tăng ưu tiên tiến trình CPU (High Priority) để chống giật đứng/khựng khung hình.')
+      }
       if ((child as any).spawnargs) {
         postLog(jobId, 'info', `Command: ${(child as any).spawnargs.join(' ')}`)
       }

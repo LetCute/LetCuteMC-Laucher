@@ -1,6 +1,6 @@
-{
+﻿{
   "name": "letcutemc",
-  "version": "1.0.419",
+  "version": "1.1.0",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -17,7 +17,10 @@
     "build": "npm run build:renderer && npm run build:main && npm run verify:main",
     "start": "cross-env NODE_ENV=production electron .",
     "dist": "npm run build && electron-builder -p never",
-    "dist:portable": "npm run build && electron-builder --win portable --x64 -p never"
+    "dist:portable": "npm run build && electron-builder --win portable --x64 -p never",
+    "dist:linux": "npm run build && electron-builder --linux --x64 -p never",
+    "dist:appimage": "npm run build && electron-builder --linux AppImage --x64 -p never",
+    "dist:deb": "npm run build && electron-builder --linux deb --x64 -p never"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",
@@ -109,12 +112,17 @@
       "deleteAppDataOnUninstall": false
     },
     "linux": {
-      "icon": "build/icon.png",
+      "icon": "public/logo.png",
       "category": "Game",
       "target": [
-        "deb"
+        "AppImage",
+        "deb",
+        "tar.gz"
       ],
-      "artifactName": "${productName}-${version}-ubuntu-${arch}.${ext}"
+      "desktop": {
+        "StartupWMClass": "letcutemc"
+      },
+      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     }
   }
 }

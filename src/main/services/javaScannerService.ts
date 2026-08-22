@@ -1,5 +1,6 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
+import os from 'node:os'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type {
@@ -328,6 +329,37 @@ export function getKnownJavaRoots(customScanDirs: string[] = []): string[] {
     /* ignore */
   }
 
+  // Cross-platform vendor roots
+  if (process.platform === 'linux') {
+    add('/usr/lib/jvm')
+    add('/usr/lib64/jvm')
+    add('/usr/java')
+    add('/opt/java')
+    add('/opt/jdk')
+    add(path.join(os.homedir(), '.sdkman/candidates/java'))
+    add(path.join(os.homedir(), '.jenv/versions'))
+    add(path.join(os.homedir(), '.asdf/installs/java'))
+    add(path.join(os.homedir(), '.local/share/jvm'))
+  } else if (process.platform === 'darwin') {
+    add('/Library/Java/JavaVirtualMachines')
+    add(path.join(os.homedir(), 'Library/Java/JavaVirtualMachines'))
+    add(path.join(os.homedir(), '.sdkman/candidates/java'))
+  } else if (process.platform === 'win32') {
+    const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
+    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
+    const localAppData = process.env['LOCALAPPDATA'] || path.join(os.homedir(), 'AppData', 'Local')
+
+    add(path.join(pf, 'Java'))
+    add(path.join(pf, 'Eclipse Adoptium'))
+    add(path.join(pf, 'Semeru'))
+    add(path.join(pf, 'Zulu'))
+    add(path.join(pf, 'BellSoft'))
+    add(path.join(pf, 'Microsoft'))
+    add(path.join(pf, 'Amazon Corretto'))
+    add(path.join(pf86, 'Java'))
+    add(path.join(localAppData, 'Programs', 'Eclipse Adoptium'))
+  }
+
   return [...roots]
 }
 
@@ -500,6 +532,11 @@ async function mapPool<T, R>(
 export function fallbackRequiredJavaFromMinecraftVersion(version: string): number {
   const clean = extractMinecraftVersion(version) ?? version
 
+  // Minecraft 26.x and snapshots 26w require Java 25
+  if (/^26(?:\.|$)/.test(clean) || /^26w/i.test(clean)) {
+    return 25
+  }
+
   // Year-based snapshot-ish ids (2025 / 26.1)
   const yearMatch = clean.match(/^(20)?(\d{2,4})(?:\.(\d+))?$/)
   if (yearMatch && !clean.startsWith('1.')) {
@@ -507,8 +544,9 @@ export function fallbackRequiredJavaFromMinecraftVersion(version: string): numbe
       ? Number(yearMatch[1] + yearMatch[2])
       : Number(yearMatch[2].length <= 2 ? `20${yearMatch[2]}` : yearMatch[2])
     if (Number.isFinite(year)) {
+      if (year >= 2026 || year === 26) return 25
+      if (year === 2025) return 21
       if (year <= 2024) return 8
-      if (year === 2025) return 17
       return 21
     }
   }
@@ -517,6 +555,7 @@ export function fallbackRequiredJavaFromMinecraftVersion(version: string): numbe
   const minor = parts[1] ?? 0
   const patch = parts[2] ?? 0
 
+  if (minor >= 26) return 25
   if (minor >= 21) return 21
   if (minor === 20 && patch >= 5) return 21
   if (minor >= 18) return 17

@@ -203,6 +203,7 @@ const launcherApi = {
   closeWindow(): Promise<void> { return ipcRenderer.invoke('window:close') },
   maximizeWindow(): Promise<void> { return ipcRenderer.invoke('window:maximize') },
   openFileDialog(filters?: { name: string; extensions: string[] }[]): Promise<string | null> { return ipcRenderer.invoke('dialog:open-file', filters) },
+  saveFileDialog(options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null> { return ipcRenderer.invoke('dialog:save-file', options) },
   getPathForFile(file: File): string | null { return webUtils.getPathForFile(file) ?? null },
 
   openVersionFolder(versionPath: string): Promise<boolean> {
@@ -345,6 +346,10 @@ const launcherApi = {
     return ipcRenderer.invoke('mojang:fetch-texture', url)
   },
 
+  lookupPlayerSkin(usernameOrUuid: string): Promise<{ url: string; model: 'default' | 'slim'; username: string; uuid?: string; capeUrl?: string } | null> {
+    return ipcRenderer.invoke('account:lookup-player-skin', usernameOrUuid)
+  },
+
   uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
     return ipcRenderer.invoke('mojang:upload-skin', accessToken, fileBuffer, variant)
   },
@@ -422,6 +427,148 @@ const launcherApi = {
     const listener = (_event: Electron.IpcRendererEvent, status: any) => callback(status)
     ipcRenderer.on('auto-update:status', listener)
     return () => ipcRenderer.removeListener('auto-update:status', listener)
+  },
+
+  // Worlds & Saves
+  scanWorlds(gameDir?: string): Promise<import('../shared/types').MinecraftWorld[]> {
+    return ipcRenderer.invoke('worlds:scan', gameDir)
+  },
+  backupWorld(gameDir: string | undefined, folderName: string): Promise<{ success: boolean; backupPath: string; fileName: string; sizeBytes: number; message?: string }> {
+    return ipcRenderer.invoke('worlds:backup', gameDir, folderName)
+  },
+  listWorldBackups(gameDir: string | undefined, folderName?: string): Promise<import('../shared/types').WorldBackupItem[]> {
+    return ipcRenderer.invoke('worlds:list-backups', gameDir, folderName)
+  },
+  restoreWorldBackup(gameDir: string | undefined, backupFilePath: string, targetFolderName?: string): Promise<{ success: boolean; folderName: string }> {
+    return ipcRenderer.invoke('worlds:restore-backup', gameDir, backupFilePath, targetFolderName)
+  },
+  deleteWorldBackup(backupFilePath: string): Promise<boolean> {
+    return ipcRenderer.invoke('worlds:delete-backup', backupFilePath)
+  },
+  exportWorldZip(gameDir: string | undefined, folderName: string, destinationZipPath: string): Promise<boolean> {
+    return ipcRenderer.invoke('worlds:export-zip', gameDir, folderName, destinationZipPath)
+  },
+  importWorldZip(gameDir: string | undefined, sourceZipPath: string): Promise<{ success: boolean; folderName: string; name: string }> {
+    return ipcRenderer.invoke('worlds:import-zip', gameDir, sourceZipPath)
+  },
+  duplicateWorld(gameDir: string | undefined, folderName: string, newWorldName?: string): Promise<{ success: boolean; newFolderName: string }> {
+    return ipcRenderer.invoke('worlds:duplicate', gameDir, folderName, newWorldName)
+  },
+  renameWorld(gameDir: string | undefined, folderName: string, newLevelName: string): Promise<boolean> {
+    return ipcRenderer.invoke('worlds:rename', gameDir, folderName, newLevelName)
+  },
+  deleteWorld(gameDir: string | undefined, folderName: string): Promise<boolean> {
+    return ipcRenderer.invoke('worlds:delete', gameDir, folderName)
+  },
+  openWorldFolder(gameDir: string | undefined, folderName?: string): Promise<boolean> {
+    return ipcRenderer.invoke('worlds:open-folder', gameDir, folderName)
+  },
+
+  // Screenshots Gallery
+  scanScreenshots(gameDir?: string): Promise<import('../shared/types').MinecraftScreenshot[]> {
+    return ipcRenderer.invoke('screenshots:scan', gameDir)
+  },
+  copyScreenshotToClipboard(filePath: string): Promise<boolean> {
+    return ipcRenderer.invoke('screenshots:copy-clipboard', filePath)
+  },
+  deleteScreenshot(filePath: string): Promise<boolean> {
+    return ipcRenderer.invoke('screenshots:delete', filePath)
+  },
+  deleteMultipleScreenshots(filePaths: string[]): Promise<boolean> {
+    return ipcRenderer.invoke('screenshots:delete-multiple', filePaths)
+  },
+  showScreenshotInFolder(filePath: string): Promise<boolean> {
+    return ipcRenderer.invoke('screenshots:show-in-folder', filePath)
+  },
+  openScreenshotsFolder(gameDir?: string): Promise<boolean> {
+    return ipcRenderer.invoke('screenshots:open-folder', gameDir)
+  },
+
+  // Logs & Crash Reports
+  listLogFiles(gameDir?: string): Promise<{ activeLogs: import('../shared/types').LogFileInfo[]; crashReports: import('../shared/types').LogFileInfo[] }> {
+    return ipcRenderer.invoke('logs:list-files', gameDir)
+  },
+  readLogFile(filePath: string): Promise<string> {
+    return ipcRenderer.invoke('logs:read-file', filePath)
+  },
+  uploadLogToMclogs(content: string): Promise<import('../shared/types').MclogsUploadResult> {
+    return ipcRenderer.invoke('logs:upload-mclogs', content)
+  },
+  deleteLogFile(filePath: string): Promise<boolean> {
+    return ipcRenderer.invoke('logs:delete-file', filePath)
+  },
+  clearOldLogs(gameDir?: string): Promise<{ success: boolean; count: number; freedBytes: number }> {
+    return ipcRenderer.invoke('logs:clear-old', gameDir)
+  },
+  openLogsFolder(gameDir: string | undefined, type?: 'logs' | 'crash-reports'): Promise<boolean> {
+    return ipcRenderer.invoke('logs:open-folder', gameDir, type)
+  },
+
+  // Playtime & In-game Statistics
+  getFullProfileStats(gameDir: string, profileId: string, profileName?: string): Promise<import('../shared/types').ProfileFullStats> {
+    return ipcRenderer.invoke('stats:get-full-profile', gameDir, profileId, profileName)
+  },
+  recordPlaySession(gameDir: string, profileId: string, durationSeconds: number, exitCode?: number): Promise<import('../shared/types').ProfileLauncherStats> {
+    return ipcRenderer.invoke('stats:record-session', gameDir, profileId, durationSeconds, exitCode)
+  },
+  openStatsFolder(gameDir?: string, worldFolder?: string): Promise<boolean> {
+    return ipcRenderer.invoke('stats:open-folder', gameDir, worldFolder)
+  },
+
+  // Profile Package Export / Import & Sharing
+  exportProfilePackage(options: import('../shared/types').ExportProfilePackageOptions): Promise<import('../shared/types').ExportProfileResult> {
+    return ipcRenderer.invoke('profiles:export-package', options)
+  },
+  readProfilePackageInfo(packageFilePath: string): Promise<import('../shared/types').PackagePreviewInfo> {
+    return ipcRenderer.invoke('profiles:read-package-info', packageFilePath)
+  },
+  importProfilePackage(packageFilePath: string, customName?: string): Promise<import('../shared/types').ImportProfileResult> {
+    return ipcRenderer.invoke('profiles:import-package', packageFilePath, customName)
+  },
+
+  // JVM Optimizer & Cache Cleaner
+  getJvmPresets(): Promise<import('../shared/types').JvmPresetInfo[]> {
+    return ipcRenderer.invoke('optimizer:get-presets')
+  },
+  scanCache(gameDir?: string): Promise<import('../shared/types').CacheScanResult> {
+    return ipcRenderer.invoke('optimizer:scan-cache', gameDir)
+  },
+  cleanCache(gameDir?: string, targetKeys?: string[]): Promise<import('../shared/types').CacheCleanResult> {
+    return ipcRenderer.invoke('optimizer:clean-cache', gameDir, targetKeys)
+  },
+  optimizeInGameVideoSettings(options: import('../shared/types').OptimizeVideoSettingsOptions): Promise<import('../shared/types').OptimizeVideoSettingsResult> {
+    return ipcRenderer.invoke('optimizer:optimize-video-settings', options)
+  },
+  checkLowEndOptimizationStatus(gameDir?: string): Promise<import('../shared/types').LowEndBoostCheckResult> {
+    return ipcRenderer.invoke('optimizer:check-low-end-status', gameDir)
+  },
+  installEssentialMod(gameDir: string | undefined, modSlug: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').InstallEssentialModResult> {
+    return ipcRenderer.invoke('optimizer:install-essential-mod', gameDir, modSlug, mcVersion, loader)
+  },
+  installAllMissingEssentialMods(gameDir: string | undefined, mcVersion?: string, loader?: string): Promise<import('../shared/types').InstallAllEssentialModsResult> {
+    return ipcRenderer.invoke('optimizer:install-all-essential-mods', gameDir, mcVersion, loader)
+  },
+
+  // Mod Auto-Updater
+  checkForModUpdates(gameDir?: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').ModUpdateCheckResult> {
+    return ipcRenderer.invoke('mod-updater:check', gameDir, mcVersion, loader)
+  },
+  updateSingleMod(gameDir: string | undefined, item: import('../shared/types').ModUpdateItem): Promise<import('../shared/types').UpdateSingleModResult> {
+    return ipcRenderer.invoke('mod-updater:update-single', gameDir, item)
+  },
+  updateAllMods(gameDir: string | undefined, items: import('../shared/types').ModUpdateItem[]): Promise<import('../shared/types').UpdateAllModsResult> {
+    return ipcRenderer.invoke('mod-updater:update-all', gameDir, items)
+  },
+
+  // Mod Conflict & Crash Predictor
+  checkModConflicts(gameDir?: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').ModConflictCheckResult> {
+    return ipcRenderer.invoke('mod-conflict:check', gameDir, mcVersion, loader)
+  },
+  resolveModConflict(gameDir: string | undefined, option: import('../shared/types').ResolveConflictOption, mcVersion?: string, loader?: string): Promise<import('../shared/types').ResolveConflictResult> {
+    return ipcRenderer.invoke('mod-conflict:resolve', gameDir, option, mcVersion, loader)
+  },
+  resolveAllCriticalConflicts(gameDir: string | undefined, conflicts: import('../shared/types').ModConflictItem[], mcVersion?: string, loader?: string): Promise<import('../shared/types').ResolveConflictResult> {
+    return ipcRenderer.invoke('mod-conflict:resolve-all-critical', gameDir, conflicts, mcVersion, loader)
   }
 }
 

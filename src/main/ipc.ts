@@ -99,6 +99,14 @@ import {
   checkMojangNameChange,
   changeMojangName
 } from './services/mojangApiService'
+import { worldService } from './services/worldService'
+import { screenshotService } from './services/screenshotService'
+import { logService } from './services/logService'
+import { statsService } from './services/statsService'
+import { profilePackageService } from './services/profilePackageService'
+import { optimizerService } from './services/optimizerService'
+import { modUpdaterService } from './services/modUpdaterService'
+import { modConflictService } from './services/modConflictService'
 
 // ─── In-memory launcher state ─────────────────────────────────────────────────
 
@@ -320,6 +328,16 @@ export function registerIpcHandlers(): void {
     return res.canceled ? null : res.filePaths[0] ?? null
   })
 
+  handleIpc('dialog:save-file', async (options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
+    const { dialog } = await import('electron')
+    const w = BrowserWindow.getAllWindows()[0]
+    const res = await dialog.showSaveDialog(w, {
+      defaultPath: options?.defaultPath,
+      filters: options?.filters ?? [{ name: 'Zip Archive', extensions: ['zip'] }, { name: 'All Files', extensions: ['*'] }],
+    })
+    return res.canceled ? null : res.filePath ?? null
+  })
+
   handleIpc(
     'content:open-folder',
     async (gameDir: string, type: GameContentType) => {
@@ -424,10 +442,103 @@ export function registerIpcHandlers(): void {
   // ── NEW prepare game and caching API ────────────────────────────────────────
   handleIpc('mojang:fetch-texture', async (url: string) => {
     try {
-      const res = await fetch(url)
+      if (!url) return null
+      if (url.startsWith('data:image')) return url
+
+      let targetUrl = url.trim()
+      const nmcSkinMatch = targetUrl.match(/namemc\.com\/skin\/([a-fA-F0-9]+)/i)
+      const nmcTexMatch = targetUrl.match(/namemc\.com\/texture\/([a-fA-F0-9]+)/i)
+      if (nmcSkinMatch) {
+        targetUrl = `https://textures.minecraft.net/texture/${nmcSkinMatch[1]}`
+      } else if (nmcTexMatch) {
+        targetUrl = `https://textures.minecraft.net/texture/${nmcTexMatch[1]}`
+      } else if (/^[a-fA-F0-9]{64}$/.test(targetUrl)) {
+        targetUrl = `https://textures.minecraft.net/texture/${targetUrl}`
+      }
+
+      if (targetUrl.startsWith('http://textures.minecraft.net')) {
+        targetUrl = targetUrl.replace('http://', 'https://')
+      }
+
+      const res = await fetch(targetUrl, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        },
+      })
+      if (!res.ok) return null
       const arrayBuffer = await res.arrayBuffer()
       const buffer = Buffer.from(arrayBuffer)
       return `data:image/png;base64,${buffer.toString('base64')}`
+    } catch {
+      return null
+    }
+  })
+
+  handleIpc('account:lookup-player-skin', async (query: string) => {
+    try {
+      if (!query || !query.trim()) return null
+      let cleanQuery = query.trim()
+
+      const profMatch = cleanQuery.match(/namemc\.com\/profile\/([a-zA-Z0-9_.-]+)/i)
+      if (profMatch) {
+        cleanQuery = profMatch[1]
+      }
+
+      // 1. Try Mojang Official API
+      try {
+        const profileRes = await fetch(`https://api.mojang.com/users/profiles/minecraft/${encodeURIComponent(cleanQuery)}`, {
+          headers: { 'User-Agent': 'LetCuteMC-Launcher' },
+        })
+        if (profileRes.ok) {
+          const profileData = (await profileRes.json()) as { id: string; name: string }
+          if (profileData?.id) {
+            const sessionRes = await fetch(`https://sessionserver.mojang.com/session/minecraft/profile/${profileData.id}`, {
+              headers: { 'User-Agent': 'LetCuteMC-Launcher' },
+            })
+            if (sessionRes.ok) {
+              const sessionData = (await sessionRes.json()) as any
+              const prop = sessionData.properties?.find((p: any) => p.name === 'textures')
+              if (prop?.value) {
+                const tex = JSON.parse(Buffer.from(prop.value, 'base64').toString())
+                const skin = tex?.textures?.SKIN
+                const cape = tex?.textures?.CAPE
+                if (skin?.url) {
+                  return {
+                    url: skin.url.replace('http://', 'https://'),
+                    model: (skin.metadata?.model === 'slim' ? 'slim' : 'default') as 'slim' | 'default',
+                    capeUrl: cape?.url ? cape.url.replace('http://', 'https://') : undefined,
+                    username: profileData.name,
+                    uuid: profileData.id,
+                  }
+                }
+              }
+            }
+          }
+        }
+      } catch {}
+
+      // 2. Fallback: PlayerDB API
+      try {
+        const playerDbRes = await fetch(`https://playerdb.co/api/player/minecraft/${encodeURIComponent(cleanQuery)}`, {
+          headers: { 'User-Agent': 'LetCuteMC-Launcher' },
+        })
+        if (playerDbRes.ok) {
+          const dbData = (await playerDbRes.json()) as any
+          if (dbData?.code === 'player.found' && dbData?.data?.player) {
+            const p = dbData.data.player
+            if (p.skin_texture) {
+              return {
+                url: p.skin_texture.replace('http://', 'https://'),
+                model: 'default' as 'default',
+                username: p.username || cleanQuery,
+                uuid: p.id,
+              }
+            }
+          }
+        }
+      } catch {}
+
+      return null
     } catch {
       return null
     }
@@ -503,4 +614,62 @@ export function registerIpcHandlers(): void {
     const { quitAndInstallUpdate } = await import('./services/autoUpdaterService.js')
     quitAndInstallUpdate()
   })
+
+  // Worlds & Saves
+  handleIpc('worlds:scan', (gameDir?: string) => worldService.scanWorlds(gameDir))
+  handleIpc('worlds:backup', (gameDir: string | undefined, folderName: string) => worldService.backupWorld(gameDir, folderName))
+  handleIpc('worlds:list-backups', (gameDir: string | undefined, folderName?: string) => worldService.listWorldBackups(gameDir, folderName))
+  handleIpc('worlds:restore-backup', (gameDir: string | undefined, backupFilePath: string, targetFolderName?: string) => worldService.restoreWorldBackup(gameDir, backupFilePath, targetFolderName))
+  handleIpc('worlds:delete-backup', (backupFilePath: string) => worldService.deleteWorldBackup(backupFilePath))
+  handleIpc('worlds:export-zip', (gameDir: string | undefined, folderName: string, destinationZipPath: string) => worldService.exportWorldZip(gameDir, folderName, destinationZipPath))
+  handleIpc('worlds:import-zip', (gameDir: string | undefined, sourceZipPath: string) => worldService.importWorldZip(gameDir, sourceZipPath))
+  handleIpc('worlds:duplicate', (gameDir: string | undefined, folderName: string, newWorldName?: string) => worldService.duplicateWorld(gameDir, folderName, newWorldName))
+  handleIpc('worlds:rename', (gameDir: string | undefined, folderName: string, newLevelName: string) => worldService.renameWorld(gameDir, folderName, newLevelName))
+  handleIpc('worlds:delete', (gameDir: string | undefined, folderName: string) => worldService.deleteWorld(gameDir, folderName))
+  handleIpc('worlds:open-folder', (gameDir: string | undefined, folderName?: string) => worldService.openWorldFolder(gameDir, folderName))
+
+  // Screenshots Gallery
+  handleIpc('screenshots:scan', (gameDir?: string) => screenshotService.scanScreenshots(gameDir))
+  handleIpc('screenshots:copy-clipboard', (filePath: string) => screenshotService.copyScreenshotToClipboard(filePath))
+  handleIpc('screenshots:delete', (filePath: string) => screenshotService.deleteScreenshot(filePath))
+  handleIpc('screenshots:delete-multiple', (filePaths: string[]) => screenshotService.deleteMultipleScreenshots(filePaths))
+  handleIpc('screenshots:show-in-folder', (filePath: string) => screenshotService.showScreenshotInFolder(filePath))
+  handleIpc('screenshots:open-folder', (gameDir?: string) => screenshotService.openScreenshotsFolder(gameDir))
+
+  // Logs & Crash Reports
+  handleIpc('logs:list-files', (gameDir?: string) => logService.listLogFiles(gameDir))
+  handleIpc('logs:read-file', (filePath: string) => logService.readLogFile(filePath))
+  handleIpc('logs:upload-mclogs', (content: string) => logService.uploadLogToMclogs(content))
+  handleIpc('logs:delete-file', (filePath: string) => logService.deleteLogFile(filePath))
+  handleIpc('logs:clear-old', (gameDir?: string) => logService.clearOldLogs(gameDir))
+  handleIpc('logs:open-folder', (gameDir: string | undefined, type?: 'logs' | 'crash-reports') => logService.openLogsFolder(gameDir, type))
+
+  // Playtime & In-game Statistics
+  handleIpc('stats:get-full-profile', (gameDir: string, profileId: string, profileName?: string) => statsService.getFullProfileStats(gameDir, profileId, profileName))
+  handleIpc('stats:record-session', (gameDir: string, profileId: string, durationSeconds: number, exitCode?: number) => statsService.recordPlaySession(gameDir, profileId, durationSeconds, exitCode))
+  handleIpc('stats:open-folder', (gameDir: string, worldFolder?: string) => statsService.openStatsFolder(gameDir, worldFolder))
+
+  // Profile Package Export / Import & Sharing
+  handleIpc('profiles:export-package', (options: import('../shared/types').ExportProfilePackageOptions) => profilePackageService.exportProfilePackage(options))
+  handleIpc('profiles:read-package-info', (packageFilePath: string) => profilePackageService.readPackageInfo(packageFilePath))
+  handleIpc('profiles:import-package', (packageFilePath: string, customName?: string) => profilePackageService.importProfilePackage(packageFilePath, customName))
+
+  // JVM Optimizer, Low-End Boost & Cache Cleaner
+  handleIpc('optimizer:get-presets', () => optimizerService.getJvmPresets())
+  handleIpc('optimizer:scan-cache', (gameDir?: string) => optimizerService.scanCache(gameDir))
+  handleIpc('optimizer:clean-cache', (gameDir?: string, targetKeys?: string[]) => optimizerService.cleanCache(gameDir, targetKeys))
+  handleIpc('optimizer:optimize-video-settings', (options: import('../shared/types').OptimizeVideoSettingsOptions) => optimizerService.optimizeInGameVideoSettings(options))
+  handleIpc('optimizer:check-low-end-status', (gameDir?: string) => optimizerService.checkLowEndOptimizationStatus(gameDir))
+  handleIpc('optimizer:install-essential-mod', (gameDir: string | undefined, modSlug: string, mcVersion?: string, loader?: string) => optimizerService.installEssentialMod(gameDir, modSlug, mcVersion, loader))
+  handleIpc('optimizer:install-all-essential-mods', (gameDir: string | undefined, mcVersion?: string, loader?: string) => optimizerService.installAllMissingEssentialMods(gameDir, mcVersion, loader))
+
+  // Mod Auto-Updater
+  handleIpc('mod-updater:check', (gameDir?: string, mcVersion?: string, loader?: string) => modUpdaterService.checkForModUpdates(gameDir, mcVersion, loader))
+  handleIpc('mod-updater:update-single', (gameDir: string | undefined, item: import('../shared/types').ModUpdateItem) => modUpdaterService.updateSingleMod(gameDir, item))
+  handleIpc('mod-updater:update-all', (gameDir: string | undefined, items: import('../shared/types').ModUpdateItem[]) => modUpdaterService.updateAllMods(gameDir, items))
+
+  // Mod Conflict & Crash Predictor
+  handleIpc('mod-conflict:check', (gameDir?: string, mcVersion?: string, loader?: string) => modConflictService.checkModConflicts(gameDir, mcVersion, loader))
+  handleIpc('mod-conflict:resolve', (gameDir: string | undefined, option: import('../shared/types').ResolveConflictOption, mcVersion?: string, loader?: string) => modConflictService.resolveConflict(gameDir, option, mcVersion, loader))
+  handleIpc('mod-conflict:resolve-all-critical', (gameDir: string | undefined, conflicts: import('../shared/types').ModConflictItem[], mcVersion?: string, loader?: string) => modConflictService.resolveAllCritical(gameDir, conflicts, mcVersion, loader))
 }

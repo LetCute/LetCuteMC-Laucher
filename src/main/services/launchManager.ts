@@ -38,6 +38,8 @@ let flushTimer: ReturnType<typeof setTimeout> | null = null
 let currentVersion: string = ''
 let currentProfileName: string = ''
 let currentProfileId: string = ''
+let currentGameDir: string = ''
+let gameStartTime: number | null = null
 let activeJobId: string | null = null
 /** True while launcher is hidden because Minecraft is running */
 let hiddenForGame = false
@@ -46,6 +48,7 @@ let hiddenForGame = false
 import { getProfiles } from './profileService.js'
 import { setPlaying, setIdle } from './discordRpcService.js'
 import { taskManagerService } from './taskManagerService.js'
+import { statsService } from './statsService.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -211,6 +214,7 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
         taskManagerService.updateTaskProgress(activeJobId, msg.progress.percent || 0, msg.progress.message || msg.progress.title)
       }
       if (msg.progress.status === 'running') {
+        gameStartTime = Date.now()
         hideLauncherForGame()
         if (activeJobId) {
           taskManagerService.completeTask(activeJobId, 'Game đang chạy')
@@ -240,6 +244,17 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
 
     case 'finished': {
       currentState.endedAt = now()
+
+      // Record Playtime Session if game was running
+      if (gameStartTime && currentProfileId && currentGameDir) {
+        const durationSeconds = Math.max(1, (Date.now() - gameStartTime) / 1000)
+        try {
+          statsService.recordPlaySession(currentGameDir, currentProfileId, durationSeconds)
+        } catch (err) {
+          console.error('[LaunchManager] Failed to record play session:', err)
+        }
+        gameStartTime = null
+      }
 
       if (!msg.ok && currentState.status !== 'cancelled') {
         currentState.status = 'failed'
@@ -298,6 +313,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   }
   currentVersion = input.version
   currentProfileId = input.profileId
+  currentGameDir = input.gameDir || ''
 
   // Deduplicate and block if prepare worker is running for the same profile
   const { isPrepareActiveForProfile } = await import('./prepareGameService.js')

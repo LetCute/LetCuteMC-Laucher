@@ -14,6 +14,13 @@ import {
   ChevronDown,
   Settings2,
   Activity,
+  Globe,
+  Camera,
+  ScrollText,
+  BarChart3,
+  ArrowLeft,
+  ChevronRight,
+  Gamepad2,
 } from 'lucide-react'
 import { useToast } from '../ui/Toast'
 // Images now loaded directly from public/assets
@@ -26,6 +33,7 @@ import type {
 } from '@/shared/types'
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
+import { useAccounts } from '../../hooks/useAccounts'
 import { cn } from '@/lib/utils'
 import { SkinHead } from '../ui/SkinHead'
 import { Button } from '../ui/button'
@@ -39,7 +47,7 @@ import {
 } from '../ui/DropdownMenu'
 import pkg from '../../../../package.json'
 
-export type TabId = 'store' | 'profiles' | 'versions' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'accounts' | 'settings' | 'tasks' | 'about'
+export type TabId = 'store' | 'profiles' | 'versions' | 'worlds' | 'mods' | 'resourcepacks' | 'shaderpacks' | 'screenshots' | 'logs' | 'stats' | 'accounts' | 'settings' | 'tasks' | 'about'
 
 interface SidebarProps {
   activeTab: TabId
@@ -56,23 +64,26 @@ interface SidebarProps {
 }
 
 import { ModrinthIcon } from '../icons/ModrinthIcon'
-const MENU_ITEMS = [
-  { id: 'store', label: 'Cửa hàng', icon: ModrinthIcon },
 
+const GAME_MANAGEMENT_ITEMS = [
   { id: 'profiles', label: 'Cấu hình game', icon: Layers },
   { id: 'versions', label: 'Phiên bản', icon: List },
-
+  { id: 'worlds', label: 'Thế giới', icon: Globe },
   { id: 'mods', label: 'Mods', icon: Box },
   { id: 'resourcepacks', label: 'Resource Packs', icon: PackageOpen },
   { id: 'shaderpacks', label: 'Shader Packs', icon: Zap },
+  { id: 'screenshots', label: 'Ảnh chụp', icon: Camera },
+  { id: 'logs', label: 'Nhật ký', icon: ScrollText },
+  { id: 'stats', label: 'Thống kê', icon: BarChart3 },
+] as const
 
+const MAIN_ITEMS = [
+  { id: 'store', label: 'Cửa hàng', icon: ModrinthIcon },
   { id: 'accounts', label: 'Tài khoản', icon: User },
   { id: 'tasks', label: 'Tiến trình', icon: Activity },
-
   { id: 'settings', label: 'Cài đặt', icon: Settings },
   { id: 'about', label: 'Giới thiệu', icon: Heart },
-] as const;
-
+] as const
 
 export function Sidebar({
   activeTab,
@@ -92,43 +103,46 @@ export function Sidebar({
   const { prepareState, progress: prepareProgress, isPreparing, startPrepare } = usePrepareGame(activeProfile, settings)
   const [shouldLaunchAfterPrepare, setShouldLaunchAfterPrepare] = useState(false)
 
-  const accounts = accountState?.accounts || []
-  const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
-  const displayUsername = activeAccount?.username || 'Player'
-  const isVirtual = !activeAccount || activeAccount.type === 'local'
-  const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
+  const isGameTab = GAME_MANAGEMENT_ITEMS.some((item) => item.id === activeTab)
+  const [navView, setNavView] = useState<'main' | 'game'>(isGameTab ? 'game' : 'main')
 
-  // Read custom skin from localStorage (shared with AccountsScreen)
-  const getAccountAvatar = (account: any): { url: string, isFullSkin: boolean } => {
-    if (account.skinUrl) {
-      return { url: account.skinUrl, isFullSkin: true }
+  useEffect(() => {
+    if (isGameTab) {
+      setNavView('game')
     }
-    // Fallback: Microsoft uses minotar, local uses steve
-    return {
-      url: account.type === 'microsoft'
-        ? `https://minotar.net/helm/${account.username}/64.png`
-        : './assets/steve.png',
-      isFullSkin: false
-    }
-  }
+  }, [activeTab, isGameTab])
+
+  const {
+    accounts,
+    activeAccount,
+    displayUsername,
+    isVirtual,
+    hasMicrosoftAccount,
+    getAccountAvatar,
+    selectAccount,
+  } = useAccounts({
+    initialState: accountState,
+    onStateChange: onAccountStateChange,
+  })
 
   const triggerLaunch = async () => {
     if (!activeProfile) return
 
-    const auth: LaunchInput['auth'] = isVirtual
-      ? {
-        type: 'virtual',
-        username: displayUsername,
-        uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
-        accessToken: 'offline-token-placeholder',
-      }
-      : {
-        type: 'microsoft',
-        username: activeAccount.username,
-        uuid: activeAccount.uuid,
-        accessToken: activeAccount.accessToken || '',
-        expiresAt: activeAccount.expiresAt,
-      }
+    const auth: LaunchInput['auth'] =
+      isVirtual || !activeAccount
+        ? {
+            type: 'virtual',
+            username: displayUsername,
+            uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
+            accessToken: 'offline-token-placeholder',
+          }
+        : {
+            type: 'microsoft',
+            username: activeAccount.username,
+            uuid: activeAccount.uuid,
+            accessToken: activeAccount.accessToken || '',
+            expiresAt: activeAccount.expiresAt,
+          }
 
     await startLaunch({
       profileId: activeProfile.id,
@@ -178,7 +192,7 @@ export function Sidebar({
   const canCancel = isBusy && !isRunning
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-background/50 backdrop-blur-sm border-r border-border/30 shadow-[4px_0_24px_rgba(0,0,0,0.2)] z-20">
+    <aside className="flex h-full w-64 shrink-0 flex-col bg-zinc-950/85 backdrop-blur-md border-r border-zinc-800/60 shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
       {/* Logo */}
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
@@ -200,7 +214,7 @@ export function Sidebar({
       <div className="px-3 pb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-lg border border-border/30 bg-background/50 backdrop-blur-sm p-2.5 transition-colors hover:bg-accent/40 hover:text-accent-foreground group">
+            <div className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/85 p-2.5 transition-all hover:bg-zinc-900 hover:border-primary/40 hover:text-accent-foreground group shadow-sm">
               <div className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
                 <span className="truncate text-sm font-semibold text-sidebar-foreground">
@@ -210,7 +224,7 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px] border-zinc-800/80 bg-background/50 backdrop-blur-md">
+          <DropdownMenuContent align="center" className="w-[220px] bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
@@ -234,44 +248,142 @@ export function Sidebar({
         </DropdownMenu>
       </div>
 
-      {/* Navigation */}
+      {/* Navigation (2-Level Sliding Structure) */}
       <nav className="flex-1 px-3 py-1 space-y-0.5 overflow-y-auto">
-        {MENU_ITEMS.map((item) => {
-          const Icon = item.icon
-          const isActive = activeTab === item.id
-          return (
+        {navView === 'game' ? (
+          <div className="space-y-1">
+            {/* Back Button */}
             <Button
-              key={item.id}
-              onClick={() => onTabChange(item.id)}
+              onClick={() => setNavView('main')}
+              variant="sidebar"
+              className="group relative flex w-full items-center gap-2.5 mb-2 bg-zinc-900/90 border border-zinc-800 hover:border-primary/40 text-primary font-bold text-xs rounded-xl h-9 shadow-sm"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
+              <span>Quay lại Menu chính</span>
+            </Button>
+
+            <div className="text-[10px] font-bold uppercase tracking-wider text-zinc-500 px-3 py-1">
+              Tài nguyên & Cấu hình
+            </div>
+
+            {GAME_MANAGEMENT_ITEMS.map((item) => {
+              const Icon = item.icon
+              const isActive = activeTab === item.id
+              return (
+                <Button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  variant="sidebar"
+                  className={cn(
+                    'group relative flex w-full items-center gap-3 transition-all duration-150',
+                    isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-4 w-4 shrink-0 transition-colors',
+                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                    )}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  <span>{item.label}</span>
+                </Button>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="space-y-1">
+            {/* Store Button */}
+            <Button
+              onClick={() => onTabChange('store')}
               variant="sidebar"
               className={cn(
                 'group relative flex w-full items-center gap-3 transition-all duration-150',
-                isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                activeTab === 'store' && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
               )}
             >
-              <Icon
-                className={[
+              <ModrinthIcon
+                className={cn(
                   'h-4 w-4 shrink-0 transition-colors',
-                  isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground',
-                ].join(' ')}
-                strokeWidth={isActive ? 2.5 : 2}
+                  activeTab === 'store' ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                )}
               />
-              <span>{item.label}</span>
+              <span>Cửa hàng</span>
             </Button>
-          )
-        })}
 
-        {/* Discord Button */}
-        <Button
-          onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
-          variant="sidebar"
-          className="group relative flex w-full items-center gap-3 transition-all duration-150 text-[#5865F2] hover:bg-[#5865F2]/10 hover:text-[#5865F2]"
-        >
-          <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
-          </svg>
-          <span className="font-semibold tracking-wide">Discord Server</span>
-        </Button>
+            {/* Game Management Sub-Menu Slider Trigger */}
+            <Button
+              onClick={() => {
+                setNavView('game')
+                if (!isGameTab) {
+                  onTabChange('profiles')
+                }
+              }}
+              variant="sidebar"
+              className={cn(
+                'group relative flex w-full items-center justify-between gap-3 transition-all duration-150',
+                isGameTab
+                  ? 'bg-primary/20 text-primary border border-primary/40 font-bold'
+                  : 'text-sidebar-foreground hover:bg-sidebar-accent'
+              )}
+            >
+              <div className="flex items-center gap-3 min-w-0">
+                <Gamepad2
+                  className={cn(
+                    'h-4 w-4 shrink-0 transition-colors',
+                    isGameTab ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                  )}
+                  strokeWidth={isGameTab ? 2.5 : 2}
+                />
+                <span className="truncate font-semibold">Quản lý Game</span>
+              </div>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold group-hover:bg-zinc-800 group-hover:text-zinc-200">
+                  9 mục
+                </span>
+                <ChevronRight className="h-3.5 w-3.5 text-zinc-500 group-hover:text-zinc-300" />
+              </div>
+            </Button>
+
+            {/* Accounts, Tasks, Settings, About */}
+            {MAIN_ITEMS.filter((item) => item.id !== 'store').map((item) => {
+              const Icon = item.icon
+              const isActive = activeTab === item.id
+              return (
+                <Button
+                  key={item.id}
+                  onClick={() => onTabChange(item.id)}
+                  variant="sidebar"
+                  className={cn(
+                    'group relative flex w-full items-center gap-3 transition-all duration-150',
+                    isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                  )}
+                >
+                  <Icon
+                    className={cn(
+                      'h-4 w-4 shrink-0 transition-colors',
+                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                    )}
+                    strokeWidth={isActive ? 2.5 : 2}
+                  />
+                  <span>{item.label}</span>
+                </Button>
+              )
+            })}
+
+            {/* Discord Button */}
+            <Button
+              onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
+              variant="sidebar"
+              className="group relative flex w-full items-center gap-3 transition-all duration-150 text-[#5865F2] hover:bg-[#5865F2]/10 hover:text-[#5865F2]"
+            >
+              <svg className="h-4 w-4 shrink-0 fill-current" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                <path d="M20.317 4.37a19.791 19.791 0 0 0-4.885-1.515.074.074 0 0 0-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 0 0-5.487 0 12.64 12.64 0 0 0-.617-1.25.077.077 0 0 0-.079-.037A19.736 19.736 0 0 0 3.677 4.37a.07.07 0 0 0-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.078.078 0 0 0 .084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 0 0-.041-.106 13.107 13.107 0 0 1-1.872-.892.077.077 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.074.074 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 0 1 .078.01c.12.098.246.198.373.292a.077.077 0 0 1-.006.127 12.299 12.299 0 0 1-1.873.892.077.077 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 0 0 .084.028 19.839 19.839 0 0 0 6.002-3.03.077.077 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 0 0-.031-.028zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z" />
+              </svg>
+              <span className="font-semibold tracking-wide">Discord Server</span>
+            </Button>
+          </div>
+        )}
       </nav>
 
       {/* Unified Play & Account Card */}
@@ -322,7 +434,7 @@ export function Sidebar({
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 border-zinc-800/80 bg-background/50 backdrop-blur-md">
+            <DropdownMenuContent align="end" className="w-56 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-48 overflow-y-auto">
@@ -331,14 +443,9 @@ export function Sidebar({
                   return (
                     <DropdownMenuItem
                       key={acc.id}
-                      onClick={async () => {
+                      onClick={() => {
                         if (!isActive) {
-                          try {
-                            const updated = await window.launcherApi.selectAccount(acc.id)
-                            onAccountStateChange(updated)
-                          } catch (err) {
-                            console.error(err)
-                          }
+                          void selectAccount(acc.id)
                         }
                       }}
                       className="cursor-pointer"

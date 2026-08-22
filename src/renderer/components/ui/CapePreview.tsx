@@ -21,27 +21,40 @@ export function CapePreview({ capeUrl, width = 20, height = 32, className }: Cap
 
   useEffect(() => {
     const canvas = canvasRef.current
-    if (!canvas) return
+    if (!canvas || !capeUrl) return
 
     const ctx = canvas.getContext('2d')
     if (!ctx) return
 
+    let finalUrl = capeUrl
+    if (finalUrl.startsWith('http://textures.minecraft.net')) {
+      finalUrl = finalUrl.replace('http://', 'https://')
+    }
+
     const img = new Image()
-    img.crossOrigin = 'anonymous'
-
     img.onload = () => {
-      // Clear
       ctx.clearRect(0, 0, width, height)
-
-      // Pixel-perfect rendering
       ctx.imageSmoothingEnabled = false
-
-      // Draw cape back layer (12, 1) -> (10, 16) from the texture
-      // If some capes are mapped differently, 1,1 is front, 12,1 is back.
       ctx.drawImage(img, 1, 1, 10, 16, 0, 0, width, height)
     }
 
-    img.src = capeUrl
+    img.onerror = () => {
+      if (window.launcherApi?.fetchMojangTexture) {
+        window.launcherApi.fetchMojangTexture(finalUrl).then((base64) => {
+          if (base64) {
+            const fallbackImg = new Image()
+            fallbackImg.onload = () => {
+              ctx.clearRect(0, 0, width, height)
+              ctx.imageSmoothingEnabled = false
+              ctx.drawImage(fallbackImg, 1, 1, 10, 16, 0, 0, width, height)
+            }
+            fallbackImg.src = base64
+          }
+        })
+      }
+    }
+
+    img.src = finalUrl
   }, [capeUrl, width, height])
 
   return (

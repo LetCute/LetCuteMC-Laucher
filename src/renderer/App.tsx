@@ -5,9 +5,13 @@ import type { TabId } from './components/layout/Sidebar';
 
 import { ProfilesScreen } from './screens/ProfilesScreen';
 import { VersionsScreen } from './screens/VersionsScreen';
+import { WorldsScreen } from './screens/WorldsScreen';
 import { ModsScreen } from './screens/ModsScreen';
 import { ResourcePacksScreen } from './screens/ResourcePacksScreen';
 import { ShaderPacksScreen } from './screens/ShaderPacksScreen';
+import { ScreenshotsScreen } from './screens/ScreenshotsScreen';
+import { LogsScreen } from './screens/LogsScreen';
+import StatsScreen from './screens/StatsScreen';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { AccountsScreen } from './screens/AccountsScreen';
 import TasksScreen from './screens/TasksScreen';
@@ -21,6 +25,8 @@ import { ConfirmDialogProvider, useConfirm } from './components/ui/ConfirmDialog
 import { launcherClient } from './services/launcherClient';
 import { useLauncherJob } from './hooks/useLauncherJob';
 import { usePrepareGame } from './hooks/usePrepareGame';
+import { useAccounts } from './hooks/useAccounts';
+import { useKeepAliveTabs } from './hooks/useTabTransition';
 
 import type {
   LauncherProfile,
@@ -50,6 +56,12 @@ function MainApp() {
   const { showToast } = useToast()
   const confirm = useConfirm()
 
+  // ── Tabs that stay mounted in DOM after first visit (no re-scan on switch) ──
+  const PERSISTENT_TABS = [
+    'mods', 'resourcepacks', 'shaderpacks',
+    'worlds', 'screenshots', 'stats', 'logs', 'store',
+  ] as const
+
   // ── Core state ───────────────────────────────────────────────────────────
   const [appPhase, setAppPhase] = useState<'updater' | 'client'>('updater');
   const [gameDir, setGameDir] = useState<string>('');
@@ -58,6 +70,9 @@ function MainApp() {
     activeAccountId: null,
     accounts: []
   });
+
+  const { isVisible, shouldMount } = useKeepAliveTabs(activeTab, PERSISTENT_TABS)
+
   const [profiles, setProfiles] = useState<LauncherProfile[]>([]);
   const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
 
@@ -91,18 +106,14 @@ function MainApp() {
   });
   const [appError, setAppError] = useState<string | null>(null);
   const [criticalReady, setCriticalReady] = useState(false);
-  const [contentVisited, setContentVisited] = useState({
-    mods: false,
-    resourcepacks: false,
-    shaderpacks: false,
-  });
 
-  useEffect(() => {
-    if ((activeTab as string) === 'mods' || (activeTab as string) === 'resourcepacks' || (activeTab as string) === 'shaderpacks') {
-      const key = activeTab as 'mods' | 'resourcepacks' | 'shaderpacks'
-      setContentVisited(prev => (prev[key] ? prev : { ...prev, [key]: true }))
-    }
-  }, [activeTab]);
+  // ── Account hook (shared with Sidebar) ───────────────────────────────────
+    const {
+    accounts: _accounts,
+    activeAccount,
+    isVirtual,
+    displayUsername,
+  } = useAccounts({ initialState: accountState })
 
   // ── Launch job state (Worker Thread based, no polling) ─────────────────
   const { state: launchJobState, startLaunch, isBusy, isStarting } = useLauncherJob();
@@ -117,29 +128,24 @@ function MainApp() {
     const target = profiles.find(p => p.id === profileId)
     if (!target) return
 
-    const activeAccount = accountState.accounts.find(a => a.id === accountState.activeAccountId)
-    const isVirtual = !activeAccount || activeAccount.type === 'local'
-    const username = activeAccount?.username || 'Player'
-
     await startLaunch({
       profileId: target.id,
       version: target.minecraftVersion,
       versionType: 'release',
       gameDir: target.gameDir || gameDir,
-      // Với profile modpack có gameDir riêng: dùng mcRootDir để XMCL tìm libraries/versions đúng chỗ
       resourcePath: target.mcRootDir || null,
       javaPath: javaSelection?.selectedRuntime?.javaPath ?? null,
       minMemoryMb: target.minMemoryMb || settings.defaultMinMemoryMb,
       maxMemoryMb: target.maxMemoryMb || settings.defaultMaxMemoryMb,
       serverAddress: undefined,
       auth: isVirtual
-        ? { type: 'virtual', username, uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
+        ? { type: 'virtual', username: displayUsername, uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
         : {
           type: 'microsoft',
-          username,
-          uuid: activeAccount.uuid,
-          accessToken: activeAccount.accessToken || '',
-          expiresAt: activeAccount.expiresAt,
+          username: activeAccount!.username,
+          uuid: activeAccount!.uuid,
+          accessToken: activeAccount!.accessToken || '',
+          expiresAt: activeAccount!.expiresAt,
         },
     })
   }
@@ -276,9 +282,13 @@ function MainApp() {
         case 'store': details = 'Đang khám phá Cửa hàng'; state = 'Tìm kiếm mods & modpacks'; break;
         case 'profiles': details = 'Đang quản lý Profile'; state = 'Sẵn sàng khởi động'; break;
         case 'versions': details = 'Đang quản lý Phiên bản'; state = 'Tải phiên bản Minecraft'; break;
+        case 'worlds': details = 'Đang quản lý Thế giới'; state = 'Xem & sao lưu bản đồ'; break;
         case 'mods': details = 'Đang quản lý Mods'; state = 'Tuỳ biến Mods'; break;
         case 'resourcepacks': details = 'Đang xem Resource Packs'; state = 'Thay đổi giao diện'; break;
         case 'shaderpacks': details = 'Đang xem Shader Packs'; state = 'Thay đổi đồ hoạ'; break;
+        case 'screenshots': details = 'Đang xem Thư viện ảnh'; state = 'Xem ảnh chụp màn hình'; break;
+        case 'logs': details = 'Đang kiểm tra Nhật ký'; state = 'Xem nhật ký & phân tích lỗi'; break;
+        case 'stats': details = 'Đang xem Thống kê'; state = 'Xem thành tựu & giờ chơi'; break;
         case 'settings': details = 'Đang cài đặt Launcher'; state = 'Tinh chỉnh hệ thống'; break;
         case 'accounts': details = 'Đang xem thư viện Skin'; state = 'Quản lý tài khoản'; break;
         case 'tasks': details = 'Đang xem Tiến trình'; state = 'Theo dõi tác vụ chạy ngầm'; break;
@@ -418,49 +428,112 @@ function MainApp() {
 
                 <div className="min-h-0 flex-1 overflow-y-auto">
                   <ErrorBoundary fallbackMessage="Màn hình này đang gặp sự cố. Vui lòng thử lại.">
-                    {activeTab === 'store' && (
-                      <StoreScreen
-                        gameDir={activeProfile?.gameDir || gameDir}
-                        profiles={profiles}
-                        activeProfileId={activeProfileId}
-                        onInstallSuccess={async (newProfileId) => {
-                          await initializeAppData();
-                          await handleSetActiveProfile(newProfileId);
-                          setActiveTab('mods');
-                        }}
-                      />
-                    )}
 
+                    {/* ── Non-persistent tabs: simple mount/unmount ── */}
                     {activeTab === 'profiles' && (
-                      <ProfilesScreen
-                        profiles={profiles}
-                        activeProfileId={activeProfileId}
-                        onSetActive={handleSetActiveProfile}
-                        onCreateProfile={() => openCreateProfile()}
-                        onEdit={openEditProfile}
-                        onDelete={handleDeleteProfile}
-                        onLaunchProfile={handleLaunchProfileDirectly}
-                        isWorking={isWorking}
-                      />
+                      <div className="h-full tab-panel">
+                        <ProfilesScreen
+                          profiles={profiles}
+                          activeProfileId={activeProfileId}
+                          onSetActive={handleSetActiveProfile}
+                          onCreateProfile={() => openCreateProfile()}
+                          onEdit={openEditProfile}
+                          onDelete={handleDeleteProfile}
+                          onLaunchProfile={handleLaunchProfileDirectly}
+                          isWorking={isWorking}
+                        />
+                      </div>
                     )}
 
                     {activeTab === 'versions' && (
-                      <VersionsScreen
-                        catalog={versionCatalog}
-                        gameDir={gameDir}
-                        onCreateProfile={(versionItem) => openCreateProfile(versionItem)}
-                        onRefresh={async () => {
-                          if (!gameDir) return
-                          const catalog = await launcherClient.getMinecraftVersionCatalog(gameDir)
-                          setVersionCatalog(catalog)
-                        }}
-                        isWorking={isWorking}
-                      />
+                      <div className="h-full tab-panel">
+                        <VersionsScreen
+                          catalog={versionCatalog}
+                          gameDir={gameDir}
+                          onCreateProfile={(versionItem) => openCreateProfile(versionItem)}
+                          onRefresh={async () => {
+                            if (!gameDir) return
+                            const catalog = await launcherClient.getMinecraftVersionCatalog(gameDir)
+                            setVersionCatalog(catalog)
+                          }}
+                          isWorking={isWorking}
+                        />
+                      </div>
                     )}
 
-                    {/* Keep mounted after first open — avoid re-scan every tab switch */}
-                    {(activeTab === 'mods' || contentVisited.mods) && (
-                      <div className={activeTab === 'mods' ? 'h-full' : 'hidden'}>
+                    {activeTab === 'settings' && (
+                      <div className="h-full tab-panel">
+                        <SettingsScreen
+                          settings={settings}
+                          activeProfile={activeProfile}
+                          onSave={async (s) => {
+                            const updated = await launcherClient.updateSettings(s);
+                            setSettings(updated);
+                          }}
+                          onSaveJavaPath={async (javaPath) => {
+                            if (!activeProfile) return;
+                            const updated = await launcherClient.updateProfile(activeProfile.id, { javaPath });
+                            setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
+                          }}
+                          accountState={accountState}
+                          gameDir={gameDir}
+                          onAccountStateChange={setAccountState}
+                          appendLog={() => {/* logs now managed by useLauncherJob */}}
+                          isWorking={isWorking}
+                        />
+                      </div>
+                    )}
+
+                    {activeTab === 'accounts' && (
+                      <div className="h-full tab-panel">
+                        <AccountsScreen
+                          accountState={accountState}
+                          onAccountStateChange={setAccountState}
+                          appendLog={() => {}}
+                          isWorking={isWorking}
+                        />
+                      </div>
+                    )}
+
+                    {activeTab === 'tasks' && (
+                      <div className="h-full tab-panel">
+                        <TasksScreen />
+                      </div>
+                    )}
+
+                    {activeTab === 'about' && (
+                      <div className="h-full tab-panel">
+                        <AboutScreen />
+                      </div>
+                    )}
+
+                    {/* ── Persistent tabs: keep DOM alive after first visit ── */}
+                    {shouldMount('store') && (
+                      <div className={`tab-panel ${isVisible('store') ? 'h-full' : 'hidden'}`}>
+                        <StoreScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profiles={profiles}
+                          activeProfileId={activeProfileId}
+                          onInstallSuccess={async (newProfileId) => {
+                            await initializeAppData();
+                            await handleSetActiveProfile(newProfileId);
+                            setActiveTab('mods');
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {shouldMount('worlds') && (
+                      <div className={`tab-panel ${isVisible('worlds') ? 'h-full' : 'hidden'}`}>
+                        <WorldsScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profileName={activeProfile?.name}
+                        />
+                      </div>
+                    )}
+
+                    {shouldMount('mods') && (
+                      <div className={`tab-panel ${isVisible('mods') ? 'h-full' : 'hidden'}`}>
                         <ModsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileName={activeProfile?.name}
@@ -469,54 +542,44 @@ function MainApp() {
                       </div>
                     )}
 
-                    {(activeTab === 'resourcepacks' || contentVisited.resourcepacks) && (
-                      <div className={activeTab === 'resourcepacks' ? 'h-full' : 'hidden'}>
+                    {shouldMount('resourcepacks') && (
+                      <div className={`tab-panel ${isVisible('resourcepacks') ? 'h-full' : 'hidden'}`}>
                         <ResourcePacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
                       </div>
                     )}
 
-                    {(activeTab === 'shaderpacks' || contentVisited.shaderpacks) && (
-                      <div className={activeTab === 'shaderpacks' ? 'h-full' : 'hidden'}>
+                    {shouldMount('shaderpacks') && (
+                      <div className={`tab-panel ${isVisible('shaderpacks') ? 'h-full' : 'hidden'}`}>
                         <ShaderPacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
                       </div>
                     )}
 
-                    {activeTab === 'settings' && (
-                      <SettingsScreen
-                        settings={settings}
-                        activeProfile={activeProfile}
-                        onSave={async (s) => {
-                          const updated = await launcherClient.updateSettings(s);
-                          setSettings(updated);
-                        }}
-                        onSaveJavaPath={async (javaPath) => {
-                          if (!activeProfile) return;
-                          const updated = await launcherClient.updateProfile(activeProfile.id, { javaPath });
-                          setProfiles((prev) => prev.map((p) => (p.id === updated.id ? updated : p)));
-                        }}
-                        accountState={accountState}
-                        gameDir={gameDir}
-                        onAccountStateChange={setAccountState}
-                        appendLog={() => {/* logs now managed by useLauncherJob */ }}
-                        isWorking={isWorking}
-                      />
+                    {shouldMount('screenshots') && (
+                      <div className={`tab-panel ${isVisible('screenshots') ? 'h-full' : 'hidden'}`}>
+                        <ScreenshotsScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profileName={activeProfile?.name}
+                        />
+                      </div>
                     )}
 
-                    {activeTab === 'accounts' && (
-                      <AccountsScreen
-                        accountState={accountState}
-                        onAccountStateChange={setAccountState}
-                        appendLog={() => { }}
-                        isWorking={isWorking}
-                      />
+                    {shouldMount('logs') && (
+                      <div className={`tab-panel ${isVisible('logs') ? 'h-full' : 'hidden'}`}>
+                        <LogsScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profileName={activeProfile?.name}
+                        />
+                      </div>
                     )}
 
-                    {activeTab === 'tasks' && (
-                      <TasksScreen />
-                    )}
-
-                    {activeTab === 'about' && (
-                      <AboutScreen />
+                    {shouldMount('stats') && (
+                      <div className={`tab-panel ${isVisible('stats') ? 'h-full' : 'hidden'}`}>
+                        <StatsScreen
+                          gameDir={activeProfile?.gameDir || gameDir}
+                          profileId={activeProfile?.id}
+                          profileName={activeProfile?.name}
+                        />
+                      </div>
                     )}
                   </ErrorBoundary>
                 </div>

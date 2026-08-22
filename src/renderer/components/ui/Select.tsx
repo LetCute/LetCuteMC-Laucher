@@ -62,8 +62,8 @@ export function Select({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm px-3.5 py-2 text-sm text-foreground transition-all duration-200 outline-none text-left select-none",
-            "hover:bg-background/70 focus:border-primary/60 focus:ring-2 focus:ring-ring/30",
+            "flex h-10 w-full items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/90 px-3.5 py-2 text-sm text-foreground transition-all duration-200 outline-none text-left select-none",
+            "hover:bg-zinc-800/80 hover:border-zinc-700 focus:border-primary/60 focus:ring-2 focus:ring-ring/30",
             isOpen && "border-primary/60 ring-2 ring-ring/30",
             disabled && "pointer-events-none cursor-not-allowed opacity-50",
             className
@@ -83,7 +83,7 @@ export function Select({
         {isOpen && (
           <div
             className={cn(
-              "absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-800/80 bg-background/90 p-1 shadow-xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-muted-foreground/20",
+              "absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-700/60 bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700",
               align === "right" ? "right-0" : "left-0"
             )}
           >

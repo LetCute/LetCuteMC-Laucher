@@ -233,15 +233,15 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
 
         <form onSubmit={handleSearch} className="mt-4 flex gap-3 max-w-2xl">
           <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
             <Input
               placeholder="Nhập tên modpack (VD: Fabulously Optimized, RLcraft...)"
-              className="pl-10 h-11 text-base bg-background/50 backdrop-blur-sm border-accent rounded-xl "
+              className="pl-10 h-10 text-xs bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 rounded-xl"
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
           </div>
-          <Button type="submit" className="h-11 px-6 rounded-xl font-bold text-sm" disabled={loading}>
+          <Button type="submit" className="h-10 px-5 rounded-xl font-bold text-xs" disabled={loading}>
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Tìm kiếm'}
           </Button>
         </form>
@@ -259,24 +259,24 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
             <p>Không tìm thấy Modpack nào.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {projects.map((project) => (
               <div
                 key={project.project_id}
                 onClick={() => openProject(project)}
-                className="group relative flex flex-col bg-background/50 backdrop-blur-sm border border-border/50 rounded-sm overflow-hidden hover:border-primary/50 hover:shadow-[0_0_20px_rgba(var(--primary-rgb),0.1)] transition-all cursor-pointer"
+                className="group relative flex flex-col bg-zinc-900/85 border border-zinc-800/80 rounded-2xl overflow-hidden hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cursor-pointer"
               >
                 {/* Banner / Icon area */}
-                <div className="h-32 bg-zinc-900 flex items-center justify-center overflow-hidden border-b border-border/50 relative">
+                <div className="h-32 bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/80 relative">
                   {project.icon_url ? (
                     <img src={project.icon_url} alt={project.title} className="h-full w-full object-cover opacity-80 group-hover:opacity-100 transition-opacity blur-[2px] scale-110" />
                   ) : (
-                    <Layers className="h-12 w-12 text-zinc-800" />
+                    <Layers className="h-12 w-12 text-zinc-700" />
                   )}
-                  <div className="absolute inset-0 bg-gradient-to-t from-card to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-900/90 to-transparent" />
 
                   {project.icon_url && (
-                    <img src={project.icon_url} className="absolute h-16 w-16 rounded-xl shadow-lg border border-border/50 z-10 bg-background/50 backdrop-blur-sm" />
+                    <img src={project.icon_url} className="absolute h-16 w-16 rounded-xl shadow-lg border border-zinc-700/60 z-10 bg-zinc-900" />
                   )}
 
                   {installations.some(i => i.projectId === project.project_id) && (
@@ -288,12 +288,12 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
 
                 {/* Details */}
                 <div className="p-4 flex-1 flex flex-col">
-                  <h3 className="font-bold text-base text-foreground line-clamp-1">{project.title}</h3>
+                  <h3 className="font-bold text-sm text-foreground line-clamp-1 group-hover:text-primary transition-colors">{project.title}</h3>
                   <p className="text-xs text-muted-foreground mt-1 mb-3 line-clamp-2 flex-1">
                     {project.description}
                   </p>
 
-                  <div className="flex items-center justify-between text-[11px] font-medium mt-auto pt-3 border-t border-border/50 text-muted-foreground">
+                  <div className="flex items-center justify-between text-[11px] font-medium mt-auto pt-3 border-t border-zinc-800 text-muted-foreground">
                     <span className="flex items-center gap-1.5">
                       <Download className="h-3.5 w-3.5" />
                       {new Intl.NumberFormat('en-US', { notation: 'compact' }).format(project.downloads)}
@@ -430,7 +430,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
                 placeholder="https://modrinth.com/modpack/.../version/..."
                 value={importInputValue}
                 onChange={(e) => setImportInputValue(e.target.value)}
-                className="bg-background/50 backdrop-blur-sm"
+                className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 rounded-xl"
               />
             </div>
           )}
@@ -440,7 +440,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
               placeholder="VD: Fabulously Optimized"
               value={importProfileName}
               onChange={(e) => setImportProfileName(e.target.value)}
-              className="bg-background/50 backdrop-blur-sm"
+              className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 rounded-xl"
             />
           </div>
           

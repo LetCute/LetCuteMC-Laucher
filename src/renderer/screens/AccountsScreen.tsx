@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import type { AccountState } from '@/shared/types.ts'
 import { Input } from '../components/ui/Input'
 import { useToast } from '../components/ui/Toast'
@@ -17,14 +17,16 @@ import {
   UserCircle,
   Loader2,
   XCircle,
-  Pencil
+  Pencil,
+  Search,
+  Sparkles,
+  User,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-interface SkinData {
-  url: string
-  model: SkinModel
-}
+import { NAMEMC_CURATED_SKINS, NAMEMC_CATEGORIES, type NameMCSkin } from '../data/namemcSkins'
+import { NAMEMC_CURATED_CAPES, type NameMCCape } from '../data/namemcCapes'
+import { SkinBody } from '../components/ui/SkinBody'
+import { useAccounts } from '../hooks/useAccounts'
 
 interface AccountsScreenProps {
   accountState: AccountState
@@ -32,8 +34,6 @@ interface AccountsScreenProps {
   appendLog: (level: 'info' | 'success' | 'warn' | 'error', message: string) => void
   isWorking?: boolean
 }
-
-import { SkinBody } from '../components/ui/SkinBody'
 
 // Helper to convert base64 data URL to ArrayBuffer for uploading
 function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
@@ -47,16 +47,35 @@ function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
   return bytes.buffer
 }
 
-const GallerySkinItem = ({ skin, onSelect }: { skin: any, onSelect: () => void }) => {
+const GallerySkinItem = ({
+  skin,
+  onSelect,
+  isSelected,
+}: {
+  skin: NameMCSkin
+  onSelect: () => void
+  isSelected?: boolean
+}) => {
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-background/50 backdrop-blur-sm/50 transition-all group"
-      title={skin.name || 'Skin'}
+      className={[
+        'rounded-xl p-2 flex flex-col items-center gap-1.5 transition-all group relative border text-left',
+        isSelected
+          ? 'border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.2)]'
+          : 'border-border/40 bg-background/40 backdrop-blur-sm hover:border-primary/40 hover:bg-background/80 hover:-translate-y-0.5',
+      ].join(' ')}
+      title={`${skin.name} (${skin.model === 'slim' ? 'Tay mảnh' : 'Classic'})`}
     >
-      <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
+      <div className="w-16 h-24 rounded-md overflow-hidden flex items-center justify-center bg-zinc-900/30 group-hover:scale-105 transition-transform drop-shadow-sm">
         <SkinBody skinUrl={skin.url} width={48} height={96} className="h-full object-contain" />
+      </div>
+      <div className="w-full text-center min-w-0 px-1">
+        <p className="text-[11px] font-semibold text-foreground truncate">{skin.name}</p>
+        <span className="inline-block text-[9px] text-muted-foreground px-1.5 py-0.2 rounded bg-muted/40 truncate max-w-full">
+          {skin.model === 'slim' ? 'Slim' : 'Classic'}
+        </span>
       </div>
     </button>
   )
@@ -89,14 +108,15 @@ export const AccountsScreen = ({
   const [pendingCapeId, setPendingCapeId] = useState<string>('') // For Premium owned capes
   const [skinTab, setSkinTab] = useState<'name' | 'skin' | 'cape'>('skin')
 
-  const [mineskinInput, setMineskinInput] = useState('')
-  const [isFetchingMineskin, setIsFetchingMineskin] = useState(false)
-
-  const [mineskinGallery, setMineskinGallery] = useState<any[]>([])
-  const [isFetchingGallery, setIsFetchingGallery] = useState(false)
-  const [galleryPage, setGalleryPage] = useState(1)
+  // NameMC Skin & Cape state
+  const [namemcInput, setNamemcInput] = useState('')
+  const [isImportingNamemc, setIsImportingNamemc] = useState(false)
+  const [selectedCategory, setSelectedCategory] = useState<'all' | 'hot_vn' | 'anime' | 'boy' | 'girl' | 'meme'>('all')
   const [galleryQuery, setGalleryQuery] = useState('')
-  const [activeQuery, setActiveQuery] = useState('')
+  const [galleryPage, setGalleryPage] = useState(1)
+  const [isSearchingPlayer, setIsSearchingPlayer] = useState(false)
+  const [capeGalleryQuery, setCapeGalleryQuery] = useState('')
+  const [selectedCapeUrl, setSelectedCapeUrl] = useState<string | null>(null)
 
   const [renameAllowed, setRenameAllowed] = useState(true)
   const [renameCooldownMessage, setRenameCooldownMessage] = useState('')
@@ -108,27 +128,55 @@ export const AccountsScreen = ({
   const [renameTargetType, setRenameTargetType] = useState<'local' | 'microsoft'>('local')
   const [renameTargetToken, setRenameTargetToken] = useState('')
 
-  const [mineskinCapes, setMineskinCapes] = useState<any[]>([])
-  const [isFetchingCapes, setIsFetchingCapes] = useState(false)
-  const [capeGalleryQuery, setCapeGalleryQuery] = useState('')
-
   const [isFetchingMojang, setIsFetchingMojang] = useState(false)
   const [isSavingMojang, setIsSavingMojang] = useState(false)
   const [mojangProfile, setMojangProfile] = useState<any>(null)
 
+  const filteredSkins = useMemo(() => {
+    return NAMEMC_CURATED_SKINS.filter(skin => {
+      const matchesCat = selectedCategory === 'all' || skin.category === selectedCategory
+      const q = galleryQuery.trim().toLowerCase()
+      const matchesQuery = !q ||
+        skin.name.toLowerCase().includes(q) ||
+        skin.id.toLowerCase().includes(q) ||
+        (skin.author && skin.author.toLowerCase().includes(q))
+      return matchesCat && matchesQuery
+    })
+  }, [selectedCategory, galleryQuery])
+
+  const SKINS_PER_PAGE = 12
+  const totalPages = Math.max(1, Math.ceil(filteredSkins.length / SKINS_PER_PAGE))
+  const paginatedSkins = useMemo(() => {
+    const start = (galleryPage - 1) * SKINS_PER_PAGE
+    return filteredSkins.slice(start, start + SKINS_PER_PAGE)
+  }, [filteredSkins, galleryPage])
+
+  const filteredCapes = useMemo(() => {
+    return NAMEMC_CURATED_CAPES.filter(cape => {
+      const q = capeGalleryQuery.trim().toLowerCase()
+      return !q ||
+        cape.name.toLowerCase().includes(q) ||
+        (cape.year && cape.year.toLowerCase().includes(q)) ||
+        (cape.description && cape.description.toLowerCase().includes(q))
+    })
+  }, [capeGalleryQuery])
+
+  const {
+    accounts,
+    activeAccountId,
+    selectAccount,
+    removeAccount,
+    addLocalAccount,
+    loginMicrosoft,
+  } = useAccounts({
+    initialState: accountState,
+    onStateChange: onAccountStateChange,
+    appendLog,
+  })
+
   const handleMicrosoftLogin = async () => {
     setShowAddModal(false)
-    try {
-      const account = await window.launcherApi.loginMicrosoft()
-      const updated = await window.launcherApi.saveMicrosoftAccount(account)
-      onAccountStateChange(updated)
-      appendLog('success', `Đã đăng nhập tài khoản Microsoft: ${account.username}`)
-      showToast('success', `Đã đăng nhập: ${account.username}`)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Lỗi đăng nhập'
-      appendLog('error', msg)
-      showToast('error', msg)
-    }
+    await loginMicrosoft()
   }
 
   const handleAddLocalAccount = async () => {
@@ -136,40 +184,27 @@ export const AccountsScreen = ({
       showToast('error', 'Vui lòng nhập tên tài khoản.')
       return
     }
-    try {
-      const updated = await window.launcherApi.addLocalAccount(newLocalUsername)
-      onAccountStateChange(updated)
+    const res = await addLocalAccount(newLocalUsername)
+    if (res) {
       setNewLocalUsername('')
       setShowLocalInput(false)
       setShowAddModal(false)
-      appendLog('success', `Đã tạo tài khoản Local mới: ${newLocalUsername}`)
-      showToast('success', `Đã tạo tài khoản: ${newLocalUsername}`)
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : 'Lỗi tạo tài khoản'
-      appendLog('error', msg)
-      showToast('error', msg)
     }
   }
 
   const handleSelectAccount = async (id: string) => {
-    try {
-      const updated = await window.launcherApi.selectAccount(id)
-      onAccountStateChange(updated)
-      appendLog('info', `Đã chuyển sang tài khoản: ${updated.accounts.find((a: any) => a.id === id)?.username}`)
-    } catch (e) {
-      appendLog('error', e instanceof Error ? e.message : 'Lỗi chuyển tài khoản')
-    }
+    await selectAccount(id)
   }
 
   const handleRemoveAccount = async (id: string, name: string) => {
-    if (!(await confirm({ message: `Bạn có chắc muốn xóa tài khoản "${name}"?`, isDestructive: true }))) return
-    try {
-      const updated = await window.launcherApi.removeAccount(id)
-      onAccountStateChange(updated)
-      appendLog('info', `Đã xóa tài khoản: ${name}`)
-    } catch (e) {
-      appendLog('error', e instanceof Error ? e.message : 'Lỗi xóa tài khoản')
-    }
+    if (
+      !(await confirm({
+        message: `Bạn có chắc muốn xóa tài khoản "${name}"?`,
+        isDestructive: true,
+      }))
+    )
+      return
+    await removeAccount(id)
   }
 
   // Open the skin change modal for a specific account
@@ -227,8 +262,10 @@ export const AccountsScreen = ({
           const base64Cape = await window.launcherApi.fetchMojangTexture(activeCape.url)
           setPendingCapeFile(base64Cape || activeCape.url)
           setPendingCapeId(activeCape.id)
+          setSelectedCapeUrl(activeCape.url)
         } else {
           setPendingCapeFile(null)
+          setSelectedCapeUrl(null)
         }
       } catch (err: any) {
         showToast('error', `Lỗi tải thông tin Mojang: ${err.message}`)
@@ -236,6 +273,7 @@ export const AccountsScreen = ({
         setPendingSkinFile(acc?.skinUrl || null)
         setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
         setPendingCapeFile(acc?.capeUrl || null)
+        setSelectedCapeUrl(acc?.capeUrl || null)
       } finally {
         setIsFetchingMojang(false)
       }
@@ -245,6 +283,7 @@ export const AccountsScreen = ({
       setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
       setPendingSkinFile(acc?.skinUrl || null)
       setPendingCapeFile(acc?.capeUrl || null)
+      setSelectedCapeUrl(acc?.capeUrl || null)
     }
   }
 
@@ -256,10 +295,16 @@ export const AccountsScreen = ({
     setPendingSkinFile(null)
     setPendingSkinModel('default')
     setPendingCapeFile(null)
+    setSelectedCapeUrl(null)
     setPendingCapeId('')
     setSkinTab('skin')
     setMojangProfile(null)
     setIsCheckingRename(false)
+    setNamemcInput('')
+    setGalleryQuery('')
+    setSelectedCategory('all')
+    setGalleryPage(1)
+    setCapeGalleryQuery('')
   }
 
   const handleRenameClick = async () => {
@@ -342,138 +387,131 @@ export const AccountsScreen = ({
     e.target.value = ''
   }
 
-  const loadMineskinGallery = async (page: number, query: string = activeQuery) => {
-    setIsFetchingGallery(true)
+  const handleSelectGallerySkin = async (skin: NameMCSkin) => {
+    setIsImportingNamemc(true)
     try {
-      const url = query.trim()
-        ? `https://api.mineskin.org/get/list/${page}?filter=${encodeURIComponent(query)}`
-        : `https://api.mineskin.org/get/list/${page}`
-      const res = await fetch(url)
-      if (res.ok) {
-        const data = await res.json()
-        setMineskinGallery(data.skins || [])
-        setGalleryPage(page)
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsFetchingGallery(false)
-    }
-  }
-
-  const loadMineskinCapes = async () => {
-    setIsFetchingCapes(true)
-    try {
-      const res = await fetch('https://api.mineskin.org/v2/capes')
-      if (res.ok) {
-        const data = await res.json()
-        setMineskinCapes(data.capes || [])
-      }
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsFetchingCapes(false)
-    }
-  }
-
-  useEffect(() => {
-    if (showSkinModal && skinModalTargetType === 'local' && skinTab === 'cape' && mineskinCapes.length === 0) {
-      loadMineskinCapes()
-    }
-  }, [showSkinModal, skinModalTargetType, skinTab])
-
-  const handleSearchGallery = (e: React.FormEvent) => {
-    e.preventDefault()
-    setActiveQuery(galleryQuery)
-    loadMineskinGallery(1, galleryQuery)
-  }
-
-  useEffect(() => {
-    if (showSkinModal && skinTab === 'skin' && mineskinGallery.length === 0) {
-      loadMineskinGallery(1)
-    }
-  }, [showSkinModal, skinTab])
-
-  const handleSelectGalleryCape = async (url: string) => {
-    setIsFetchingCapes(true)
-    try {
-      const base64Cape = await window.launcherApi.fetchMojangTexture(url)
-      if (base64Cape) {
-        setPendingCapeFile(base64Cape)
-      } else {
-        throw new Error('Không thể tải ảnh cape')
-      }
-    } catch (err) {
-      showToast('error', 'Lỗi tải ảnh cape từ MineSkin')
-    } finally {
-      setIsFetchingCapes(false)
-    }
-  }
-
-  const handleSelectGallerySkin = async (textureUrl: string) => {
-    setIsFetchingMineskin(true)
-    try {
-      const base64Skin = await window.launcherApi.fetchMojangTexture(textureUrl)
+      const base64Skin = await window.launcherApi.fetchMojangTexture(skin.url)
       if (base64Skin) {
         setPendingSkinFile(base64Skin)
-        setPendingSkinModel('default')
+        setPendingSkinModel(skin.model)
+        showToast('success', `Đã chọn skin: ${skin.name}`)
       } else {
-        throw new Error('Không thể tải ảnh')
+        throw new Error('Không thể nạp skin này')
       }
-    } catch (err) {
-      showToast('error', 'Lỗi tải ảnh từ thư viện MineSkin')
+    } catch (err: any) {
+      showToast('error', err.message || 'Lỗi tải ảnh từ thư viện NameMC')
     } finally {
-      setIsFetchingMineskin(false)
+      setIsImportingNamemc(false)
     }
   }
 
-  const handleImportMineskin = async () => {
-    if (!mineskinInput.trim()) return
-    const identifier = mineskinInput.trim()
-
-    setIsFetchingMineskin(true)
+  const handleSelectGalleryCape = async (cape: NameMCCape) => {
+    setSelectedCapeUrl(cape.url)
     try {
-      let textureUrl = ''
-      let variant = 'default'
-
-      if (identifier.startsWith('http') && !identifier.includes('mineskin.org/')) {
-        textureUrl = identifier
+      const base64Cape = await window.launcherApi.fetchMojangTexture(cape.url)
+      if (base64Cape) {
+        setPendingCapeFile(base64Cape)
+        showToast('success', `Đã chọn áo choàng: ${cape.name}`)
       } else {
-        let msId = identifier
-        if (identifier.includes('mineskin.org/')) {
-          const parts = identifier.split('/').filter(Boolean)
-          msId = parts[parts.length - 1]
-        }
+        setPendingCapeFile(cape.url)
+        showToast('success', `Đã chọn áo choàng: ${cape.name}`)
+      }
+    } catch {
+      setPendingCapeFile(cape.url)
+      showToast('success', `Đã chọn áo choàng: ${cape.name}`)
+    }
+  }
 
-        const isId = /^\d+$/.test(msId)
-        const url = isId
-          ? `https://api.mineskin.org/get/id/${msId}`
-          : `https://api.mineskin.org/get/uuid/${msId}`
+  const handleImportNamemc = async () => {
+    const raw = namemcInput.trim()
+    if (!raw) return
 
-        const res = await fetch(url)
-        if (!res.ok) throw new Error('Không tìm thấy skin (hoặc MineSkin lỗi)')
-        const data = await res.json()
-
-        textureUrl = data?.data?.texture?.url
-        variant = data?.variant || 'classic'
+    setIsImportingNamemc(true)
+    try {
+      // 1. Direct Data URL
+      if (raw.startsWith('data:image')) {
+        setPendingSkinFile(raw)
+        showToast('success', 'Đã nạp file skin ảnh!')
+        setNamemcInput('')
+        return
       }
 
-      if (textureUrl) {
-        const base64Skin = await window.launcherApi.fetchMojangTexture(textureUrl)
+      // 2. NameMC Skin link / Texture link / Raw 64 hex hash
+      const nmcSkinMatch = raw.match(/namemc\.com\/skin\/([a-fA-F0-9]+)/i)
+      const nmcTexMatch = raw.match(/namemc\.com\/texture\/([a-fA-F0-9]+)/i)
+      const isHexHash = /^[a-fA-F0-9]{64}$/.test(raw)
+
+      if (nmcSkinMatch || nmcTexMatch || isHexHash) {
+        const hash = nmcSkinMatch ? nmcSkinMatch[1] : nmcTexMatch ? nmcTexMatch[1] : raw
+        const mojangUrl = `https://textures.minecraft.net/texture/${hash}`
+        const base64Skin = await window.launcherApi.fetchMojangTexture(mojangUrl)
         if (base64Skin) {
           setPendingSkinFile(base64Skin)
-          setPendingSkinModel(variant === 'slim' ? 'slim' : 'default')
-        } else {
-          throw new Error('Không thể tải ảnh từ link này')
+          showToast('success', 'Đã nạp skin NameMC thành công!')
+          setNamemcInput('')
+          return
+        }
+      }
+
+      // 3. Direct HTTP Image URL (other than NameMC profile)
+      if ((raw.startsWith('http://') || raw.startsWith('https://')) && !raw.includes('namemc.com/profile/')) {
+        const base64Skin = await window.launcherApi.fetchMojangTexture(raw)
+        if (base64Skin) {
+          setPendingSkinFile(base64Skin)
+          showToast('success', 'Đã nạp skin từ đường dẫn!')
+          setNamemcInput('')
+          return
+        }
+      }
+
+      // 4. Player username / NameMC profile lookup
+      const playerData = await window.launcherApi.lookupPlayerSkin(raw)
+      if (playerData && playerData.url) {
+        const base64Skin = await window.launcherApi.fetchMojangTexture(playerData.url)
+        if (base64Skin) {
+          setPendingSkinFile(base64Skin)
+          setPendingSkinModel(playerData.model || 'default')
+          if (playerData.capeUrl && skinModalTargetType === 'local') {
+            const base64Cape = await window.launcherApi.fetchMojangTexture(playerData.capeUrl)
+            if (base64Cape) setPendingCapeFile(base64Cape)
+          }
+          showToast('success', `Đã nạp skin người chơi ${playerData.username} (${playerData.model === 'slim' ? 'Tay mảnh' : 'Classic'})!`)
+          setNamemcInput('')
+          return
+        }
+      }
+
+      throw new Error('Không tìm thấy skin. Vui lòng kiểm tra lại tên người chơi hoặc link NameMC.')
+    } catch (err: any) {
+      showToast('error', err.message || 'Lỗi nạp skin từ NameMC')
+    } finally {
+      setIsImportingNamemc(false)
+    }
+  }
+
+  const handleLivePlayerSearch = async () => {
+    if (!galleryQuery.trim()) return
+    setIsSearchingPlayer(true)
+    try {
+      const playerData = await window.launcherApi.lookupPlayerSkin(galleryQuery.trim())
+      if (playerData && playerData.url) {
+        const base64Skin = await window.launcherApi.fetchMojangTexture(playerData.url)
+        if (base64Skin) {
+          setPendingSkinFile(base64Skin)
+          setPendingSkinModel(playerData.model || 'default')
+          if (playerData.capeUrl && skinModalTargetType === 'local') {
+            const base64Cape = await window.launcherApi.fetchMojangTexture(playerData.capeUrl)
+            if (base64Cape) setPendingCapeFile(base64Cape)
+          }
+          showToast('success', `Đã tìm thấy & nạp skin người chơi ${playerData.username}!`)
         }
       } else {
-        throw new Error('Dữ liệu skin không hợp lệ')
+        showToast('error', `Không tìm thấy người chơi "${galleryQuery.trim()}" trên NameMC / Mojang.`)
       }
     } catch (err: any) {
-      showToast('error', err.message || 'Lỗi tải ảnh skin')
+      showToast('error', err.message || 'Lỗi tìm kiếm người chơi')
     } finally {
-      setIsFetchingMineskin(false)
-      setMineskinInput('')
+      setIsSearchingPlayer(false)
     }
   }
 
@@ -536,8 +574,6 @@ export const AccountsScreen = ({
     setNewLocalUsername('')
   }
 
-  const accounts = accountState?.accounts || []
-
   return (
     <div className="px-6 pt-2 pb-6 h-full flex flex-col gap-5">
       <input ref={skinInputRef} type="file" accept="image/png" className="hidden" onChange={handleSkinFileChange} />
@@ -560,7 +596,7 @@ export const AccountsScreen = ({
         {accounts.length > 0 ? (
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
             {accounts.map(acc => {
-              const isActive = acc.id === accountState?.activeAccountId
+              const isActive = acc.id === activeAccountId
               const isLocal = acc.type === 'local'
               const skinData = { url: acc.skinUrl || '', model: (acc.skinModel as SkinModel) || 'default' }
               const capeData = acc.capeUrl || ''
@@ -571,11 +607,11 @@ export const AccountsScreen = ({
                   key={acc.id}
                   onClick={() => !isActive && !isWorking && handleSelectAccount(acc.id)}
                   className={[
-                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer bg-background/50 backdrop-blur-sm',
+                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer shadow-md',
                     isWorking ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
-                      ? 'border-primary/50'
-                      : 'border-border hover:border-primary/30 hover:shadow-lg hover:-translate-y-0.5',
+                      ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
+                      : 'border-zinc-800/80 bg-zinc-900/85 hover:bg-zinc-900 hover:border-primary/40 hover:-translate-y-0.5',
                   ].join(' ')}
                 >
                   {isActive && (
@@ -645,7 +681,7 @@ export const AccountsScreen = ({
         onClose={closeSkinModal}
         title={`Ngoại hình – ${skinModalTargetName}`}
         description={skinModalTargetType === 'microsoft' ? "Chỉnh sửa Skin & Cape trực tiếp trên server Mojang" : "Chỉnh sửa Skin & Cape (Local)"}
-        maxWidth="max-w-xl"
+        maxWidth="max-w-2xl"
         footer={
           <>
             <Button variant="outline" onClick={closeSkinModal} disabled={isSavingMojang || isFetchingMojang}>Hủy</Button>
@@ -731,7 +767,7 @@ export const AccountsScreen = ({
                             </button>
                           </div>
                         ) : (
-                          <p className="text-xs text-muted-foreground">Chưa nạp skin mới. Bạn có thể chọn file hoặc dùng link ảnh để nạp.</p>
+                          <p className="text-xs text-muted-foreground">Chưa nạp skin mới. Bạn có thể chọn file hoặc dùng link ảnh/NameMC để nạp.</p>
                         )}
                       </div>
 
@@ -740,7 +776,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('default')}
-                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'default' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
+                          className={['flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'default' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -756,7 +792,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('slim')}
-                          className={['flex items-center gap-3 p-2.5 rounded-lg border-2 transition-all duration-200', pendingSkinModel === 'slim' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
+                          className={['flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'slim' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -770,27 +806,30 @@ export const AccountsScreen = ({
                         </button>
                       </div>
 
-                      {/* MineSkin Import */}
-                      <div className="flex items-center gap-2 mt-2">
-                        <Input
-                          placeholder="Link ảnh .png bất kỳ hoặc MineSkin ID..."
-                          className="h-8 text-xs flex-1"
-                          value={mineskinInput}
-                          onChange={(e) => setMineskinInput(e.target.value)}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter') handleImportMineskin()
-                          }}
-                          disabled={isFetchingMineskin}
-                        />
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          className="h-8 text-xs shrink-0"
-                          onClick={handleImportMineskin}
-                          disabled={isFetchingMineskin || !mineskinInput.trim()}
-                        >
-                          {isFetchingMineskin ? <Loader2 size={14} className="animate-spin" /> : 'Import'}
-                        </Button>
+                      {/* NameMC Smart Import */}
+                      <div className="space-y-1.5 mt-2">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            placeholder="Tên người chơi (SlenderMan, Độ Mixi...) hoặc link NameMC..."
+                            className="h-8 text-xs flex-1"
+                            value={namemcInput}
+                            onChange={(e) => setNamemcInput(e.target.value)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') handleImportNamemc()
+                            }}
+                            disabled={isImportingNamemc}
+                          />
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-8 text-xs shrink-0 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30"
+                            onClick={handleImportNamemc}
+                            disabled={isImportingNamemc || !namemcInput.trim()}
+                          >
+                            {isImportingNamemc ? <Loader2 size={14} className="animate-spin mr-1" /> : <Sparkles size={13} className="mr-1" />}
+                            Nạp
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -812,46 +851,53 @@ export const AccountsScreen = ({
                           {pendingCapeFile ? (
                             <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border border-primary/40 bg-black/10">
                               <span className="text-xs font-medium text-primary">Đã nạp file áo choàng</span>
-                              <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => setPendingCapeFile(null)} title="Gỡ bỏ">
+                              <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => { setPendingCapeFile(null); setSelectedCapeUrl(null); }} title="Gỡ bỏ">
                                 <Trash2 size={16} />
                               </button>
                             </div>
                           ) : (
-                            <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể tự upload file ảnh cape (.png) bất kỳ.</p>
+                            <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể chọn từ danh sách NameMC bên dưới hoặc tự tải lên file PNG.</p>
                           )}
                         </div>
                       ) : (
                         // Microsoft Capes
-                        <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
-                          <button
-                            type="button"
-                            onClick={() => { setPendingCapeId(''); setPendingCapeFile(null) }}
-                            className={['flex items-center gap-2 p-2 rounded-lg border transition-all', pendingCapeId === '' ? 'border-primary bg-primary/10' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
-                          >
-                            <div className="h-8 w-8 rounded bg-muted flex items-center justify-center shrink-0">
-                              <XCircle size={14} className="text-muted-foreground" />
-                            </div>
-                            <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng</span>
-                          </button>
+                        <div className="space-y-3">
+                          <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-start gap-2">
+                            <Sparkles size={14} className="shrink-0 mt-0.5" />
+                            <span>Tài khoản Microsoft (Bản quyền) chỉ có thể trang bị các áo choàng chính chủ được cấp phép trên hệ thống Mojang.</span>
+                          </div>
 
-                          {mojangProfile?.capes?.map((cape: any) => (
+                          <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
                             <button
-                              key={cape.id}
                               type="button"
-                              onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url) }}
-                              className={['flex items-center gap-3 p-2 rounded-lg border transition-all', pendingCapeId === cape.id ? 'border-primary bg-primary/10 shadow-[0_0_8px_rgba(var(--primary),0.2)]' : 'border-border/50 bg-background/50 backdrop-blur-sm hover:border-primary/40'].join(' ')}
+                              onClick={() => { setPendingCapeId(''); setPendingCapeFile(null); setSelectedCapeUrl(null); }}
+                              className={['flex items-center gap-2 p-2.5 rounded-xl border transition-all shadow-sm', pendingCapeId === '' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                             >
-                              <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
-                              <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
-                                {cape.alias || 'Cape'}
-                              </span>
+                              <div className="h-8 w-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                                <XCircle size={14} className="text-muted-foreground" />
+                              </div>
+                              <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng áo choàng</span>
                             </button>
-                          ))}
-                          {mojangProfile?.capes?.length === 0 && (
-                            <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-border">
-                              <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào.</span>
-                            </div>
-                          )}
+
+                            {mojangProfile?.capes?.map((cape: any) => (
+                              <button
+                                key={cape.id}
+                                type="button"
+                                onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url); setSelectedCapeUrl(cape.url); }}
+                                className={['flex items-center gap-3 p-2.5 rounded-xl border transition-all shadow-sm', pendingCapeId === cape.id ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                              >
+                                <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
+                                <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
+                                  {cape.alias || 'Cape Mojang'}
+                                </span>
+                              </button>
+                            ))}
+                            {mojangProfile?.capes?.length === 0 && (
+                              <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-border">
+                                <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào trên Mojang.</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       )}
                     </div>
@@ -859,97 +905,176 @@ export const AccountsScreen = ({
                 </div>
               </div>
 
-              {/* MineSkin Gallery Independent Section */}
+              {/* NameMC Skin Gallery Section */}
               {skinTab === 'skin' && (
-                <div className="pt-5 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-semibold text-foreground">Skin (MineSkin)</label>
+                <div className="pt-4 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-3">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                    <div className="flex items-center gap-2">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                        <Sparkles size={14} className="text-primary" />
+                        Thư viện Skin (NameMC)
+                      </label>
+                      <span className="text-[10px] text-muted-foreground bg-muted/40 px-1.5 py-0.5 rounded-full">
+                        {filteredSkins.length} skin
+                      </span>
+                    </div>
 
-                    <div className="flex items-center gap-4">
-                      <form onSubmit={handleSearchGallery} className="flex items-center gap-2">
+                    <div className="flex items-center gap-2">
+                      <div className="relative">
+                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                         <Input
-                          placeholder="Tìm kiếm skin..."
-                          className="h-8 text-xs w-48"
+                          placeholder="Tìm skin / người chơi..."
+                          className="h-8 text-xs pl-8 w-44 sm:w-52"
                           value={galleryQuery}
-                          onChange={(e) => setGalleryQuery(e.target.value)}
+                          onChange={(e) => {
+                            setGalleryQuery(e.target.value)
+                            setGalleryPage(1)
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') handleLivePlayerSearch()
+                          }}
                         />
-                        <Button type="submit" variant="secondary" size="sm" className="h-8 text-xs">
-                          Tìm
-                        </Button>
-                      </form>
+                      </div>
 
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="h-8 text-xs px-2" disabled={galleryPage <= 1 || isFetchingGallery} onClick={() => loadMineskinGallery(galleryPage - 1)}>
+                      <div className="flex gap-1 items-center">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs px-2"
+                          disabled={galleryPage <= 1}
+                          onClick={() => setGalleryPage(p => Math.max(1, p - 1))}
+                        >
                           Trước
                         </Button>
-                        <span className="text-sm font-medium text-muted-foreground flex items-center min-w-[50px] justify-center">Trang {galleryPage}</span>
-                        <Button variant="outline" size="sm" className="h-8 text-xs px-2" disabled={isFetchingGallery || mineskinGallery.length === 0} onClick={() => loadMineskinGallery(galleryPage + 1)}>
+                        <span className="text-xs font-medium text-muted-foreground flex items-center px-1">
+                          {galleryPage}/{totalPages}
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-8 text-xs px-2"
+                          disabled={galleryPage >= totalPages}
+                          onClick={() => setGalleryPage(p => Math.min(totalPages, p + 1))}
+                        >
                           Tiếp
                         </Button>
                       </div>
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
-                    {isFetchingGallery ? (
+                  {/* Category Filter Chips */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none">
+                    {NAMEMC_CATEGORIES.map(cat => (
+                      <button
+                        key={cat.key}
+                        type="button"
+                        onClick={() => {
+                          setSelectedCategory(cat.key)
+                          setGalleryPage(1)
+                        }}
+                        className={[
+                          'text-xs font-medium px-2.5 py-1 rounded-full whitespace-nowrap transition-all border shrink-0',
+                          selectedCategory === cat.key
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted/30 text-muted-foreground border-border/50 hover:bg-muted/60 hover:text-foreground',
+                        ].join(' ')}
+                      >
+                        {cat.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Skin Grid */}
+                  <div className="grid grid-cols-4 sm:grid-cols-4 gap-2.5 max-h-64 sm:max-h-72 overflow-y-auto pr-1">
+                    {isImportingNamemc && paginatedSkins.length === 0 ? (
                       <div className="col-span-4 flex justify-center py-10">
                         <Loader2 size={24} className="animate-spin text-muted-foreground" />
                       </div>
-                    ) : mineskinGallery.length === 0 ? (
-                      <div className="col-span-4 text-center text-sm text-muted-foreground py-8">
-                        Không tìm thấy skin nào.
+                    ) : paginatedSkins.length === 0 ? (
+                      <div className="col-span-4 flex flex-col items-center justify-center text-center py-8 gap-2 bg-accent/10 rounded-xl border border-dashed border-border/60">
+                        <p className="text-xs text-muted-foreground">Không có skin nào trong danh mục phù hợp với từ khóa.</p>
+                        {galleryQuery.trim() && (
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="h-7 text-xs bg-primary/20 text-primary border border-primary/30"
+                            onClick={handleLivePlayerSearch}
+                            disabled={isSearchingPlayer}
+                          >
+                            {isSearchingPlayer ? <Loader2 size={12} className="animate-spin mr-1" /> : <User size={12} className="mr-1" />}
+                            Tìm skin người chơi "{galleryQuery.trim()}" trên NameMC
+                          </Button>
+                        )}
                       </div>
                     ) : (
-                      mineskinGallery.map((skin) => (
-                        <GallerySkinItem key={skin.id} skin={skin} onSelect={() => handleSelectGallerySkin(skin.url)} />
+                      paginatedSkins.map((skin) => (
+                        <GallerySkinItem
+                          key={skin.id}
+                          skin={skin}
+                          isSelected={pendingSkinFile === skin.url}
+                          onSelect={() => handleSelectGallerySkin(skin)}
+                        />
                       ))
                     )}
                   </div>
                 </div>
               )}
 
-              {/* MineSkin Cape Gallery Independent Section */}
+              {/* NameMC & Mojang Capes Gallery Section (Local only) */}
               {skinTab === 'cape' && skinModalTargetType === 'local' && (
-                <div className="pt-5 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-semibold text-foreground">Cape (MineSkin)</label>
+                <div className="pt-4 border-t border-border/50 animate-in fade-in slide-in-from-bottom-2 duration-300 flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                      <Sparkles size={14} className="text-primary" />
+                      Thư viện Áo choàng NameMC
+                    </label>
 
-                    <div className="flex items-center gap-4">
+                    <div className="relative">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                       <Input
-                        placeholder="Tìm kiếm cape..."
-                        className="h-8 text-xs w-48"
+                        placeholder="Tìm kiếm áo choàng..."
+                        className="h-8 text-xs pl-8 w-48"
                         value={capeGalleryQuery}
                         onChange={(e) => setCapeGalleryQuery(e.target.value)}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-4 gap-3 max-h-48 overflow-y-auto pr-1">
-                    {isFetchingCapes ? (
-                      <div className="col-span-4 flex justify-center py-10">
-                        <Loader2 size={24} className="animate-spin text-muted-foreground" />
-                      </div>
-                    ) : mineskinCapes.length === 0 ? (
-                      <div className="col-span-4 text-center text-sm text-muted-foreground py-8">
-                        Không tìm thấy cape nào.
+                  <div className="grid grid-cols-4 gap-3 max-h-56 overflow-y-auto pr-1">
+                    {filteredCapes.length === 0 ? (
+                      <div className="col-span-4 text-center text-xs text-muted-foreground py-8">
+                        Không tìm thấy áo choàng nào.
                       </div>
                     ) : (
-                      mineskinCapes
-                        .filter(cape => !capeGalleryQuery || cape.alias?.toLowerCase().includes(capeGalleryQuery.toLowerCase()))
-                        .map((cape) => (
+                      filteredCapes.map((cape) => {
+                        const isSelected = pendingCapeFile === cape.url || selectedCapeUrl === cape.url
+                        return (
                           <button
-                            key={cape.uuid}
+                            key={cape.id}
                             type="button"
-                            onClick={() => handleSelectGalleryCape(cape.url)}
-                            className="bg-transparent border border-transparent rounded-xl p-2 flex flex-col items-center gap-2 hover:border-primary/30 hover:bg-background/50 backdrop-blur-sm/50 transition-all group"
-                            title={cape.alias || 'Cape'}
+                            onClick={() => handleSelectGalleryCape(cape)}
+                            className={[
+                              'border rounded-xl p-2 flex flex-col items-center gap-1.5 transition-all group relative',
+                              isSelected
+                                ? 'border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.2)] ring-1 ring-primary'
+                                : 'border-border/40 bg-background/40 backdrop-blur-sm hover:border-primary/40 hover:bg-background/80 hover:-translate-y-0.5',
+                            ].join(' ')}
+                            title={`${cape.name}${cape.description ? ` - ${cape.description}` : ''}`}
                           >
-                            <div className="w-16 h-24 rounded-sm overflow-hidden flex items-center justify-center bg-zinc-900/10 group-hover:scale-105 transition-transform drop-shadow-sm">
+                            <div className="w-16 h-24 rounded-md overflow-hidden flex items-center justify-center bg-zinc-900/20 group-hover:scale-105 transition-transform drop-shadow-sm">
                               <CapePreview capeUrl={cape.url} width={40} height={64} className="shrink-0 drop-shadow-md" />
                             </div>
-                            <span className="text-xs font-medium text-foreground truncate w-full text-center">{cape.alias}</span>
+                            <span className={['text-[11px] font-semibold truncate w-full text-center px-1', isSelected ? 'text-primary' : 'text-foreground'].join(' ')}>
+                              {cape.name}
+                            </span>
+                            {cape.year && (
+                              <span className="text-[9px] text-muted-foreground px-1 py-0.2 rounded bg-muted/40">
+                                {cape.year}
+                              </span>
+                            )}
                           </button>
-                        ))
+                        )
+                      })
                     )}
                   </div>
                 </div>
@@ -971,13 +1096,13 @@ export const AccountsScreen = ({
           {/* Microsoft Option */}
           <button
             onClick={handleMicrosoftLogin} disabled={isWorking}
-            className="group flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-emerald-500/40 hover:bg-emerald-500/5 transition-all text-left disabled:opacity-50"
+            className="group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
           >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 group-hover:bg-emerald-500/20">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
               <Key size={20} />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-foreground/80">Tài khoản Microsoft</p>
+              <p className="text-sm font-bold text-foreground">Tài khoản Microsoft</p>
               <p className="text-xs text-muted-foreground mt-0.5">Đăng nhập bản quyền Microsoft</p>
             </div>
             <div className="shrink-0 text-muted-foreground group-hover:text-emerald-400">
@@ -989,13 +1114,13 @@ export const AccountsScreen = ({
           {!showLocalInput ? (
             <button
               onClick={() => setShowLocalInput(true)} disabled={isWorking}
-              className="group flex items-center gap-4 p-4 rounded-xl border border-border/50 bg-background/50 backdrop-blur-sm hover:border-amber-500/40 hover:bg-amber-500/5 transition-all text-left disabled:opacity-50"
+              className="group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-amber-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-400 group-hover:bg-amber-500/20">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:bg-amber-500/25">
                 <FlaskConical size={20} />
               </div>
               <div className="min-w-0 flex-1">
-                <p className="text-sm font-bold text-foreground/80">Tài khoản Local (Offline)</p>
+                <p className="text-sm font-bold text-foreground">Tài khoản Local (Offline)</p>
                 <p className="text-xs text-muted-foreground mt-0.5">Khởi tạo nhanh, chơi offline</p>
               </div>
               <div className="shrink-0 text-muted-foreground group-hover:text-amber-400">

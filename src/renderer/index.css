@@ -56,10 +56,10 @@
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
 
-  --color-emerald-300: oklch(0.70 0.13 142);
-  --color-emerald-400: oklch(0.60 0.16 142);
-  --color-emerald-500: oklch(0.53 0.15 142);
-  --color-emerald-600: oklch(0.45 0.14 142);
+  --color-emerald-300: oklch(0.75 0.14 150);
+  --color-emerald-400: oklch(0.68 0.17 150);
+  --color-emerald-500: oklch(0.60 0.18 150);
+  --color-emerald-600: oklch(0.50 0.16 150);
 
   --radius-sm: calc(var(--radius) * 0.65);
   --radius-md: calc(var(--radius) * 0.85);
@@ -73,79 +73,79 @@
   color-scheme: dark;
 
   /*
-    LetCuteMC Dark Green Theme
-    - Sidebar: tối nhất
-    - Background: nền app chính
-    - Card/Popover: nổi nhẹ trên nền
-    - Primary: emerald/grass không quá neon
+    LetCuteMC Modern Dark Emerald Green Theme
+    - Background: Deep obsidian zinc-950
+    - Surfaces: Soft dark glass panels with subtle emerald borders
+    - Primary: Vibrant Minecraft Emerald / Grass Green (#10b981 / #34d399)
+    - Secondary: Slate/Zinc dark stone
+    - Accent Glow: Soft emerald glow (emerald-500/20)
   */
 
   /* Base */
-  --background: oklch(0.185 0.008 240);
-
+  --background: oklch(0.125 0.010 240);
   --foreground: oklch(0.965 0.006 140);
 
-  /* Surfaces - Solid for better readability */
-  --card: oklch(0.15 0 0 / 0.55);
+  /* Surfaces - Soft Glass for High Readability */
+  --card: oklch(0.160 0.010 240 / 0.85);
   --card-foreground: oklch(0.965 0.006 140);
 
-  --popover: oklch(0.12 0 0 / 0.95);
+  --popover: oklch(0.135 0.010 240 / 0.96);
   --popover-foreground: oklch(0.965 0.006 140);
 
-  /* Primary - Minecraft grass / emerald */
-  --primary: oklch(0.560 0.145 142);
-  --primary-hover: oklch(0.620 0.155 142);
-  --primary-foreground: oklch(0.967 0 0);
+  /* Primary - Vibrant Minecraft Emerald Green */
+  --primary: oklch(0.620 0.175 150);
+  --primary-hover: oklch(0.680 0.185 150);
+  --primary-foreground: oklch(0.110 0.020 240);
 
-  /* Secondary - dark stone */
-  --secondary: oklch(0.270 0.015 240 / 0.5);
-  --secondary-foreground: oklch(0.965 0.006 140);
+  /* Secondary - Dark Glass Stone */
+  --secondary: oklch(0.220 0.012 240 / 0.65);
+  --secondary-foreground: oklch(0.940 0.008 140);
 
-  /* Interactive states - Translucent */
-  --muted: oklch(0.240 0.010 240 / 0.5);
-  --muted-foreground: oklch(0.700 0.010 240);
+  /* Interactive states */
+  --muted: oklch(0.200 0.010 240 / 0.6);
+  --muted-foreground: oklch(0.680 0.010 140);
 
-  --accent: oklch(0.270 0.015 240 / 0.5);
-  --accent-foreground: oklch(0.940 0.010 140);
+  --accent: oklch(0.240 0.025 150 / 0.55);
+  --accent-foreground: oklch(0.960 0.010 140);
 
-  /* Destructive - redstone */
+  /* Destructive - Red */
   --destructive: oklch(0.600 0.210 27);
   --destructive-foreground: oklch(0.985 0.005 20);
 
-  /* Warning - gold */
+  /* Warning - Amber */
   --warning: oklch(0.780 0.145 82);
   --warning-foreground: oklch(0.145 0.035 70);
 
-  /* Info - diamond */
-  --info: oklch(0.730 0.120 195);
-  --info-foreground: oklch(0.105 0.035 205);
+  /* Info - Diamond */
+  --info: oklch(0.740 0.140 215);
+  --info-foreground: oklch(0.110 0.035 240);
 
   /* Borders / inputs */
-  --border: oklch(0.285 0.010 240);
-  --input: oklch(0.175 0.008 240);
-  --ring: oklch(0.560 0.145 142);
+  --border: oklch(0.240 0.012 240);
+  --input: oklch(0.165 0.010 240);
+  --ring: oklch(0.620 0.175 150);
 
   /* Charts */
-  --chart-1: oklch(0.560 0.145 142);
-  --chart-2: oklch(0.780 0.145 82);
-  --chart-3: oklch(0.730 0.120 195);
+  --chart-1: oklch(0.620 0.175 150);
+  --chart-2: oklch(0.650 0.180 275);
+  --chart-3: oklch(0.780 0.145 82);
   --chart-4: oklch(0.600 0.210 27);
-  --chart-5: oklch(0.620 0.110 285);
+  --chart-5: oklch(0.680 0.150 160);
 
-  --radius: 0.75rem;
+  --radius: 0.85rem;
 
-  /* Sidebar - darkest surface */
-  --sidebar: oklch(0.105 0.005 240);
-  --sidebar-foreground: oklch(0.875 0.008 140);
+  /* Sidebar - Darkest Surface */
+  --sidebar: oklch(0.105 0.008 240);
+  --sidebar-foreground: oklch(0.880 0.008 140);
 
-  --sidebar-primary: oklch(0.560 0.145 142);
-  --sidebar-primary-foreground: oklch(0.985 0.005 140);
+  --sidebar-primary: oklch(0.620 0.175 150);
+  --sidebar-primary-foreground: oklch(0.110 0.020 240);
 
-  --sidebar-accent: oklch(0.205 0.035 142);
-  --sidebar-accent-foreground: oklch(0.945 0.010 140);
+  --sidebar-accent: oklch(0.190 0.035 150 / 0.7);
+  --sidebar-accent-foreground: oklch(0.960 0.010 140);
 
-  --sidebar-border: oklch(0.235 0.008 240);
-  --sidebar-ring: oklch(0.560 0.145 142);
+  --sidebar-border: oklch(0.200 0.010 240);
+  --sidebar-ring: oklch(0.620 0.175 150);
 }
 
 html,
@@ -233,3 +233,26 @@ body {
   background-image: radial-gradient(var(--border) 1px, transparent 1px);
   background-size: 16px 16px;
 }
+
+/* ── GPU compositing layer for persistent tab panels ─────────────────────── */
+.tab-panel {
+  /* contain: layout removed — it blocked scroll propagation in Settings/About */
+}
+
+/* ── Skeleton shimmer ─────────────────────────────────────────────────────── */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted) / 0.4) 25%,
+    hsl(var(--muted) / 0.7) 50%,
+    hsl(var(--muted) / 0.4) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s ease-in-out infinite;
+}
+

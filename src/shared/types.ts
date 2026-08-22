@@ -65,6 +65,9 @@ export interface LaunchInput {
   maxMemoryMb: number
   serverAddress?: string
   auth?: AuthSession | null
+  jvmPreset?: JvmPresetType
+  customJvmArgs?: string
+  enableDedicatedGpu?: boolean
 }
 
 export interface LaunchResult {
@@ -270,9 +273,15 @@ export interface LauncherProfile {
   gameDir: string
   /** Thư mục chứa versions/libraries/assets. Dùng khi gameDir là thư mục profile riêng (modpack). */
   mcRootDir?: string | null
+  loader?: 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'vanilla'
+  loaderVersion?: string
   minMemoryMb: number
   maxMemoryMb: number
   javaPath?: string | null
+  jvmArgs?: string | null
+  description?: string
+  author?: string
+  tags?: string[]
   createdAt: string
   updatedAt: string
 }
@@ -287,9 +296,14 @@ export interface CreateProfileInput {
   minecraftVersion: string
   gameDir?: string
   mcRootDir?: string | null
+  loader?: 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'vanilla'
+  loaderVersion?: string
   minMemoryMb?: number
   maxMemoryMb?: number
   javaPath?: string | null
+  jvmArgs?: string | null
+  description?: string
+  author?: string
 }
 
 export interface UpdateProfileInput {
@@ -297,9 +311,14 @@ export interface UpdateProfileInput {
   minecraftVersion?: string
   gameDir?: string
   mcRootDir?: string | null
+  loader?: 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'vanilla'
+  loaderVersion?: string
   minMemoryMb?: number
   maxMemoryMb?: number
   javaPath?: string | null
+  jvmArgs?: string | null
+  description?: string
+  author?: string
 }
 
 export interface MinecraftServer {
@@ -369,6 +388,10 @@ export interface LauncherSettings {
   performanceMode: PerformanceMode
   // Integrations
   enableDiscordRpc: boolean
+  // JVM Presets & Optimization
+  jvmPreset?: JvmPresetType
+  customJvmArgs?: string
+  enableDedicatedGpu?: boolean
 }
 
 // ─── Minecraft Version Catalog ────────────────────────────────────────────────
@@ -780,3 +803,429 @@ export interface AutoFixDependenciesResult {
   message: string
 }
 
+// ─── Worlds & Saves types ──────────────────────────────────────────────────
+
+export type WorldGameType = 'survival' | 'creative' | 'adventure' | 'spectator' | 'hardcore' | 'unknown'
+export type WorldDifficulty = 'peaceful' | 'easy' | 'normal' | 'hard' | 'unknown'
+
+export interface MinecraftWorld {
+  folderName: string
+  folderPath?: string
+  path?: string
+  name: string
+  versionName: string
+  versionId?: number
+  gameType: WorldGameType
+  gameTypeRaw?: number
+  difficulty: WorldDifficulty
+  hardcore?: boolean
+  isHardcore: boolean
+  cheatsEnabled?: boolean
+  allowCommands: boolean
+  lastPlayed: number
+  sizeBytes: number
+  iconBase64?: string | null
+  seed?: string
+  backupCount: number
+  datapacks?: Array<{ name: string; enabled: boolean; description?: string }>
+}
+
+export interface WorldBackupItem {
+  id: string
+  fileName: string
+  filePath: string
+  worldFolderName: string
+  createdAt: number
+  sizeBytes: number
+}
+
+// ─── Screenshots types ───────────────────────────────────────────────────────
+
+export interface MinecraftScreenshot {
+  id: string
+  fileName: string
+  filePath: string
+  sizeBytes: number
+  createdAt: number
+  dataUrl?: string
+}
+
+// ─── Logs & Crash Reports types ──────────────────────────────────────────
+
+export interface LogFileInfo {
+  id: string
+  fileName: string
+  filePath: string
+  sizeBytes: number
+  createdAt: number
+  isCrashReport: boolean
+  isCompressed: boolean
+}
+
+export type LogLevel = 'ALL' | 'INFO' | 'WARN' | 'ERROR' | 'FATAL' | 'DEBUG'
+
+export interface ParsedLogLine {
+  id: number
+  raw: string
+  timestamp?: string
+  thread?: string
+  level: 'INFO' | 'WARN' | 'ERROR' | 'FATAL' | 'DEBUG' | 'UNKNOWN'
+  logger?: string
+  message: string
+}
+
+export interface LogDiagnosisItem {
+  type: 'danger' | 'warning' | 'info'
+  title: string
+  description: string
+  suggestion?: string
+  sourceMod?: string
+}
+
+export interface MclogsUploadResult {
+  success: boolean
+  url?: string
+  id?: string
+  raw?: string
+  error?: string
+}
+
+// ─── Playtime & In-game Statistics types ─────────────────────────────────────
+
+export interface PlaySessionRecord {
+  id: string
+  startTime: number
+  endTime: number
+  durationSeconds: number
+  exitCode?: number
+}
+
+export interface ProfileLauncherStats {
+  profileId: string
+  totalPlaytimeSeconds: number
+  lastPlayedTimestamp: number
+  launchCount: number
+  sessions: PlaySessionRecord[]
+}
+
+export interface MiningStatItem {
+  id: string
+  name: string
+  count: number
+  rarity: 'common' | 'uncommon' | 'rare' | 'epic' | 'legendary'
+  iconKey: string
+}
+
+export interface MobKillStatItem {
+  id: string
+  name: string
+  count: number
+  isBoss: boolean
+  iconKey: string
+}
+
+export interface TravelStats {
+  walkMeters: number
+  sprintMeters: number
+  swimMeters: number
+  flyElytraMeters: number
+  boatMeters: number
+  horseMeters: number
+  minecartMeters: number
+  totalDistanceMeters: number
+  jumps: number
+}
+
+export interface SurvivalLifeStats {
+  deaths: number
+  mobKills: number
+  playerKills: number
+  damageDealt: number
+  damageTaken: number
+  timesSlept: number
+  chestsOpened: number
+  fishCaught: number
+  animalsBred: number
+  enchantedItems: number
+  raidsWon: number
+}
+
+export interface WorldStatsSummary {
+  worldFolder: string
+  worldName: string
+  playerUuid: string
+  inGamePlaytimeTicks: number
+  inGamePlaytimeSeconds: number
+  mining: MiningStatItem[]
+  combat: MobKillStatItem[]
+  travel: TravelStats
+  survival: SurvivalLifeStats
+}
+
+export interface ProfileFullStats {
+  profileId: string
+  profileName: string
+  launcherStats: ProfileLauncherStats
+  aggregatedInGameStats: {
+    totalInGameSeconds: number
+    worldsCount: number
+    topMining: MiningStatItem[]
+    totalBlocksMined: number
+    topKills: MobKillStatItem[]
+    totalMobKills: number
+    travel: TravelStats
+    survival: SurvivalLifeStats
+  }
+  worlds: WorldStatsSummary[]
+}
+
+// ─── Profile Package Export / Import types ──────────────────────────────────
+
+export interface ProfilePackageManifest {
+  formatVersion: number
+  appName: 'LetCuteMC'
+  exportedAt: string
+  name: string
+  minecraftVersion: string
+  loader?: 'fabric' | 'forge' | 'neoforge' | 'quilt' | 'vanilla'
+  loaderVersion?: string
+  minMemoryMb?: number
+  maxMemoryMb?: number
+  javaPath?: string | null
+  jvmArgs?: string | null
+  description?: string
+  author?: string
+  includedFeatures: {
+    mods: boolean
+    config: boolean
+    shaderpacks: boolean
+    resourcepacks: boolean
+    options: boolean
+    servers: boolean
+  }
+  modsCount: number
+}
+
+export interface ExportProfilePackageOptions {
+  profileId: string
+  destinationPath: string
+  includeMods: boolean
+  includeConfig: boolean
+  includeShaderPacks: boolean
+  includeResourcePacks: boolean
+  includeOptions: boolean
+  includeServers: boolean
+  description?: string
+  author?: string
+}
+
+export interface ExportProfileResult {
+  success: boolean
+  outputPath?: string
+  fileSizeBytes?: number
+  error?: string
+}
+
+export interface PackagePreviewInfo {
+  valid: boolean
+  manifest?: ProfilePackageManifest
+  fileName: string
+  filePath: string
+  fileSizeBytes: number
+  error?: string
+}
+
+export interface ImportProfileResult {
+  success: boolean
+  profile?: LauncherProfile
+  error?: string
+}
+
+// ─── JVM Optimizer & Game Performance Types ──────────────────────────────────
+
+export type JvmPresetType = 'aikar' | 'shenandoah' | 'zgc' | 'low_end' | 'ultra_low_end' | 'default' | 'custom'
+
+export interface JvmPresetInfo {
+  id: JvmPresetType
+  name: string
+  tagline: string
+  description: string
+  minJavaVersion: number
+  recommended: boolean
+  flags: string[]
+}
+
+export interface CacheItemDetail {
+  key: string
+  label: string
+  description: string
+  sizeBytes: number
+  fileCount: number
+  paths: string[]
+}
+
+export interface CacheScanResult {
+  totalSizeBytes: number
+  totalFileCount: number
+  items: CacheItemDetail[]
+}
+
+export interface CacheCleanResult {
+  success: boolean
+  freedBytes: number
+  freedCount: number
+  error?: string
+}
+
+export type LowEndOptimizationLevel =
+  | 'ultra_potato'
+  | 'balanced_low'
+  | 'high_quality'
+  | 'ultra_quality'
+  | 'restore_default'
+
+export interface OptimizeVideoSettingsOptions {
+  gameDir?: string
+  level: LowEndOptimizationLevel
+  customRenderDistance?: number
+  disableMipmap?: boolean
+  disableClouds?: boolean
+  fastGraphics?: boolean
+  tuneSodium?: boolean
+}
+
+export interface OptimizeVideoSettingsResult {
+  success: boolean
+  optionsPath: string
+  changesApplied: string[]
+  sodiumConfigUpdated: boolean
+  message: string
+}
+
+export interface EssentialModItem {
+  id: string
+  name: string
+  slug: string
+  installed: boolean
+  category: 'render' | 'memory' | 'cpu' | 'fps'
+  description: string
+  impact: 'extreme' | 'high' | 'medium'
+}
+
+export interface LowEndBoostCheckResult {
+  isOptimized: boolean
+  currentPreset: JvmPresetType
+  currentRenderDistance: number
+  mipmapLevels: number
+  cloudsEnabled: boolean
+  fastGraphics: boolean
+  essentialMods: EssentialModItem[]
+}
+
+export interface InstallEssentialModResult {
+  success: boolean
+  modId: string
+  fileName?: string
+  message: string
+}
+
+export interface InstallAllEssentialModsResult {
+  success: boolean
+  installedCount: number
+  results: Array<{ modId: string; modName: string; success: boolean; message?: string }>
+  message: string
+}
+
+// ─── Mod Auto-Updater Types ──────────────────────────────────────────────────
+
+export interface ModUpdateItem {
+  fileName: string
+  filePath: string
+  modId: string
+  modName: string
+  currentVersion: string
+  newVersion: string
+  newVersionName: string
+  newVersionId: string
+  changelog: string
+  downloadUrl: string
+  newFileName: string
+  newFileSize: number
+  releaseDate: string
+  updateAvailable: boolean
+  projectId: string
+  projectIconUrl?: string | null
+  loader?: string
+}
+
+export interface ModUpdateCheckResult {
+  totalMods: number
+  upToDateCount: number
+  updatesAvailableCount: number
+  updates: ModUpdateItem[]
+  error?: string
+}
+
+export interface UpdateSingleModResult {
+  success: boolean
+  modId: string
+  oldFileName: string
+  newFileName: string
+  error?: string
+}
+
+export interface UpdateAllModsResult {
+  success: boolean
+  totalUpdated: number
+  failedCount: number
+  results: Array<{ modId: string; modName: string; success: boolean; error?: string }>
+}
+
+// ─── Mod Conflict & Crash Predictor Types ────────────────────────────────────
+
+export type ModConflictSeverity = 'critical' | 'warning' | 'suggestion'
+export type ModConflictType =
+  | 'performance_conflict'
+  | 'loader_mismatch'
+  | 'duplicate_mod'
+  | 'missing_companion'
+  | 'declared_incompatible'
+  | 'java_version'
+
+export type ModConflictAction = 'disable_mod' | 'delete_mod' | 'install_companion'
+
+export interface ModConflictItem {
+  id: string
+  severity: ModConflictSeverity
+  type: ModConflictType
+  title: string
+  description: string
+  involvedMods: Array<{ fileName: string; modId?: string; name?: string }>
+  recommendedAction: ModConflictAction
+  actionLabel: string
+  targetFileName?: string
+  companionModInfo?: { modId: string; slug: string; name: string }
+}
+
+export interface ModConflictCheckResult {
+  totalMods: number
+  hasCritical: boolean
+  criticalCount: number
+  warningCount: number
+  suggestionCount: number
+  conflicts: ModConflictItem[]
+  error?: string
+}
+
+export interface ResolveConflictOption {
+  conflictId: string
+  action: ModConflictAction
+  targetFileName?: string
+  companionModSlug?: string
+}
+
+export interface ResolveConflictResult {
+  success: boolean
+  message: string
+  resolvedConflicts: string[]
+}

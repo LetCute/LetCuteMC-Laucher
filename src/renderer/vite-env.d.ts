@@ -137,6 +137,7 @@ declare global {
       // Mojang API
       getMojangProfile(accessToken: string): Promise<import('../shared/types').MojangProfile>
       fetchMojangTexture(url: string): Promise<string | null>
+      lookupPlayerSkin(usernameOrUuid: string): Promise<{ url: string; model: 'default' | 'slim'; username: string; uuid?: string; capeUrl?: string } | null>
       uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
       changeMojangCape(accessToken: string, capeId: string): Promise<void>
       checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }>
@@ -190,6 +191,67 @@ declare global {
       checkForUpdates(): Promise<any>
       quitAndInstallUpdate(): Promise<void>
       onUpdateStatus(callback: (status: { type: string, message: string, data?: any }) => void): () => void
+
+      // File Dialogs
+      saveFileDialog(options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null>
+
+      // Worlds & Saves API
+      scanWorlds(gameDir?: string): Promise<import('../shared/types').MinecraftWorld[]>
+      backupWorld(gameDir: string | undefined, folderName: string): Promise<{ success: boolean; backupPath: string; fileName: string; sizeBytes: number; message?: string }>
+      listWorldBackups(gameDir: string | undefined, folderName?: string): Promise<import('../shared/types').WorldBackupItem[]>
+      restoreWorldBackup(gameDir: string | undefined, backupFilePath: string, targetFolderName?: string): Promise<{ success: boolean; folderName: string }>
+      deleteWorldBackup(backupFilePath: string): Promise<boolean>
+      exportWorldZip(gameDir: string | undefined, folderName: string, destinationZipPath: string): Promise<boolean>
+      importWorldZip(gameDir: string | undefined, sourceZipPath: string): Promise<{ success: boolean; folderName: string; name: string }>
+      duplicateWorld(gameDir: string | undefined, folderName: string, newWorldName?: string): Promise<{ success: boolean; newFolderName: string }>
+      renameWorld(gameDir: string | undefined, folderName: string, newLevelName: string): Promise<boolean>
+      deleteWorld(gameDir: string | undefined, folderName: string): Promise<boolean>
+      openWorldFolder(gameDir: string | undefined, folderName?: string): Promise<boolean>
+
+      // Screenshots Gallery API
+      scanScreenshots(gameDir?: string): Promise<import('../shared/types').MinecraftScreenshot[]>
+      copyScreenshotToClipboard(filePath: string): Promise<boolean>
+      deleteScreenshot(filePath: string): Promise<boolean>
+      deleteMultipleScreenshots(filePaths: string[]): Promise<boolean>
+      showScreenshotInFolder(filePath: string): Promise<boolean>
+      openScreenshotsFolder(gameDir?: string): Promise<boolean>
+
+      // Logs & Crash Reports API
+      listLogFiles(gameDir?: string): Promise<{ activeLogs: import('../shared/types').LogFileInfo[]; crashReports: import('../shared/types').LogFileInfo[] }>
+      readLogFile(filePath: string): Promise<string>
+      uploadLogToMclogs(content: string): Promise<import('../shared/types').MclogsUploadResult>
+      deleteLogFile(filePath: string): Promise<boolean>
+      clearOldLogs(gameDir?: string): Promise<{ success: boolean; count: number; freedBytes: number }>
+      openLogsFolder(gameDir: string | undefined, type?: 'logs' | 'crash-reports'): Promise<boolean>
+
+      // Playtime & In-game Statistics API
+      getFullProfileStats(gameDir: string, profileId: string, profileName?: string): Promise<import('../shared/types').ProfileFullStats>
+      recordPlaySession(gameDir: string, profileId: string, durationSeconds: number, exitCode?: number): Promise<import('../shared/types').ProfileLauncherStats>
+      openStatsFolder(gameDir?: string, worldFolder?: string): Promise<boolean>
+
+      // Profile Package Export / Import API
+      exportProfilePackage(options: import('../shared/types').ExportProfilePackageOptions): Promise<import('../shared/types').ExportProfileResult>
+      readProfilePackageInfo(packageFilePath: string): Promise<import('../shared/types').PackagePreviewInfo>
+      importProfilePackage(packageFilePath: string, customName?: string): Promise<import('../shared/types').ImportProfileResult>
+
+      // JVM Optimizer & Cache Cleaner API
+      getJvmPresets(): Promise<import('../shared/types').JvmPresetInfo[]>
+      scanCache(gameDir?: string): Promise<import('../shared/types').CacheScanResult>
+      cleanCache(gameDir?: string, targetKeys?: string[]): Promise<import('../shared/types').CacheCleanResult>
+      optimizeInGameVideoSettings(options: import('../shared/types').OptimizeVideoSettingsOptions): Promise<import('../shared/types').OptimizeVideoSettingsResult>
+      checkLowEndOptimizationStatus(gameDir?: string): Promise<import('../shared/types').LowEndBoostCheckResult>
+      installEssentialMod(gameDir: string | undefined, modSlug: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').InstallEssentialModResult>
+      installAllMissingEssentialMods(gameDir: string | undefined, mcVersion?: string, loader?: string): Promise<import('../shared/types').InstallAllEssentialModsResult>
+
+      // Mod Auto-Updater API
+      checkForModUpdates(gameDir?: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').ModUpdateCheckResult>
+      updateSingleMod(gameDir: string | undefined, item: import('../shared/types').ModUpdateItem): Promise<import('../shared/types').UpdateSingleModResult>
+      updateAllMods(gameDir: string | undefined, items: import('../shared/types').ModUpdateItem[]): Promise<import('../shared/types').UpdateAllModsResult>
+
+      // Mod Conflict & Crash Predictor API
+      checkModConflicts(gameDir?: string, mcVersion?: string, loader?: string): Promise<import('../shared/types').ModConflictCheckResult>
+      resolveModConflict(gameDir: string | undefined, option: import('../shared/types').ResolveConflictOption, mcVersion?: string, loader?: string): Promise<import('../shared/types').ResolveConflictResult>
+      resolveAllCriticalConflicts(gameDir: string | undefined, conflicts: import('../shared/types').ModConflictItem[], mcVersion?: string, loader?: string): Promise<import('../shared/types').ResolveConflictResult>
     }
   }
 }
