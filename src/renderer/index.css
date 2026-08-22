@@ -282,6 +282,11 @@ body {
   }
 
   /* 7. Màu nền đục chắc chắn, giảm tải alpha compositing */
+  :root[data-ui-quality="low"] .bg-cover {
+    background-image: none !important;
+    background-color: oklch(0.115 0.008 240) !important;
+  }
+
   :root[data-ui-quality="low"] .bg-zinc-900\/85,
   :root[data-ui-quality="low"] .bg-zinc-900\/80,
   :root[data-ui-quality="low"] .bg-zinc-900\/90,
