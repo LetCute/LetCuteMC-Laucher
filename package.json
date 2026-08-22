@@ -115,14 +115,12 @@
       "icon": "public/logo.png",
       "category": "Game",
       "target": [
-        "AppImage",
-        "deb",
-        "tar.gz"
+        "deb"
       ],
       "desktop": {
         "StartupWMClass": "letcutemc"
       },
-      "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
+      "artifactName": "${productName}-${version}-ubuntu-x86_64.${ext}"
     }
   }
 }
