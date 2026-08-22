@@ -621,126 +621,126 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         )}
       </div>
 
-      {/* ── Interactive Lightbox Modal ───────────────────────────────────────── */}
+      {/* ── Floating Screenshot Modal Popup ─────────────────────────────────── */}
       {activeScreenshot && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-2xl animate-in fade-in duration-150 select-none"
+          className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/75 backdrop-blur-sm animate-in fade-in duration-150 select-none"
           onClick={() => setActiveLightboxIndex(null)}
         >
-          {/* Top Controls Bar */}
+          {/* Floating Dialog Card */}
           <div
-            className="flex items-center justify-between px-6 py-3 border-b border-zinc-800/80 bg-zinc-950/90 shrink-0"
+            className="relative w-full max-w-5xl bg-zinc-950/95 border border-zinc-800/90 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary border border-primary/30 shrink-0">
-                <Camera size={14} />
+            {/* Modal Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/80 bg-zinc-900/60 shrink-0">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary border border-primary/30 shrink-0">
+                  <Camera size={14} />
+                </div>
+                <div className="min-w-0">
+                  <h3 className="text-xs font-bold text-zinc-100 truncate" title={activeScreenshot.fileName}>
+                    {activeScreenshot.fileName}
+                  </h3>
+                  <p className="text-[11px] text-zinc-400 flex items-center gap-2 mt-0.5">
+                    <span>{formatDateTime(activeScreenshot.createdAt)}</span>
+                    <span className="text-zinc-600">·</span>
+                    <span className="font-semibold text-primary">{formatBytes(activeScreenshot.sizeBytes)}</span>
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <h3 className="text-xs font-bold text-zinc-100 truncate" title={activeScreenshot.fileName}>
-                  {activeScreenshot.fileName}
-                </h3>
-                <p className="text-[11px] text-zinc-400 flex items-center gap-2 mt-0.5">
-                  <span>{formatDateTime(activeScreenshot.createdAt)}</span>
-                  <span className="text-zinc-600">·</span>
-                  <span className="font-semibold text-primary">{formatBytes(activeScreenshot.sizeBytes)}</span>
-                </p>
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+                  {(activeLightboxIndex ?? 0) + 1} / {filteredScreenshots.length}
+                </span>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleCopy(activeScreenshot)}
+                  disabled={isCopying}
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
+                  title="Sao chép ảnh (Ctrl+C)"
+                >
+                  {isCopying ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} className="text-primary" />}
+                  <span>Sao chép</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleShowInFolder(activeScreenshot.filePath)}
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
+                  title="Mở trong File Explorer"
+                >
+                  <FolderOpen size={12} />
+                  <span>Mở thư mục</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handleDelete(activeScreenshot)}
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5 rounded-lg"
+                  title="Xóa ảnh này"
+                >
+                  <Trash2 size={12} />
+                  <span>Xóa</span>
+                </Button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveLightboxIndex(null)}
+                  className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1.5"
+                  title="Đóng (Esc)"
+                >
+                  <X size={18} />
+                </button>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-lg">
-                {(activeLightboxIndex ?? 0) + 1} / {filteredScreenshots.length}
-              </span>
+            {/* Modal Body / Image Stage */}
+            <div className="relative flex-1 flex items-center justify-center p-4 bg-zinc-950/80 overflow-hidden min-h-[380px] max-h-[76vh]">
+              {/* Previous Button */}
+              {filteredScreenshots.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handlePrev()
+                  }}
+                  className="absolute left-4 z-10 p-2 rounded-xl bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-xl backdrop-blur-md"
+                  title="Ảnh trước (Mũi tên trái)"
+                >
+                  <ChevronLeft size={20} />
+                </button>
+              )}
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleCopy(activeScreenshot)}
-                disabled={isCopying}
-                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
-                title="Sao chép ảnh (Ctrl+C)"
-              >
-                {isCopying ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} className="text-primary" />}
-                <span>Sao chép</span>
-              </Button>
+              {/* Preview Image */}
+              <div className="max-h-full max-w-full flex items-center justify-center">
+                <img
+                  src={activeScreenshot.dataUrl}
+                  alt={activeScreenshot.fileName}
+                  className="max-h-[72vh] max-w-full object-contain rounded-lg shadow-xl border border-zinc-800/80"
+                />
+              </div>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleShowInFolder(activeScreenshot.filePath)}
-                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
-                title="Mở trong File Explorer"
-              >
-                <FolderOpen size={12} />
-                <span>Mở thư mục</span>
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => handleDelete(activeScreenshot)}
-                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5 rounded-lg"
-                title="Xóa ảnh này"
-              >
-                <Trash2 size={12} />
-                <span>Xóa</span>
-              </Button>
-
-              <button
-                type="button"
-                onClick={() => setActiveLightboxIndex(null)}
-                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1.5"
-                title="Đóng (Esc)"
-              >
-                <X size={18} />
-              </button>
+              {/* Next Button */}
+              {filteredScreenshots.length > 1 && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    handleNext()
+                  }}
+                  className="absolute right-4 z-10 p-2 rounded-xl bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-xl backdrop-blur-md"
+                  title="Ảnh tiếp theo (Mũi tên phải)"
+                >
+                  <ChevronRight size={20} />
+                </button>
+              )}
             </div>
-          </div>
-
-          {/* Main Image View with Navigation */}
-          <div className="relative flex-1 flex items-center justify-center p-6 overflow-hidden">
-            {/* Previous Button */}
-            {filteredScreenshots.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handlePrev()
-                }}
-                className="absolute left-6 z-10 p-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-2xl backdrop-blur-md"
-                title="Ảnh trước (Mũi tên trái)"
-              >
-                <ChevronLeft size={22} />
-              </button>
-            )}
-
-            {/* Preview Image */}
-            <div
-              className="max-h-full max-w-full flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <img
-                src={activeScreenshot.dataUrl}
-                alt={activeScreenshot.fileName}
-                className="max-h-[82vh] max-w-[88vw] object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.8)] border border-zinc-800"
-              />
-            </div>
-
-            {/* Next Button */}
-            {filteredScreenshots.length > 1 && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  handleNext()
-                }}
-                className="absolute right-6 z-10 p-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-2xl backdrop-blur-md"
-                title="Ảnh tiếp theo (Mũi tên phải)"
-              >
-                <ChevronRight size={22} />
-              </button>
-            )}
           </div>
         </div>
       )}
