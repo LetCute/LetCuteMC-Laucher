@@ -182,11 +182,10 @@ export const ProfilesScreen = ({
                   <div
                     key={profile.id}
                     onClick={() => {
-                      if (!isWorking) onSetActive(profile.id)
+                      onSetActive(profile.id)
                     }}
                     className={cn(
-                      'group flex items-center justify-between gap-4 p-4 rounded-2xl border transition-all duration-200 shadow-md',
-                      isWorking ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+                      'group flex items-center justify-between gap-4 p-4 rounded-2xl border transition-all duration-200 shadow-md cursor-pointer',
                       isActive
                         ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
                         : 'border-zinc-800/80 bg-zinc-900/85 hover:bg-zinc-900 hover:border-primary/40'
