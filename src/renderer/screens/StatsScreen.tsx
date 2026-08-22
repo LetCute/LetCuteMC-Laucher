@@ -226,7 +226,7 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
                 </DropdownMenuTrigger>
                 <DropdownMenuContent
                   align="start"
-                  className="w-56 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50"
+                  className="w-56 dropdown-panel rounded-2xl p-1.5 z-50"
                 >
                   <DropdownMenuLabel className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 px-2 py-1">
                     Chọn phạm vi thế giới
@@ -324,17 +324,17 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
       </div>
 
       {/* Hero 4 Sleek & Compact Metric Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
         {/* Card 1: Playtime */}
-        <div className="p-2.5 px-3 rounded-xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-cyan-500/15 border border-cyan-500/30 text-primary flex items-center justify-center shrink-0">
-            <Clock size={16} />
+        <div className="p-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+          <div className="h-9 w-9 rounded-xl bg-cyan-500/15 border border-cyan-500/30 text-primary flex items-center justify-center shrink-0">
+            <Clock size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">
-              Tổng Giờ Chơi
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide truncate">
+              Tổng giờ chơi
             </p>
-            <p className="text-xs font-bold text-foreground truncate">
+            <p className="text-xs font-bold text-foreground truncate mt-0.5">
               {formatDuration(
                 Math.max(
                   statsData?.launcherStats.totalPlaytimeSeconds || 0,
@@ -346,46 +346,52 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
         </div>
 
         {/* Card 2: Launches & Last Played */}
-        <div className="p-2.5 px-3 rounded-xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
-            <Zap size={16} />
+        <div className="p-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+          <div className="h-9 w-9 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
+            <Zap size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">
-              Số Lần Khởi Chạy
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide truncate">
+              Số lần mở game
             </p>
-            <p className="text-xs font-bold text-foreground truncate">
+            <p className="text-xs font-bold text-foreground truncate mt-0.5">
               {(statsData?.launcherStats.launchCount || 0).toLocaleString('vi-VN')} lần {statsData?.launcherStats.lastPlayedTimestamp ? `· ${formatRelativeTime(statsData.launcherStats.lastPlayedTimestamp)}` : ''}
             </p>
           </div>
         </div>
 
         {/* Card 3: Rare Ores */}
-        <div className="p-2.5 px-3 rounded-xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
-            <Pickaxe size={16} />
+        <div className="p-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+          <div className="h-9 w-9 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
+            <Pickaxe size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">
-              Khoáng Sản Quý
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide truncate">
+              Khoáng sản quý
             </p>
-            <p className="text-xs font-bold text-emerald-400 truncate">
+            <p className="text-xs font-bold text-emerald-400 truncate mt-0.5">
               {rareOresCount.diamonds} Kim Cương {rareOresCount.netherite > 0 ? `· ${rareOresCount.netherite} Netherite` : ''}
             </p>
           </div>
         </div>
 
         {/* Card 4: Combat & K/D */}
-        <div className="p-2.5 px-3 rounded-xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-2.5">
-          <div className="h-8 w-8 rounded-lg bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
-            <Sword size={16} />
+        <div className="p-3 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+          <div className="h-9 w-9 rounded-xl bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
+            <Sword size={18} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[9px] font-bold text-muted-foreground uppercase tracking-wider truncate">
-              Chiến Tích Diệt Quái
-            </p>
-            <p className="text-xs font-bold text-red-400 truncate">
-              {(activeStats?.totalMobKills || 0).toLocaleString('vi-VN')} quái · K/D: {kdRatio}
+            <div className="flex items-center justify-between gap-1">
+              <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wide truncate">
+                Chiến tích diệt quái
+              </p>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-red-500/20 text-red-300 border border-red-500/30 shrink-0">
+                K/D: {kdRatio}
+              </span>
+            </div>
+            <p className="text-xs font-bold text-red-400 truncate mt-0.5">
+              {(activeStats?.totalMobKills || 0).toLocaleString('vi-VN')} quái
+              <span className="text-zinc-500 text-[10px] font-normal ml-1.5">({activeStats?.survival.deaths || 0} tử trận)</span>
             </p>
           </div>
         </div>

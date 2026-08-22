@@ -39,12 +39,13 @@ export function useTabTransition(activeTab: string, durationMs = 120) {
 
 /**
  * useKeepAliveTabs — tracks which tabs have been visited so we can keep their DOM mounted.
+ * Keeps visited tab DOM nodes active in memory with zero-reflow GPU containment.
  */
 export function useKeepAliveTabs(
   activeTab: string,
   persistentTabs: readonly string[]
 ) {
-  const [visited, setVisited] = useState<Set<string>>(new Set())
+  const [visited, setVisited] = useState<Set<string>>(new Set([activeTab]))
 
   useEffect(() => {
     if (persistentTabs.includes(activeTab)) {

@@ -307,12 +307,31 @@ export class StatsService {
       const worldFolders = fs.readdirSync(savesDir)
       for (const folder of worldFolders) {
         const fullWorldPath = path.join(savesDir, folder)
-        if (!fs.statSync(fullWorldPath).isDirectory()) continue
+        try {
+          if (!fs.statSync(fullWorldPath).isDirectory()) continue
+        } catch {
+          continue
+        }
 
         const statsDir = path.join(fullWorldPath, 'stats')
-        if (!fs.existsSync(statsDir) || !fs.statSync(statsDir).isDirectory()) continue
+        if (!fs.existsSync(statsDir)) continue
+        try {
+          if (!fs.statSync(statsDir).isDirectory()) continue
+        } catch {
+          continue
+        }
 
-        const statFiles = fs.readdirSync(statsDir).filter((f) => f.endsWith('.json'))
+        let statFiles: string[] = []
+        try {
+          statFiles = fs.readdirSync(statsDir).filter((f) => f.endsWith('.json'))
+        } catch {
+          continue
+        }
+        if (statFiles.length === 0) continue
+
+        // Gom tất cả các tệp thống kê người chơi (.json) trong cùng thế giới thành 1 mục đại diện duy nhất
+        let worldSummary: WorldStatsSummary | null = null
+
         for (const file of statFiles) {
           const uuid = path.basename(file, '.json')
           const statFilePath = path.join(statsDir, file)
@@ -320,13 +339,66 @@ export class StatsService {
           try {
             const raw = fs.readFileSync(statFilePath, 'utf-8')
             const json = JSON.parse(raw)
-            const summary = this.parseMinecraftStatsJson(folder, uuid, json)
-            if (summary) {
-              summaries.push(summary)
+            const parsed = this.parseMinecraftStatsJson(folder, uuid, json)
+            if (parsed) {
+              if (!worldSummary) {
+                worldSummary = parsed
+              } else {
+                worldSummary.inGamePlaytimeTicks += parsed.inGamePlaytimeTicks
+                worldSummary.inGamePlaytimeSeconds += parsed.inGamePlaytimeSeconds
+
+                // Travel
+                worldSummary.travel.walkMeters += parsed.travel.walkMeters
+                worldSummary.travel.sprintMeters += parsed.travel.sprintMeters
+                worldSummary.travel.swimMeters += parsed.travel.swimMeters
+                worldSummary.travel.flyElytraMeters += parsed.travel.flyElytraMeters
+                worldSummary.travel.boatMeters += parsed.travel.boatMeters
+                worldSummary.travel.horseMeters += parsed.travel.horseMeters
+                worldSummary.travel.minecartMeters += parsed.travel.minecartMeters
+                worldSummary.travel.totalDistanceMeters += parsed.travel.totalDistanceMeters
+                worldSummary.travel.jumps += parsed.travel.jumps
+
+                // Survival
+                worldSummary.survival.deaths += parsed.survival.deaths
+                worldSummary.survival.mobKills += parsed.survival.mobKills
+                worldSummary.survival.playerKills += parsed.survival.playerKills
+                worldSummary.survival.damageDealt += parsed.survival.damageDealt
+                worldSummary.survival.damageTaken += parsed.survival.damageTaken
+                worldSummary.survival.timesSlept += parsed.survival.timesSlept
+                worldSummary.survival.chestsOpened += parsed.survival.chestsOpened
+                worldSummary.survival.fishCaught += parsed.survival.fishCaught
+                worldSummary.survival.animalsBred += parsed.survival.animalsBred
+                worldSummary.survival.enchantedItems += parsed.survival.enchantedItems
+                worldSummary.survival.raidsWon += parsed.survival.raidsWon
+
+                // Mining merge
+                for (const m of parsed.mining) {
+                  const exist = worldSummary.mining.find((item) => item.id === m.id)
+                  if (exist) {
+                    exist.count += m.count
+                  } else {
+                    worldSummary.mining.push({ ...m })
+                  }
+                }
+
+                // Combat merge
+                for (const c of parsed.combat) {
+                  const exist = worldSummary.combat.find((item) => item.id === c.id)
+                  if (exist) {
+                    exist.count += c.count
+                  } else {
+                    worldSummary.combat.push({ ...c })
+                  }
+                }
+              }
             }
           } catch (e) {
             console.error(`[StatsService] Failed to parse stat file: ${statFilePath}`, e)
           }
+        }
+
+        if (worldSummary) {
+          summaries.push(worldSummary)
         }
       }
     } catch (err) {

@@ -234,6 +234,22 @@ body {
     -webkit-backdrop-filter: blur(12px);
   }
 
+  :root[data-ui-quality="high"] .sidebar-panel,
+  :root:not([data-ui-quality]) .sidebar-panel {
+    background-color: rgba(9, 9, 11, 0.82) !important;
+    backdrop-filter: blur(16px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+  }
+
+  :root[data-ui-quality="high"] .dropdown-panel,
+  :root:not([data-ui-quality]) .dropdown-panel {
+    background-color: rgba(24, 24, 27, 0.80) !important;
+    backdrop-filter: blur(16px) saturate(140%) !important;
+    -webkit-backdrop-filter: blur(16px) saturate(140%) !important;
+    border-color: rgba(63, 63, 70, 0.7) !important;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.6) !important;
+  }
+
   /* Medium Quality: Lightweight Blur */
   :root[data-ui-quality="medium"] .bg-card,
   :root[data-ui-quality="medium"] .bg-popover,
@@ -242,7 +258,35 @@ body {
     -webkit-backdrop-filter: blur(6px);
   }
 
+  :root[data-ui-quality="medium"] .sidebar-panel {
+    background-color: rgba(9, 9, 11, 0.90) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+  }
+
+  :root[data-ui-quality="medium"] .dropdown-panel {
+    background-color: rgba(24, 24, 27, 0.90) !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+    border-color: rgba(63, 63, 70, 0.6) !important;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5) !important;
+  }
+
   /* ── Low Quality / Potato PC: MAX PERFORMANCE MODE ── */
+  :root[data-ui-quality="low"] .sidebar-panel {
+    background-color: rgb(9, 9, 11) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
+  :root[data-ui-quality="low"] .dropdown-panel {
+    background-color: rgb(24, 24, 27) !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    border-color: rgb(39, 39, 42) !important;
+    box-shadow: none !important;
+  }
+
   :root[data-ui-quality="low"] * {
     /* 1. Triệt tiêu toàn bộ backdrop-filter gây nghẽn GPU */
     backdrop-filter: none !important;
@@ -318,8 +362,35 @@ body {
 }
 
 /* ── GPU compositing layer for persistent tab panels ─────────────────────── */
-.tab-panel {
-  /* contain: layout removed — it blocked scroll propagation in Settings/About */
+.tab-viewport {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.tab-panel-pane {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow-y: auto;
+  will-change: opacity, visibility;
+}
+
+.tab-panel-pane[data-active="true"] {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  z-index: 10;
+}
+
+.tab-panel-pane[data-active="false"] {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  z-index: 0;
+  content-visibility: hidden;
 }
 
 /* ── Skeleton shimmer ─────────────────────────────────────────────────────── */

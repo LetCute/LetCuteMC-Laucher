@@ -8,7 +8,7 @@ import AdmZip from 'adm-zip'
 import type { MinecraftWorld, WorldBackupItem, WorldDifficulty, WorldGameType } from '../../shared/types'
 import { detectMinecraftDirectory } from './minecraftDirectoryService'
 
-const parseNbt = util.promisify(nbt.parse)
+const parseNbt = (buffer: Buffer | ArrayBuffer) => nbt.parse(buffer)
 
 function getFolderSizeBytes(dirPath: string): number {
   let totalSize = 0

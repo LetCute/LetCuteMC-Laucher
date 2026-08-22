@@ -74,11 +74,11 @@ const GAME_MANAGEMENT_ITEMS = [
   { id: 'shaderpacks', label: 'Shader Packs', icon: Zap },
   { id: 'screenshots', label: 'Ảnh chụp', icon: Camera },
   { id: 'logs', label: 'Nhật ký', icon: ScrollText },
-  { id: 'stats', label: 'Thống kê', icon: BarChart3 },
 ] as const
 
 const MAIN_ITEMS = [
   { id: 'store', label: 'Cửa hàng', icon: ModrinthIcon },
+  { id: 'stats', label: 'Thống kê', icon: BarChart3 },
   { id: 'accounts', label: 'Tài khoản', icon: User },
   { id: 'tasks', label: 'Tiến trình', icon: Activity },
   { id: 'settings', label: 'Cài đặt', icon: Settings },
@@ -192,7 +192,7 @@ export function Sidebar({
   const canCancel = isBusy && !isRunning
 
   return (
-    <aside className="flex h-full w-64 shrink-0 flex-col bg-zinc-950 border-r border-zinc-800/80 shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
+    <aside className="sidebar-panel flex h-full w-64 shrink-0 flex-col border-r border-zinc-800/80 shadow-[4px_0_24px_rgba(0,0,0,0.3)] z-20">
       {/* Logo */}
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
@@ -224,7 +224,7 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px] bg-zinc-900 border-zinc-700/60 rounded-2xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
+          <DropdownMenuContent align="center" className="w-[220px] dropdown-panel rounded-2xl p-1.5 z-50">
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
@@ -340,7 +340,7 @@ export function Sidebar({
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold group-hover:bg-zinc-800 group-hover:text-zinc-200">
-                  9 mục
+                  8 mục
                 </span>
                 <ChevronRight className="h-3.5 w-3.5 text-zinc-500 group-hover:text-zinc-300" />
               </div>
@@ -435,7 +435,7 @@ export function Sidebar({
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
+            <DropdownMenuContent align="end" className="w-56 dropdown-panel rounded-2xl p-1.5 z-50">
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-48 overflow-y-auto">

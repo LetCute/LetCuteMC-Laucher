@@ -83,7 +83,7 @@ export function Select({
         {isOpen && (
           <div
             className={cn(
-              "absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-xl border border-zinc-700/60 bg-zinc-900/95 p-1 shadow-2xl backdrop-blur-xl animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700",
+              "absolute z-50 mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border dropdown-panel p-1 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700",
               align === "right" ? "right-0" : "left-0"
             )}
           >

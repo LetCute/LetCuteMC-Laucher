@@ -59,14 +59,27 @@ function MainApp() {
 
   // ── Tabs that stay mounted in DOM after first visit (no re-scan on switch) ──
   const PERSISTENT_TABS = [
-    'mods', 'resourcepacks', 'shaderpacks',
-    'worlds', 'screenshots', 'stats', 'logs', 'store',
+    'store',
+    'profiles',
+    'versions',
+    'worlds',
+    'mods',
+    'resourcepacks',
+    'shaderpacks',
+    'screenshots',
+    'logs',
+    'stats',
+    'settings',
+    'accounts',
+    'tasks',
+    'about',
   ] as const
 
   // ── Core state ───────────────────────────────────────────────────────────
   const [appPhase, setAppPhase] = useState<'updater' | 'client'>('updater');
   const [gameDir, setGameDir] = useState<string>('');
   const [activeTab, setActiveTab] = useState<TabId>('profiles');
+  const [criticalReady, setCriticalReady] = useState(false);
   const [accountState, setAccountState] = useState<AccountState>({
     activeAccountId: null,
     accounts: []
@@ -106,7 +119,6 @@ function MainApp() {
     message: 'Đang khởi động...',
   });
   const [appError, setAppError] = useState<string | null>(null);
-  const [criticalReady, setCriticalReady] = useState(false);
   const [sysInfo, setSysInfo] = useState<SystemPerformanceInfo | null>(null);
 
   // ── Load system performance info on mount ──────────────────────────────────
@@ -458,12 +470,12 @@ function MainApp() {
                   </div>
                 )}
 
-                <div className="min-h-0 flex-1 overflow-y-auto">
+                <div className="min-h-0 flex-1 tab-viewport">
                   <ErrorBoundary fallbackMessage="Màn hình này đang gặp sự cố. Vui lòng thử lại.">
 
-                    {/* ── Non-persistent tabs: simple mount/unmount ── */}
-                    {activeTab === 'profiles' && (
-                      <div className="h-full tab-panel">
+                    {/* ── Persistent Keep-Alive Tabs with Zero-Reflow GPU Layer ── */}
+                    {shouldMount('profiles') && (
+                      <div className="tab-panel-pane" data-active={isVisible('profiles')}>
                         <ProfilesScreen
                           profiles={profiles}
                           activeProfileId={activeProfileId}
@@ -477,8 +489,8 @@ function MainApp() {
                       </div>
                     )}
 
-                    {activeTab === 'versions' && (
-                      <div className="h-full tab-panel">
+                    {shouldMount('versions') && (
+                      <div className="tab-panel-pane" data-active={isVisible('versions')}>
                         <VersionsScreen
                           catalog={versionCatalog}
                           gameDir={gameDir}
@@ -493,8 +505,8 @@ function MainApp() {
                       </div>
                     )}
 
-                    {activeTab === 'settings' && (
-                      <div className="h-full tab-panel">
+                    {shouldMount('settings') && (
+                      <div className="tab-panel-pane" data-active={isVisible('settings')}>
                         <SettingsScreen
                           settings={settings}
                           activeProfile={activeProfile}
@@ -516,8 +528,8 @@ function MainApp() {
                       </div>
                     )}
 
-                    {activeTab === 'accounts' && (
-                      <div className="h-full tab-panel">
+                    {shouldMount('accounts') && (
+                      <div className="tab-panel-pane" data-active={isVisible('accounts')}>
                         <AccountsScreen
                           accountState={accountState}
                           onAccountStateChange={setAccountState}
@@ -527,21 +539,20 @@ function MainApp() {
                       </div>
                     )}
 
-                    {activeTab === 'tasks' && (
-                      <div className="h-full tab-panel">
+                    {shouldMount('tasks') && (
+                      <div className="tab-panel-pane" data-active={isVisible('tasks')}>
                         <TasksScreen />
                       </div>
                     )}
 
-                    {activeTab === 'about' && (
-                      <div className="h-full tab-panel">
+                    {shouldMount('about') && (
+                      <div className="tab-panel-pane" data-active={isVisible('about')}>
                         <AboutScreen />
                       </div>
                     )}
 
-                    {/* ── Persistent tabs: keep DOM alive after first visit ── */}
                     {shouldMount('store') && (
-                      <div className={`tab-panel ${isVisible('store') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('store')}>
                         <StoreScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profiles={profiles}
@@ -556,7 +567,7 @@ function MainApp() {
                     )}
 
                     {shouldMount('worlds') && (
-                      <div className={`tab-panel ${isVisible('worlds') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('worlds')}>
                         <WorldsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileName={activeProfile?.name}
@@ -565,7 +576,7 @@ function MainApp() {
                     )}
 
                     {shouldMount('mods') && (
-                      <div className={`tab-panel ${isVisible('mods') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('mods')}>
                         <ModsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileName={activeProfile?.name}
@@ -575,19 +586,19 @@ function MainApp() {
                     )}
 
                     {shouldMount('resourcepacks') && (
-                      <div className={`tab-panel ${isVisible('resourcepacks') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('resourcepacks')}>
                         <ResourcePacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
                       </div>
                     )}
 
                     {shouldMount('shaderpacks') && (
-                      <div className={`tab-panel ${isVisible('shaderpacks') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('shaderpacks')}>
                         <ShaderPacksScreen gameDir={activeProfile?.gameDir || gameDir} profileName={activeProfile?.name} />
                       </div>
                     )}
 
                     {shouldMount('screenshots') && (
-                      <div className={`tab-panel ${isVisible('screenshots') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('screenshots')}>
                         <ScreenshotsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileName={activeProfile?.name}
@@ -596,7 +607,7 @@ function MainApp() {
                     )}
 
                     {shouldMount('logs') && (
-                      <div className={`tab-panel ${isVisible('logs') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('logs')}>
                         <LogsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileName={activeProfile?.name}
@@ -605,7 +616,7 @@ function MainApp() {
                     )}
 
                     {shouldMount('stats') && (
-                      <div className={`tab-panel ${isVisible('stats') ? 'h-full' : 'hidden'}`}>
+                      <div className="tab-panel-pane" data-active={isVisible('stats')}>
                         <StatsScreen
                           gameDir={activeProfile?.gameDir || gameDir}
                           profileId={activeProfile?.id}
