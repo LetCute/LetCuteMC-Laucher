@@ -14,6 +14,7 @@ import {
   Clock,
   CheckSquare,
   Square,
+  Maximize2,
   Grid3X3,
   LayoutGrid,
 } from 'lucide-react'
@@ -226,23 +227,45 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
   }
 
   // Toggle selection
-  const toggleSelect = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation()
+  const toggleSelect = useCallback((id: string, e?: React.MouseEvent) => {
+    if (e) {
+      e.stopPropagation()
+      e.preventDefault()
+    }
     setSelectedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
       return next
     })
+  }, [])
+
+  // Card click handler
+  const handleCardClick = (screenshot: MinecraftScreenshot, fullIndex: number, e: React.MouseEvent) => {
+    // If currently in selection mode (at least 1 item selected), clicking anywhere on the card toggles selection
+    if (selectedIds.size > 0) {
+      toggleSelect(screenshot.id, e)
+    } else {
+      setActiveLightboxIndex(fullIndex)
+    }
   }
 
   // Select all or deselect all
+  const isAllSelected = filteredScreenshots.length > 0 && selectedIds.size === filteredScreenshots.length
+
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredScreenshots.length) {
+    if (isAllSelected) {
       setSelectedIds(new Set())
     } else {
       setSelectedIds(new Set(filteredScreenshots.map((s) => s.id)))
     }
+  }
+
+  const clearSelection = () => {
+    setSelectedIds(new Set())
   }
 
   // Lightbox keyboard controls
@@ -297,7 +320,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             {selectedIds.size > 0 && (
               <>
                 <span className="text-zinc-600">·</span>
-                <span className="text-amber-400 font-semibold">Đã chọn {selectedIds.size} ảnh</span>
+                <span className="text-amber-400 font-semibold">Đang chọn {selectedIds.size} / {filteredScreenshots.length} ảnh</span>
               </>
             )}
           </span>
@@ -305,16 +328,28 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         actions={
           <>
             {selectedIds.size > 0 && (
-              <Button
-                onClick={handleDeleteSelected}
-                variant="destructive"
-                size="sm"
-                className="h-8 px-3 font-semibold text-xs animate-in fade-in gap-1.5"
-                title="Xóa các ảnh đã chọn"
-              >
-                <Trash2 size={13} />
-                <span>Xóa ({selectedIds.size})</span>
-              </Button>
+              <>
+                <Button
+                  onClick={clearSelection}
+                  variant="outline"
+                  size="sm"
+                  className="h-8 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white text-xs"
+                  title="Hủy bỏ chọn"
+                >
+                  Hủy chọn
+                </Button>
+
+                <Button
+                  onClick={handleDeleteSelected}
+                  variant="destructive"
+                  size="sm"
+                  className="h-8 px-3 font-semibold text-xs animate-in fade-in gap-1.5"
+                  title="Xóa các ảnh đã chọn"
+                >
+                  <Trash2 size={13} />
+                  <span>Xóa ({selectedIds.size})</span>
+                </Button>
+              </>
             )}
 
             <Button
@@ -363,14 +398,19 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             variant="outline"
             size="sm"
             onClick={toggleSelectAll}
-            className="h-8.5 px-3 bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5 rounded-xl shrink-0 transition-all shadow-sm"
+            className={cn(
+              'h-8.5 px-3 border text-xs gap-1.5 rounded-xl shrink-0 transition-all shadow-sm',
+              isAllSelected
+                ? 'bg-primary/15 border-primary/40 text-primary font-semibold hover:bg-primary/25'
+                : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
+            )}
           >
-            {selectedIds.size === filteredScreenshots.length ? (
+            {isAllSelected ? (
               <CheckSquare size={13} className="text-primary" />
             ) : (
               <Square size={13} className="text-zinc-400" />
             )}
-            <span>{selectedIds.size === filteredScreenshots.length ? 'Bỏ chọn' : 'Chọn tất cả'}</span>
+            <span>{isAllSelected ? 'Bỏ chọn tất cả' : 'Chọn tất cả'}</span>
           </Button>
         )}
 
@@ -470,7 +510,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                     return (
                       <div
                         key={screenshot.id}
-                        onClick={() => setActiveLightboxIndex(fullIndex)}
+                        onClick={(e) => handleCardClick(screenshot, fullIndex, e)}
                         className={cn(
                           'group relative rounded-xl overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02]',
                           isSelected
@@ -500,30 +540,47 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                             </span>
                           </div>
 
-                          {/* Checkbox badge (Top Left) */}
+                          {/* Checkbox badge (Top Left) - always visible when selecting */}
                           <button
                             type="button"
                             onClick={(e) => toggleSelect(screenshot.id, e)}
                             className={cn(
-                              'absolute top-2 left-2 h-6 w-6 rounded-lg flex items-center justify-center transition-all z-10',
+                              'absolute top-2 left-2 h-7 w-7 rounded-lg flex items-center justify-center transition-all z-20 shadow-md',
                               isSelected
-                                ? 'bg-primary text-primary-foreground shadow-md ring-1 ring-primary/50'
-                                : 'bg-black/60 backdrop-blur-md text-white/70 hover:bg-black/90 hover:text-white border border-white/10 opacity-0 group-hover:opacity-100'
+                                ? 'bg-primary text-primary-foreground ring-2 ring-primary/40'
+                                : selectedIds.size > 0
+                                  ? 'bg-black/70 backdrop-blur-md text-white/70 hover:bg-black/90 hover:text-white border border-white/20'
+                                  : 'bg-black/60 backdrop-blur-md text-white/70 hover:bg-black/90 hover:text-white border border-white/10 opacity-0 group-hover:opacity-100'
                             )}
-                            title={isSelected ? 'Bỏ chọn' : 'Chọn ảnh'}
+                            title={isSelected ? 'Bỏ chọn ảnh' : 'Chọn ảnh'}
                           >
-                            {isSelected ? <Check size={12} strokeWidth={3} /> : <Square size={11} />}
+                            {isSelected ? <Check size={13} strokeWidth={3} /> : <Square size={12} />}
                           </button>
 
                           {/* Hover Action Buttons (Top Right) */}
                           <div
-                            className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                            className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20"
                             onClick={(e) => e.stopPropagation()}
                           >
                             <button
                               type="button"
-                              onClick={() => handleCopy(screenshot)}
-                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                setActiveLightboxIndex(fullIndex)
+                              }}
+                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              title="Xem phóng to"
+                            >
+                              <Maximize2 size={11} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void handleCopy(screenshot)
+                              }}
+                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
                               title="Sao chép ảnh (Ctrl+C)"
                             >
                               <Copy size={11} />
@@ -531,8 +588,11 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
 
                             <button
                               type="button"
-                              onClick={() => handleShowInFolder(screenshot.filePath)}
-                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                handleShowInFolder(screenshot.filePath)
+                              }}
+                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
                               title="Mở trong Folder"
                             >
                               <FolderOpen size={11} />
@@ -540,8 +600,11 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
 
                             <button
                               type="button"
-                              onClick={() => handleDelete(screenshot)}
-                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center shadow-md transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                void handleDelete(screenshot)
+                              }}
+                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center shadow-md transition-colors"
                               title="Xóa ảnh"
                             >
                               <Trash2 size={11} />
