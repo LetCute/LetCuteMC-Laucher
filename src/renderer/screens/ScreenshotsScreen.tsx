@@ -14,7 +14,6 @@ import {
   Clock,
   CheckSquare,
   Square,
-  ZoomIn,
   Grid3X3,
   LayoutGrid,
 } from 'lucide-react'
@@ -24,6 +23,7 @@ import { useToast } from '../components/ui/Toast'
 import { useConfirm } from '../components/ui/ConfirmDialogContext'
 import { Button } from '../components/ui/button'
 import { Input } from '../components/ui/Input'
+import { ScreenHeader } from '../components/common/ScreenHeader'
 import { cn } from '@/lib/utils'
 
 interface ScreenshotsScreenProps {
@@ -48,6 +48,17 @@ function formatDateTime(timestamp: number): string {
     year: 'numeric',
     hour: '2-digit',
     minute: '2-digit',
+    second: '2-digit',
+  })
+}
+
+function formatTimeOnly(timestamp: number): string {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  return date.toLocaleTimeString('vi-VN', {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
   })
 }
 
@@ -132,9 +143,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
     try {
       const ok = await launcherClient.copyScreenshotToClipboard(screenshot.filePath)
       if (ok) {
-        showToast('success', 'Đã sao chép hình ảnh vào Clipboard! (Ctrl+V để dán)')
+        showToast('success', 'Đã sao chép ảnh vào Clipboard (Ctrl+V để dán)')
       } else {
-        showToast('error', 'Không thể sao chép hình ảnh vào Clipboard.')
+        showToast('error', 'Không thể sao chép ảnh vào Clipboard.')
       }
     } catch (e: any) {
       showToast('error', `Lỗi sao chép: ${e?.message || e}`)
@@ -273,83 +284,76 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
     activeLightboxIndex !== null ? filteredScreenshots[activeLightboxIndex] : null
 
   return (
-    <div className="px-6 pt-3 pb-6 flex flex-col h-full gap-4 select-none">
-      {/* Header Bar */}
-      <div className="flex items-center justify-between gap-4">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-xl font-bold text-foreground tracking-tight whitespace-nowrap">
-              Thư viện Ảnh chụp
-            </h2>
-            {profileName && (
-              <span className="text-xs font-medium text-zinc-300 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-lg truncate max-w-xs">
-                Cấu hình: <strong className="text-primary font-semibold">{profileName}</strong>
-              </span>
-            )}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 whitespace-nowrap">
-            <span className="whitespace-nowrap">Tổng: <strong className="text-zinc-200">{screenshots.length}</strong> ảnh</span>
-            <span className="text-zinc-700">·</span>
-            <span className="whitespace-nowrap">Dung lượng: <strong className="text-primary font-semibold">{formatBytes(totalSize)}</strong></span>
+    <div className="px-6 pt-4 pb-6 flex flex-col h-full gap-3.5 select-none">
+      {/* ── Screen Header ────────────────────────────────────────────────────────── */}
+      <ScreenHeader
+        title="Thư viện Ảnh chụp"
+        profileName={profileName}
+        subtitle={
+          <span className="flex items-center gap-2 flex-wrap">
+            <span>Tổng cộng: <strong className="text-zinc-100 font-semibold">{screenshots.length}</strong> ảnh</span>
+            <span className="text-zinc-600">·</span>
+            <span>Dung lượng: <strong className="text-primary font-semibold">{formatBytes(totalSize)}</strong></span>
             {selectedIds.size > 0 && (
               <>
-                <span className="text-zinc-700">·</span>
-                <span className="text-amber-400 font-semibold whitespace-nowrap">Đã chọn {selectedIds.size} ảnh</span>
+                <span className="text-zinc-600">·</span>
+                <span className="text-amber-400 font-semibold">Đã chọn {selectedIds.size} ảnh</span>
               </>
             )}
-          </div>
-        </div>
+          </span>
+        }
+        actions={
+          <>
+            {selectedIds.size > 0 && (
+              <Button
+                onClick={handleDeleteSelected}
+                variant="destructive"
+                size="sm"
+                className="h-8 px-3 font-semibold text-xs animate-in fade-in gap-1.5"
+                title="Xóa các ảnh đã chọn"
+              >
+                <Trash2 size={13} />
+                <span>Xóa ({selectedIds.size})</span>
+              </Button>
+            )}
 
-        <div className="flex items-center gap-2 shrink-0">
-          {selectedIds.size > 0 && (
             <Button
-              onClick={handleDeleteSelected}
-              variant="destructive"
+              onClick={handleOpenFolder}
+              variant="outline"
               size="sm"
-              className="h-9 px-3.5 font-semibold text-xs animate-in fade-in"
-              title="Xóa các ảnh đã chọn"
+              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              title="Mở thư mục screenshots trong Explorer"
             >
-              <Trash2 size={14} className="mr-1.5" />
-              Xóa ({selectedIds.size}) ảnh
+              <FolderOpen size={13} className="text-primary" />
+              <span>Thư mục Ảnh</span>
             </Button>
-          )}
 
-          <Button
-            onClick={() => handleOpenFolder()}
-            variant="outline"
-            size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
-            title="Mở thư mục screenshots trong Explorer"
-          >
-            <FolderOpen size={14} className="mr-1.5" />
-            Thư mục Ảnh
-          </Button>
+            <Button
+              onClick={loadScreenshots}
+              disabled={isLoading}
+              variant="outline"
+              size="sm"
+              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              title="Làm mới danh sách ảnh"
+            >
+              <RefreshCw size={13} className={cn(isLoading && 'animate-spin')} />
+              <span>Làm mới</span>
+            </Button>
+          </>
+        }
+      />
 
-          <Button
-            onClick={loadScreenshots}
-            disabled={isLoading}
-            variant="outline"
-            size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
-            title="Làm mới danh sách ảnh"
-          >
-            <RefreshCw size={13} className={cn(isLoading && 'animate-spin', 'mr-1.5')} />
-            Làm mới
-          </Button>
-        </div>
-      </div>
-
-      {/* Search & Grid Display Options Bar */}
+      {/* ── Search & Filter Controls ────────────────────────────────────────────── */}
       <div className="flex gap-2.5 items-center">
         {/* Search Field */}
-        <div className="flex-1 min-w-[220px]">
+        <div className="flex-1 min-w-[200px]">
           <Input
-            className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 h-9 rounded-xl text-xs"
+            className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 h-8.5 rounded-xl text-xs"
             type="text"
             placeholder="Tìm kiếm theo tên ảnh, ngày chụp..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            icon={<Search className="h-4 w-4 text-zinc-400" />}
+            icon={<Search className="h-3.5 w-3.5 text-zinc-400" />}
           />
         </div>
 
@@ -359,19 +363,19 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             variant="outline"
             size="sm"
             onClick={toggleSelectAll}
-            className="h-9 px-3 bg-zinc-900/80 border-zinc-700/70 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-primary/50 text-xs gap-1.5 rounded-xl shrink-0 transition-all shadow-sm"
+            className="h-8.5 px-3 bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5 rounded-xl shrink-0 transition-all shadow-sm"
           >
             {selectedIds.size === filteredScreenshots.length ? (
-              <CheckSquare size={14} className="text-primary" />
+              <CheckSquare size={13} className="text-primary" />
             ) : (
-              <Square size={14} className="text-zinc-400" />
+              <Square size={13} className="text-zinc-400" />
             )}
             <span>{selectedIds.size === filteredScreenshots.length ? 'Bỏ chọn' : 'Chọn tất cả'}</span>
           </Button>
         )}
 
         {/* Grid Size Switcher */}
-        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-xl p-0.5 h-9 shrink-0">
+        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-xl p-0.5 h-8.5 shrink-0">
           <button
             onClick={() => setGridSize('normal')}
             className={cn(
@@ -380,7 +384,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                 ? 'bg-primary/20 text-primary font-semibold'
                 : 'text-zinc-400 hover:text-zinc-200'
             )}
-            title="Lưới vừa (4 cột)"
+            title="Lưới vừa (4-5 cột)"
           >
             <Grid3X3 size={13} />
             <span className="text-[11px]">Vừa</span>
@@ -401,17 +405,17 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         </div>
       </div>
 
-      {/* Screenshots Gallery Content */}
+      {/* ── Screenshots Gallery Content ─────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto pr-1">
         {isLoading ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center py-20">
-            <Loader2 size={32} className="animate-spin text-primary" />
-            <p className="text-sm font-medium text-muted-foreground">Đang tải ảnh chụp màn hình...</p>
+            <Loader2 size={28} className="animate-spin text-primary" />
+            <p className="text-xs font-medium text-muted-foreground">Đang tải ảnh chụp màn hình...</p>
           </div>
         ) : filteredScreenshots.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-20 text-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
-              <Camera size={32} />
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
+              <Camera size={26} />
             </div>
             <div>
               <p className="text-sm font-semibold text-zinc-100">
@@ -427,21 +431,21 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => handleOpenFolder()}
+                onClick={handleOpenFolder}
                 className="mt-1 text-xs bg-zinc-800/80 border-zinc-700 hover:border-primary/50 text-zinc-200"
               >
-                <FolderOpen size={14} className="mr-1.5" />
+                <FolderOpen size={13} className="mr-1.5 text-primary" />
                 Mở thư mục Screenshots
               </Button>
             )}
           </div>
         ) : (
-          <div className="flex flex-col gap-6 pb-6">
+          <div className="flex flex-col gap-5 pb-6">
             {groupedScreenshots.map((group) => (
-              <div key={group.label} className="flex flex-col gap-3">
-                {/* Group Heading */}
+              <div key={group.label} className="flex flex-col gap-2.5">
+                {/* Group Heading Badge */}
                 <div className="flex items-center gap-2 border-b border-zinc-800/60 pb-1.5">
-                  <Clock size={13} className="text-primary" />
+                  <Clock size={12} className="text-primary" />
                   <h3 className="text-xs font-bold text-zinc-300 uppercase tracking-wider">
                     {group.label}
                   </h3>
@@ -450,13 +454,13 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   </span>
                 </div>
 
-                {/* Items Grid */}
+                {/* Modern Image Grid */}
                 <div
                   className={cn(
-                    'grid gap-3.5',
+                    'grid gap-3',
                     gridSize === 'normal'
-                      ? 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'
-                      : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+                      ? 'grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5'
+                      : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3'
                   )}
                 >
                   {group.items.map((screenshot) => {
@@ -468,13 +472,13 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                         key={screenshot.id}
                         onClick={() => setActiveLightboxIndex(fullIndex)}
                         className={cn(
-                          'group relative flex flex-col rounded-2xl border bg-zinc-900/85 overflow-hidden transition-all duration-200 cursor-pointer shadow-md hover:shadow-2xl hover:-translate-y-1',
+                          'group relative rounded-xl overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02]',
                           isSelected
-                            ? 'border-primary ring-2 ring-primary/40 bg-zinc-900'
-                            : 'border-zinc-800 hover:border-primary/50'
+                            ? 'border-primary ring-2 ring-primary/40'
+                            : 'border-zinc-800/90 hover:border-primary/50'
                         )}
                       >
-                        {/* Image Preview Container */}
+                        {/* Image Frame */}
                         <div className="relative w-full aspect-video bg-zinc-950 overflow-hidden">
                           <img
                             src={screenshot.dataUrl}
@@ -483,87 +487,65 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
 
-                          {/* Hover Dark Gradient Overlay */}
-                          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex flex-col justify-between p-2.5">
-                            {/* Top row: Checkbox & Zoom icon */}
-                            <div className="flex items-center justify-between">
-                              <button
-                                type="button"
-                                onClick={(e) => toggleSelect(screenshot.id, e)}
-                                className={cn(
-                                  'h-6 w-6 rounded-lg flex items-center justify-center transition-all',
-                                  isSelected
-                                    ? 'bg-primary text-primary-foreground shadow-md'
-                                    : 'bg-black/60 text-white/80 hover:bg-black/80 hover:text-white'
-                                )}
-                                title={isSelected ? 'Bỏ chọn' : 'Chọn ảnh'}
-                              >
-                                {isSelected ? <Check size={12} strokeWidth={3} /> : <Square size={12} />}
-                              </button>
+                          {/* Subtle Bottom Vignette for text readability */}
+                          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/85 via-black/40 to-transparent pointer-events-none" />
 
-                              <div className="h-6 w-6 rounded-lg bg-black/60 text-white/80 flex items-center justify-center">
-                                <ZoomIn size={13} />
-                              </div>
-                            </div>
-
-                            {/* Bottom row: Quick action buttons */}
-                            <div
-                              className="flex items-center justify-end gap-1.5"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                onClick={() => handleCopy(screenshot)}
-                                className="h-7 w-7 bg-zinc-900/90 border-zinc-700 text-zinc-200 hover:text-primary hover:border-primary/50"
-                                title="Sao chép ảnh vào Clipboard (Ctrl+C)"
-                              >
-                                <Copy size={12} />
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                onClick={() => handleShowInFolder(screenshot.filePath)}
-                                className="h-7 w-7 bg-zinc-900/90 border-zinc-700 text-zinc-200 hover:text-primary hover:border-primary/50"
-                                title="Mở trong File Explorer"
-                              >
-                                <FolderOpen size={12} />
-                              </Button>
-
-                              <Button
-                                variant="outline"
-                                size="icon-sm"
-                                onClick={() => handleDelete(screenshot)}
-                                className="h-7 w-7 bg-zinc-900/90 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40"
-                                title="Xóa ảnh này"
-                              >
-                                <Trash2 size={12} />
-                              </Button>
-                            </div>
-                          </div>
-
-                          {/* Always-visible select indicator if selected */}
-                          {isSelected && (
-                            <div className="absolute top-2.5 left-2.5 h-6 w-6 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shadow-md">
-                              <Check size={12} strokeWidth={3} />
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Card Info Footer */}
-                        <div className="p-3 flex flex-col gap-1 border-t border-zinc-800/60">
-                          <p
-                            className="text-xs font-semibold text-zinc-100 truncate group-hover:text-primary transition-colors font-mono"
-                            title={screenshot.fileName}
-                          >
-                            {screenshot.fileName}
-                          </p>
-                          <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-                            <span>{formatDateTime(screenshot.createdAt)}</span>
-                            <span className="font-semibold text-zinc-300">
+                          {/* Bottom info pill */}
+                          <div className="absolute bottom-1.5 inset-x-2 flex items-center justify-between text-[10px] text-zinc-300 font-medium pointer-events-none">
+                            <span className="truncate drop-shadow-md">
+                              {formatTimeOnly(screenshot.createdAt) || screenshot.fileName}
+                            </span>
+                            <span className="px-1.5 py-0.2 rounded bg-black/60 backdrop-blur-sm text-zinc-300 text-[9px] font-semibold border border-white/10 shrink-0 ml-1.5">
                               {formatBytes(screenshot.sizeBytes)}
                             </span>
+                          </div>
+
+                          {/* Checkbox badge (Top Left) */}
+                          <button
+                            type="button"
+                            onClick={(e) => toggleSelect(screenshot.id, e)}
+                            className={cn(
+                              'absolute top-2 left-2 h-6 w-6 rounded-lg flex items-center justify-center transition-all z-10',
+                              isSelected
+                                ? 'bg-primary text-primary-foreground shadow-md ring-1 ring-primary/50'
+                                : 'bg-black/60 backdrop-blur-md text-white/70 hover:bg-black/90 hover:text-white border border-white/10 opacity-0 group-hover:opacity-100'
+                            )}
+                            title={isSelected ? 'Bỏ chọn' : 'Chọn ảnh'}
+                          >
+                            {isSelected ? <Check size={12} strokeWidth={3} /> : <Square size={11} />}
+                          </button>
+
+                          {/* Hover Action Buttons (Top Right) */}
+                          <div
+                            className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-10"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleCopy(screenshot)}
+                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              title="Sao chép ảnh (Ctrl+C)"
+                            >
+                              <Copy size={11} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleShowInFolder(screenshot.filePath)}
+                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              title="Mở trong Folder"
+                            >
+                              <FolderOpen size={11} />
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(screenshot)}
+                              className="h-6 w-6 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center shadow-md transition-colors"
+                              title="Xóa ảnh"
+                            >
+                              <Trash2 size={11} />
+                            </button>
                           </div>
                         </div>
                       </div>
@@ -576,35 +558,35 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         )}
       </div>
 
-      {/* Interactive Lightbox Modal */}
+      {/* ── Interactive Lightbox Modal ───────────────────────────────────────── */}
       {activeScreenshot && (
         <div
-          className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-xl animate-in fade-in duration-200 select-none"
+          className="fixed inset-0 z-50 flex flex-col bg-black/95 backdrop-blur-2xl animate-in fade-in duration-150 select-none"
           onClick={() => setActiveLightboxIndex(null)}
         >
           {/* Top Controls Bar */}
           <div
-            className="flex items-center justify-between px-6 py-3.5 border-b border-zinc-800/80 bg-zinc-950/80 shrink-0"
+            className="flex items-center justify-between px-6 py-3 border-b border-zinc-800/80 bg-zinc-950/90 shrink-0"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-center gap-3 min-w-0">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/20 text-primary shrink-0">
-                <Camera size={16} />
+              <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary border border-primary/30 shrink-0">
+                <Camera size={14} />
               </div>
               <div className="min-w-0">
-                <h3 className="text-sm font-bold text-white truncate font-mono" title={activeScreenshot.fileName}>
+                <h3 className="text-xs font-bold text-zinc-100 truncate" title={activeScreenshot.fileName}>
                   {activeScreenshot.fileName}
                 </h3>
                 <p className="text-[11px] text-zinc-400 flex items-center gap-2 mt-0.5">
                   <span>{formatDateTime(activeScreenshot.createdAt)}</span>
-                  <span>·</span>
-                  <span className="font-semibold text-zinc-200">{formatBytes(activeScreenshot.sizeBytes)}</span>
+                  <span className="text-zinc-600">·</span>
+                  <span className="font-semibold text-primary">{formatBytes(activeScreenshot.sizeBytes)}</span>
                 </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-zinc-400 px-3 py-1 bg-zinc-900 border border-zinc-800 rounded-lg">
+              <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-lg">
                 {(activeLightboxIndex ?? 0) + 1} / {filteredScreenshots.length}
               </span>
 
@@ -613,42 +595,42 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                 size="sm"
                 onClick={() => handleCopy(activeScreenshot)}
                 disabled={isCopying}
-                className="h-8 px-3 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
-                title="Sao chép ảnh vào Clipboard (Ctrl+C)"
+                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
+                title="Sao chép ảnh (Ctrl+C)"
               >
-                {isCopying ? <Loader2 size={13} className="animate-spin" /> : <Copy size={13} className="text-primary" />}
-                <span>Sao chép (Ctrl+C)</span>
+                {isCopying ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} className="text-primary" />}
+                <span>Sao chép</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleShowInFolder(activeScreenshot.filePath)}
-                className="h-8 px-3 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
+                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
                 title="Mở trong File Explorer"
               >
-                <FolderOpen size={13} />
-                <span>Mở trong Explorer</span>
+                <FolderOpen size={12} />
+                <span>Mở thư mục</span>
               </Button>
 
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => handleDelete(activeScreenshot)}
-                className="h-8 px-3 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5"
+                className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5 rounded-lg"
                 title="Xóa ảnh này"
               >
-                <Trash2 size={13} />
+                <Trash2 size={12} />
                 <span>Xóa</span>
               </Button>
 
               <button
                 type="button"
                 onClick={() => setActiveLightboxIndex(null)}
-                className="p-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-2"
+                className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1.5"
                 title="Đóng (Esc)"
               >
-                <X size={20} />
+                <X size={18} />
               </button>
             </div>
           </div>
@@ -663,10 +645,10 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   e.stopPropagation()
                   handlePrev()
                 }}
-                className="absolute left-6 z-10 p-3 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-110 shadow-2xl"
+                className="absolute left-6 z-10 p-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-2xl backdrop-blur-md"
                 title="Ảnh trước (Mũi tên trái)"
               >
-                <ChevronLeft size={24} />
+                <ChevronLeft size={22} />
               </button>
             )}
 
@@ -690,10 +672,10 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   e.stopPropagation()
                   handleNext()
                 }}
-                className="absolute right-6 z-10 p-3 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-110 shadow-2xl"
+                className="absolute right-6 z-10 p-2.5 rounded-2xl bg-zinc-900/80 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-2xl backdrop-blur-md"
                 title="Ảnh tiếp theo (Mũi tên phải)"
               >
-                <ChevronRight size={24} />
+                <ChevronRight size={22} />
               </button>
             )}
           </div>
