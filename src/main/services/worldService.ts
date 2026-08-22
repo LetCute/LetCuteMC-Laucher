@@ -8,7 +8,10 @@ import AdmZip from 'adm-zip'
 import type { MinecraftWorld, WorldBackupItem, WorldDifficulty, WorldGameType } from '../../shared/types'
 import { detectMinecraftDirectory } from './minecraftDirectoryService'
 
-const parseNbt = (buffer: Buffer | ArrayBuffer) => nbt.parse(buffer)
+const parseNbt = async (buffer: Buffer | ArrayBuffer) => {
+  const res = await nbt.parse(buffer)
+  return (res as any)?.parsed || res
+}
 
 function getFolderSizeBytes(dirPath: string): number {
   let totalSize = 0
@@ -76,10 +79,9 @@ export class WorldService {
         try {
           const buffer = fs.readFileSync(levelDatPath)
           const parsed = (await parseNbt(buffer)) as any
-          const simplified = nbt.simplify(parsed)
-          const data = simplified.Data || simplified
-
-          if (!data) continue
+          const root = parsed?.parsed || parsed
+          const simplified = root ? nbt.simplify(root) : null
+          const data = simplified?.Data || simplified || {}
 
           const name: string = typeof data.LevelName === 'string' && data.LevelName ? data.LevelName : folderName
           const gameTypeRaw: number = typeof data.GameType === 'number' ? data.GameType : 0
@@ -373,7 +375,8 @@ export class WorldService {
         try {
           const buf = fs.readFileSync(extractedLevelDat)
           const parsed = (await parseNbt(buf)) as any
-          const simplified = nbt.simplify(parsed)
+          const root = parsed?.parsed || parsed
+          const simplified = root ? nbt.simplify(root) : null
           if (simplified?.Data?.LevelName) {
             worldName = simplified.Data.LevelName
           }

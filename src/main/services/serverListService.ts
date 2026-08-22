@@ -6,7 +6,10 @@ import * as nbt from 'prismarine-nbt'
 import { MinecraftServer } from '../../shared/types'
 import { detectMinecraftDirectory } from './minecraftDirectoryService'
 
-const parseNbt = (buffer: Buffer | ArrayBuffer) => nbt.parse(buffer)
+const parseNbt = async (buffer: Buffer | ArrayBuffer) => {
+  const res = await nbt.parse(buffer)
+  return (res as any)?.parsed || res
+}
 
 export class ServerListService {
   private readonly baseUrl = 'https://minecraft-mp.com/country/vietnam'

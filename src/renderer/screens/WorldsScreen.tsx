@@ -17,6 +17,8 @@ import {
   HardDrive,
   Clock,
   Key,
+  Eye,
+  EyeOff,
   Check,
   Loader2,
   FileArchive,
@@ -154,6 +156,12 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
   const [renameTarget, setRenameTarget] = useState<MinecraftWorld | null>(null)
   const [renameInput, setRenameInput] = useState('')
   const [isRenaming, setIsRenaming] = useState(false)
+
+  // Streamer safe seed reveal state
+  const [revealedSeeds, setRevealedSeeds] = useState<Record<string, boolean>>({})
+  const toggleSeedReveal = (folderName: string) => {
+    setRevealedSeeds((prev) => ({ ...prev, [folderName]: !prev[folderName] }))
+  }
 
   // Loading states for actions
   const [backingUpMap, setBackingUpMap] = useState<Record<string, boolean>>({})
@@ -396,7 +404,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
   // Copy Seed to Clipboard
   const handleCopySeed = (seed: string) => {
     void navigator.clipboard.writeText(seed)
-    showToast('success', `Đã sao chép Seed: ${seed}`)
+    showToast('success', 'Đã sao chép Seed vào bộ nhớ tạm.')
   }
 
   // Open Folder
@@ -690,19 +698,36 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                     </div>
                   </div>
 
-                  {/* Seed Line */}
+                  {/* Seed Line (Streamer Safe - Masked by default) */}
                   {world.seed && (
                     <div className="mt-2.5 pt-2 border-t border-zinc-800/80 flex items-center justify-between gap-2 text-xs">
-                      <span className="text-[11px] text-muted-foreground flex items-center gap-1 font-mono truncate">
+                      <div className="flex items-center gap-1.5 font-mono text-[11px] min-w-0">
                         <Key size={11} className="text-primary/80 shrink-0" />
-                        Seed: <span className="text-zinc-200 font-medium">{world.seed}</span>
-                      </span>
+                        <span className="text-muted-foreground shrink-0">Seed:</span>
+                        <span className={cn(
+                          'font-medium transition-all select-all truncate',
+                          revealedSeeds[world.folderName]
+                            ? 'text-zinc-200'
+                            : 'text-zinc-500 tracking-wider font-sans text-[10px]'
+                        )}>
+                          {revealedSeeds[world.folderName] ? world.seed : '••••••••••••••••'}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => toggleSeedReveal(world.folderName)}
+                          className="text-zinc-400 hover:text-zinc-200 transition-colors p-0.5 rounded hover:bg-zinc-800 shrink-0"
+                          title={revealedSeeds[world.folderName] ? 'Ẩn Seed (Chế độ Stream)' : 'Hiện Seed'}
+                        >
+                          {revealedSeeds[world.folderName] ? <EyeOff size={12} /> : <Eye size={12} />}
+                        </button>
+                      </div>
                       <button
                         onClick={() => handleCopySeed(world.seed!)}
-                        className="text-[11px] font-semibold text-primary hover:underline shrink-0"
-                        title="Sao chép Seed"
+                        className="text-[11px] font-semibold text-primary hover:underline shrink-0 flex items-center gap-1"
+                        title="Sao chép Seed vào bộ nhớ tạm"
                       >
-                        Sao chép
+                        <Copy size={11} />
+                        <span>Sao chép</span>
                       </button>
                     </div>
                   )}
