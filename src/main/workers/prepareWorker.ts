@@ -5,18 +5,22 @@ import type {
   PreparedProfileState,
   LauncherLogLevel,
 } from '../../shared/types'
-import { downloadTasks, DownloadTask } from '../services/download-manager'
+import { downloadTasks, DownloadTask } from '../services/system/downloadManager'
 
 
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import crypto from 'node:crypto'
-import { getVersionManifestCacheDir } from '../services/storageService'
-import { getCachedVersionManifest } from '../services/versionManifestCacheService'
-import { selectBestJavaRuntime, extractMinecraftVersion, resolveRequiredJavaMajor } from '../services/javaScannerService'
-import { autoInstallJava, getDefaultJavaInstallDir } from '../services/javaInstallerService'
-import { writeErrorLog } from '../services/errorLogService'
-import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/modDependencyService'
+import { getVersionManifestCacheDir } from '../services/system/storageService'
+import { getCachedVersionManifest } from '../services/launcher/versionManifestCacheService'
+import { selectBestJavaRuntime, extractMinecraftVersion, resolveRequiredJavaMajor } from '../services/launcher/javaScannerService'
+import { autoInstallJava, getDefaultJavaInstallDir } from '../services/launcher/javaInstallerService'
+import { writeErrorLog } from '../services/media/errorLogService'
+import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
+import { getUrlCandidates } from '../services/system/mirrorService'
+import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
+
+initGlobalHttpDispatcher()
 
 
 async function checkFileHash(filePath: string, expectedHash: string): Promise<boolean> {
@@ -45,34 +49,41 @@ async function downloadAsset(
   const dir = path.dirname(destPath)
   await fs.mkdir(dir, { recursive: true })
 
-  let attempts = 0
-  const maxAttempts = 3
+  const urlCandidates = getUrlCandidates(url)
 
-  while (attempts < maxAttempts) {
-    attempts++
-    try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP status ${res.status}`)
+  for (let candidateIdx = 0; candidateIdx < urlCandidates.length; candidateIdx++) {
+    const currentUrl = urlCandidates[candidateIdx]
+    let attempts = 0
+    const maxAttempts = 2
 
-      const arrayBuffer = await res.arrayBuffer()
-      const buffer = Buffer.from(arrayBuffer)
+    while (attempts < maxAttempts) {
+      attempts++
+      try {
+        const controller = new AbortController()
+        const timeoutId = setTimeout(() => controller.abort(), 20000)
+        const res = await fetch(currentUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
+        if (!res.ok) throw new Error(`HTTP status ${res.status}`)
 
-      if (buffer.length !== expectedSize) {
-        throw new Error(`Size mismatch: expected ${expectedSize}, got ${buffer.length}`)
-      }
+        const arrayBuffer = await res.arrayBuffer()
+        const buffer = Buffer.from(arrayBuffer)
 
-      const hash = crypto.createHash('sha1').update(buffer).digest('hex')
-      if (hash !== expectedHash) {
-        throw new Error(`Hash mismatch: expected ${expectedHash}, got ${hash}`)
-      }
+        if (buffer.length !== expectedSize) {
+          throw new Error(`Size mismatch: expected ${expectedSize}, got ${buffer.length}`)
+        }
 
-      await fs.writeFile(partPath, buffer)
-      await fs.rename(partPath, destPath)
-      return
-    } catch (err) {
-      try { await fs.unlink(partPath) } catch {}
-      if (attempts >= maxAttempts) {
-        throw new Error(`Failed downloading ${url} after ${maxAttempts} attempts: ${err instanceof Error ? err.message : String(err)}`)
+        const hash = crypto.createHash('sha1').update(buffer).digest('hex')
+        if (hash !== expectedHash) {
+          throw new Error(`Hash mismatch: expected ${expectedHash}, got ${hash}`)
+        }
+
+        await fs.writeFile(partPath, buffer)
+        await fs.rename(partPath, destPath)
+        return
+      } catch (err) {
+        try { await fs.unlink(partPath) } catch {}
+        if (candidateIdx === urlCandidates.length - 1 && attempts >= maxAttempts) {
+          throw new Error(`Failed downloading ${url} after ${maxAttempts} attempts: ${err instanceof Error ? err.message : String(err)}`)
+        }
       }
     }
   }
@@ -114,21 +125,61 @@ async function pathExists(p: string): Promise<boolean> {
   }
 }
 
+let lastProgressTime = 0
+let pendingProgress: { profileId: string; version: string; progress: Omit<PrepareGameProgress, 'profileId' | 'version' | 'updatedAt'> } | null = null
+let progressTimer: ReturnType<typeof setTimeout> | null = null
+
 function postProgress(
   profileId: string,
   version: string,
-  progress: Omit<PrepareGameProgress, 'profileId' | 'version' | 'updatedAt'>
+  progress: Omit<PrepareGameProgress, 'profileId' | 'version' | 'updatedAt'>,
+  forceImmediate = false
 ) {
-  parentPort!.postMessage({
-    type: 'progress',
-    profileId,
-    progress: {
-      ...progress,
+  const now = Date.now()
+  const elapsed = now - lastProgressTime
+
+  // Flush any pending trailing progress
+  if (progressTimer) {
+    clearTimeout(progressTimer)
+    progressTimer = null
+  }
+
+  // Force immediate send on major milestone (0%, 100%, errors, stage changes)
+  if (forceImmediate || progress.percent === 0 || progress.percent === 100 || elapsed >= 120) {
+    lastProgressTime = now
+    pendingProgress = null
+    parentPort!.postMessage({
+      type: 'progress',
       profileId,
-      version,
-      updatedAt: new Date().toISOString(),
-    },
-  })
+      progress: {
+        ...progress,
+        profileId,
+        version,
+        updatedAt: new Date().toISOString(),
+      },
+    })
+    return
+  }
+
+  // Otherwise throttle and schedule trailing update
+  pendingProgress = { profileId, version, progress }
+  progressTimer = setTimeout(() => {
+    if (pendingProgress) {
+      lastProgressTime = Date.now()
+      parentPort!.postMessage({
+        type: 'progress',
+        profileId: pendingProgress.profileId,
+        progress: {
+          ...pendingProgress.progress,
+          profileId: pendingProgress.profileId,
+          version: pendingProgress.version,
+          updatedAt: new Date().toISOString(),
+        },
+      })
+      pendingProgress = null
+      progressTimer = null
+    }
+  }, 120 - elapsed)
 }
 
 function postLog(level: LauncherLogLevel, message: string) {
@@ -193,10 +244,19 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
       }
 
       await fs.mkdir(versionDir, { recursive: true })
-      // Download version json
-      const res = await fetch(versionEntry.url)
-      if (!res.ok) throw new Error(`Fetch version json failed with status ${res.status}`)
-      const verJsonData = await res.json()
+      // Download version json with mirror fallback
+      const candidates = getUrlCandidates(versionEntry.url)
+      let verJsonData: any = null
+      for (const candUrl of candidates) {
+        try {
+          const res = await fetch(candUrl)
+          if (res.ok) {
+            verJsonData = await res.json()
+            break
+          }
+        } catch {}
+      }
+      if (!verJsonData) throw new Error(`Fetch version json failed for ${version}`)
       await fs.writeFile(versionJsonPath, JSON.stringify(verJsonData, null, 2), 'utf8')
       versionJsonReady = true
       postLog('success', `Đã tải và lưu cấu hình json của ${version}.`)
@@ -224,9 +284,18 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
           throw new Error(`Không tìm thấy cấu hình phiên bản cha ${inheritedVersion} trên Mojang manifest.`)
         }
         await fs.mkdir(parentDir, { recursive: true })
-        const res = await fetch(parentEntry.url)
-        if (!res.ok) throw new Error(`Tải cấu hình cha thất bại: HTTP status ${res.status}`)
-        const parentData = await res.json()
+        const parentCandidates = getUrlCandidates(parentEntry.url)
+        let parentData: any = null
+        for (const candUrl of parentCandidates) {
+          try {
+            const res = await fetch(candUrl)
+            if (res.ok) {
+              parentData = await res.json()
+              break
+            }
+          } catch {}
+        }
+        if (!parentData) throw new Error(`Tải cấu hình cha thất bại cho ${inheritedVersion}`)
         await fs.writeFile(parentJsonPath, JSON.stringify(parentData, null, 2), 'utf8')
       }
 

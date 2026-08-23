@@ -20,10 +20,10 @@ import type {
   MinecraftVersionType,
 } from '../../shared/types'
 import { Version, launch as xmclLaunch, type ResolvedVersion } from '@xmcl/core'
-import { selectBestJavaRuntime } from '../services/javaScannerService'
-import { getSettings } from '../services/settingsService'
-import { writeErrorLog } from '../services/errorLogService'
-import { optimizerService } from '../services/optimizerService'
+import { selectBestJavaRuntime } from '../services/launcher/javaScannerService'
+import { getSettings } from '../services/system/settingsService'
+import { writeErrorLog } from '../services/media/errorLogService'
+import { optimizerService } from '../services/system/optimizerService'
 
 const parentPort = process.parentPort
 if (!parentPort) {
@@ -62,12 +62,43 @@ function postStatus(jobId: string, status: LaunchStatus): void {
   postMsg({ type: 'status', jobId, status })
 }
 
-function postProgress(jobId: string, progress: Omit<LaunchJobProgress, 'updatedAt'>): void {
-  postMsg({
-    type: 'progress',
-    jobId,
-    progress: { ...progress, updatedAt: now() },
-  })
+let lastLaunchProgressTime = 0
+let pendingLaunchProgress: { jobId: string; progress: Omit<LaunchJobProgress, 'updatedAt'> } | null = null
+let launchProgressTimer: ReturnType<typeof setTimeout> | null = null
+
+function postProgress(jobId: string, progress: Omit<LaunchJobProgress, 'updatedAt'>, forceImmediate = false): void {
+  const currentTime = Date.now()
+  const elapsed = currentTime - lastLaunchProgressTime
+
+  if (launchProgressTimer) {
+    clearTimeout(launchProgressTimer)
+    launchProgressTimer = null
+  }
+
+  if (forceImmediate || progress.percent === 0 || progress.percent === 100 || elapsed >= 120) {
+    lastLaunchProgressTime = currentTime
+    pendingLaunchProgress = null
+    postMsg({
+      type: 'progress',
+      jobId,
+      progress: { ...progress, updatedAt: now() },
+    })
+    return
+  }
+
+  pendingLaunchProgress = { jobId, progress }
+  launchProgressTimer = setTimeout(() => {
+    if (pendingLaunchProgress) {
+      lastLaunchProgressTime = Date.now()
+      postMsg({
+        type: 'progress',
+        jobId: pendingLaunchProgress.jobId,
+        progress: { ...pendingLaunchProgress.progress, updatedAt: now() },
+      })
+      pendingLaunchProgress = null
+      launchProgressTimer = null
+    }
+  }, 120 - elapsed)
 }
 
 /** Only post progress if key (status:percent:message) actually changed */
@@ -223,8 +254,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     if (!javaSelection.found || !javaSelection.selectedRuntime) {
       postLog(jobId, 'warn', `[LaunchWorker] Không tìm thấy Java tương thích. Bắt đầu tự động tải Java...`)
 
-      const { resolveRequiredJavaMajor } = await import('../services/javaScannerService')
-      const { autoInstallJava, getDefaultJavaInstallDir } = await import('../services/javaInstallerService')
+      const { resolveRequiredJavaMajor } = await import('../services/launcher/javaScannerService')
+      const { autoInstallJava, getDefaultJavaInstallDir } = await import('../services/launcher/javaInstallerService')
 
       const requiredMajor = await resolveRequiredJavaMajor(input.version, resourcePath)
       const installDir = getDefaultJavaInstallDir()
@@ -232,7 +263,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       const installResult = await autoInstallJava(
         requiredMajor,
         installDir,
-        (progress) => {
+        (progress: any) => {
           postProgress(jobId, {
             status: 'checking_java',
             title: `Đang tải Java ${requiredMajor}`,

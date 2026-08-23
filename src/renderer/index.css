@@ -223,6 +223,7 @@ body {
 }
 
 @layer components {
+
   /* High Quality: Rich Glassmorphism */
   :root[data-ui-quality="high"] .bg-card,
   :root[data-ui-quality="high"] .bg-popover,
@@ -291,19 +292,19 @@ body {
     /* 1. Triệt tiêu toàn bộ backdrop-filter gây nghẽn GPU */
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    
+
     /* 2. Loại bỏ bóng đổ nặng và bộ lọc phức tạp */
     box-shadow: none !important;
     text-shadow: none !important;
     filter: none !important;
-    
+
     /* 3. Loại bỏ độ trễ transition */
     transition-duration: 0.01ms !important;
   }
 
-  /* 4. Tắt hiệu ứng phóng to (scale transform) khi rê chuột tránh tính lại layout */
-  :root[data-ui-quality="low"] .group:hover *,
-  :root[data-ui-quality="low"] *:hover {
+  /* 4. Tắt hiệu ứng phóng to (scale transform) khi rê chuột tránh tính lại layout (trừ các floating wrapper như Radix popper) */
+  :root[data-ui-quality="low"] .group:hover *:not([data-radix-popper-content-wrapper]),
+  :root[data-ui-quality="low"] *:not([data-radix-popper-content-wrapper]):hover {
     transform: none !important;
   }
 
@@ -395,18 +396,20 @@ body {
 
 /* ── Skeleton shimmer ─────────────────────────────────────────────────────── */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    hsl(var(--muted) / 0.4) 25%,
-    hsl(var(--muted) / 0.7) 50%,
-    hsl(var(--muted) / 0.4) 75%
-  );
+  background: linear-gradient(90deg,
+      hsl(var(--muted) / 0.4) 25%,
+      hsl(var(--muted) / 0.7) 50%,
+      hsl(var(--muted) / 0.4) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.6s ease-in-out infinite;
 }
-

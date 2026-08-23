@@ -435,7 +435,14 @@ export function Sidebar({
                 </div>
               </div>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-56 dropdown-panel rounded-2xl p-1.5 z-50">
+            <DropdownMenuContent
+              side="top"
+              align="start"
+              sideOffset={8}
+              collisionPadding={8}
+              avoidCollisions={false}
+              className="w-56 dropdown-panel rounded-2xl p-1.5 z-50"
+            >
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <div className="max-h-48 overflow-y-auto">

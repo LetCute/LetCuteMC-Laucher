@@ -195,6 +195,12 @@ declare global {
       // File Dialogs
       saveFileDialog(options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null>
 
+      // LAN Discovery API
+      startLanDiscovery(): Promise<boolean>
+      stopLanDiscovery(): Promise<boolean>
+      getLanServers(): Promise<import('../shared/types').LanServerInfo[]>
+      onLanServersUpdated(callback: (servers: import('../shared/types').LanServerInfo[]) => void): () => void
+
       // Worlds & Saves API
       scanWorlds(gameDir?: string): Promise<import('../shared/types').MinecraftWorld[]>
       backupWorld(gameDir: string | undefined, folderName: string): Promise<{ success: boolean; backupPath: string; fileName: string; sizeBytes: number; message?: string }>

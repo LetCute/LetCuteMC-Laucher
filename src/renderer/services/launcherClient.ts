@@ -359,6 +359,24 @@ export const launcherClient = {
     return getApi().onPrepareGameProgress(callback)
   },
 
+  // ── LAN Discovery API ───────────────────────────────────────────────────
+
+  startLanDiscovery(): Promise<boolean> {
+    return getApi().startLanDiscovery()
+  },
+
+  stopLanDiscovery(): Promise<boolean> {
+    return getApi().stopLanDiscovery()
+  },
+
+  getLanServers(): Promise<import('../../shared/types').LanServerInfo[]> {
+    return getApi().getLanServers()
+  },
+
+  onLanServersUpdated(callback: (servers: import('../../shared/types').LanServerInfo[]) => void): () => void {
+    return getApi().onLanServersUpdated(callback)
+  },
+
   // ── Worlds & Saves API ───────────────────────────────────────────────────
 
   saveFileDialog(options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }): Promise<string | null> {

@@ -1,0 +1,161 @@
+import path from 'node:path'
+import fs from 'node:fs/promises'
+import crypto from 'node:crypto'
+import type { LauncherLogLevel } from '../../../shared/types'
+import { getUrlCandidates } from './mirrorService'
+import { initGlobalHttpDispatcher } from './httpAgent'
+
+export interface DownloadTask {
+  id: string
+  url: string
+  destinationPath: string
+  sha1?: string
+  size?: number
+  label: string
+}
+
+export interface DownloadProgress {
+  taskId: string
+  label: string
+  current: number
+  total: number
+  percent: number
+}
+
+async function fileHashMatches(filePath: string, expectedSha1: string | undefined): Promise<boolean> {
+  if (!expectedSha1) return true
+  try {
+    const data = await fs.readFile(filePath)
+    const hash = crypto.createHash('sha1').update(data).digest('hex')
+    return hash.toLowerCase() === expectedSha1.toLowerCase()
+  } catch {
+    return false
+  }
+}
+
+async function pathExists(p: string): Promise<boolean> {
+  try {
+    await fs.access(p)
+    return true
+  } catch {
+    return false
+  }
+}
+
+export async function downloadTasks(
+  tasks: DownloadTask[],
+  options: {
+    concurrency: number
+    onProgress?: (progress: DownloadProgress) => void
+    onLog?: (level: LauncherLogLevel, message: string) => void
+  }
+): Promise<void> {
+  initGlobalHttpDispatcher()
+
+  const limit = Math.max(1, Math.min(options.concurrency, 16))
+  const activeTasks = new Set<Promise<void>>()
+  const queue = [...tasks]
+  
+  let completed = 0
+  const totalTasks = tasks.length
+
+  options.onLog?.('info', `Bắt đầu tải ${totalTasks} tệp tin bằng ${limit} kết nối song song...`)
+
+  const executeTask = async (task: DownloadTask) => {
+    const destDir = path.dirname(task.destinationPath)
+    await fs.mkdir(destDir, { recursive: true })
+
+    // If file already exists and hash matches, skip
+    if (await pathExists(task.destinationPath)) {
+      const ok = await fileHashMatches(task.destinationPath, task.sha1)
+      if (ok) {
+        completed++
+        options.onProgress?.({
+          taskId: task.id,
+          label: task.label,
+          current: completed,
+          total: totalTasks,
+          percent: Math.round((completed / totalTasks) * 100),
+        })
+        return
+      }
+    }
+
+    const tmpPath = `${task.destinationPath}.tmp`
+    const urlCandidates = getUrlCandidates(task.url)
+    let success = false
+    let lastError: any = null
+
+    // Try candidates (Official primary -> High speed mirror fallback)
+    for (let candidateIdx = 0; candidateIdx < urlCandidates.length && !success; candidateIdx++) {
+      const currentUrl = urlCandidates[candidateIdx]
+      let retries = 2
+
+      while (retries >= 0 && !success) {
+        try {
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 20000)
+          const response = await fetch(currentUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
+          if (!response.ok) throw new Error(`HTTP status ${response.status}`)
+          
+          const arrayBuffer = await response.arrayBuffer()
+          const buffer = Buffer.from(arrayBuffer)
+          
+          await fs.writeFile(tmpPath, buffer)
+
+          // Validate hash if expected
+          if (task.sha1) {
+            const matches = await fileHashMatches(tmpPath, task.sha1)
+            if (!matches) {
+              throw new Error(`Hash mismatch for downloaded file ${task.label}`)
+            }
+          }
+
+          // Rename tmp to actual
+          if (await pathExists(task.destinationPath)) {
+            await fs.unlink(task.destinationPath)
+          }
+          await fs.rename(tmpPath, task.destinationPath)
+          success = true
+        } catch (err) {
+          lastError = err
+          retries--
+          if (await pathExists(tmpPath)) {
+            await fs.unlink(tmpPath).catch(() => {})
+          }
+        }
+      }
+    }
+
+    if (!success) {
+      options.onLog?.('error', `Tải thất bại tệp ${task.label}: ${lastError?.message || 'Lỗi không rõ'}`)
+      throw lastError || new Error(`Failed to download ${task.label}`)
+    }
+
+    completed++
+    options.onProgress?.({
+      taskId: task.id,
+      label: task.label,
+      current: completed,
+      total: totalTasks,
+      percent: Math.round((completed / totalTasks) * 100),
+    })
+  }
+
+  while (queue.length > 0 || activeTasks.size > 0) {
+    while (activeTasks.size < limit && queue.length > 0) {
+      const nextTask = queue.shift()!
+      const p = executeTask(nextTask).then(() => {
+        activeTasks.delete(p)
+      }).catch((err) => {
+        activeTasks.delete(p)
+        throw err
+      })
+      activeTasks.add(p)
+    }
+    if (activeTasks.size > 0) await Promise.race(activeTasks)
+  }
+
+  options.onLog?.('success', `Đã tải hoàn tất ${totalTasks} tệp tin.`)
+}
+

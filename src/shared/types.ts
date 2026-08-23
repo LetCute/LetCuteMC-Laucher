@@ -981,6 +981,15 @@ export interface ProfileFullStats {
   worlds: WorldStatsSummary[]
 }
 
+// ─── LAN Discovery types ───────────────────────────────────────────────────
+
+export interface LanServerInfo {
+  motd: string
+  address: string
+  port: number
+  lastSeen: number
+}
+
 // ─── Profile Package Export / Import types ──────────────────────────────────
 
 export interface ProfilePackageManifest {
@@ -1230,4 +1239,36 @@ export interface ResolveConflictResult {
   success: boolean
   message: string
   resolvedConflicts: string[]
+}
+
+// ─── Service Response Pattern (Standardized Result) ──────────────────────────
+
+/**
+ * Standardized response wrapper for all IPC service calls.
+ * Ensures consistent error handling between Main ↔ Renderer.
+ *
+ * Usage:
+ *   return { success: true, data: result }
+ *   return { success: false, error: 'Something went wrong' }
+ */
+export interface ServiceResponse<T = void> {
+  success: boolean
+  data?: T
+  error?: string
+  /** Optional error code for programmatic handling in Renderer */
+  code?: string
+}
+
+/**
+ * Helper to create a successful ServiceResponse
+ */
+export function okResponse<T>(data: T): ServiceResponse<T> {
+  return { success: true, data }
+}
+
+/**
+ * Helper to create a failed ServiceResponse
+ */
+export function errResponse(error: string, code?: string): ServiceResponse<never> {
+  return { success: false, error, code }
 }

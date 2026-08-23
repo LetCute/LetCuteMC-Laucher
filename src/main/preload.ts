@@ -429,6 +429,22 @@ const launcherApi = {
     return () => ipcRenderer.removeListener('auto-update:status', listener)
   },
 
+  // LAN Discovery
+  startLanDiscovery(): Promise<boolean> {
+    return ipcRenderer.invoke('lan:start')
+  },
+  stopLanDiscovery(): Promise<boolean> {
+    return ipcRenderer.invoke('lan:stop')
+  },
+  getLanServers(): Promise<import('../shared/types').LanServerInfo[]> {
+    return ipcRenderer.invoke('lan:get-servers')
+  },
+  onLanServersUpdated(callback: (servers: import('../shared/types').LanServerInfo[]) => void): () => void {
+    const handler = (_event: Electron.IpcRendererEvent, servers: import('../shared/types').LanServerInfo[]) => callback(servers)
+    ipcRenderer.on('lan-servers:updated', handler)
+    return () => ipcRenderer.removeListener('lan-servers:updated', handler)
+  },
+
   // Worlds & Saves
   scanWorlds(gameDir?: string): Promise<import('../shared/types').MinecraftWorld[]> {
     return ipcRenderer.invoke('worlds:scan', gameDir)

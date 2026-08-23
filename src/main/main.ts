@@ -78,15 +78,15 @@ app.whenReady().then(() => {
 
   void Promise.all([
     import('./ipc'),
-    import('./services/launchManager'),
+    import('./services/launcher/launchManager'),
   ]).then(([{ registerIpcHandlers }, launchManager]) => {
     registerIpcHandlers()
     isGameRunningFn = launchManager.isGameRunning
     isLauncherHiddenForGameFn = launchManager.isLauncherHiddenForGame
   })
 
-  import('./services/discordRpcService').then(m => m.initDiscordRpc().catch(console.error))
-  import('./services/autoUpdaterService').then(m => {
+  import('./services/system/discordRpcService').then(m => m.initDiscordRpc().catch(console.error))
+  import('./services/system/autoUpdaterService').then(m => {
     m.initAutoUpdater()
     // Update check is now triggered manually by the renderer via IPC
   })
@@ -111,5 +111,5 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
-  import('./services/discordRpcService').then(m => m.stopDiscordRpc().catch(console.error))
+  import('./services/system/discordRpcService').then(m => m.stopDiscordRpc().catch(console.error))
 })

@@ -4,10 +4,20 @@ import path from "node:path";
 const requiredFiles = [
   "dist-electron/main/workers/prepareWorker.js",
   "dist-electron/main/workers/launchWorker.js",
-  "dist-electron/main/services/download-manager.js",
-  "dist-electron/main/services/prepareGameService.js",
-  "dist-electron/main/services/launchManager.js",
+  "dist-electron/main/services/system/downloadManager.js",
+  "dist-electron/main/services/launcher/prepareGameService.js",
+  "dist-electron/main/services/launcher/launchManager.js",
+  "dist-electron/main/services/index.js",
   "dist-electron/main/main.js",
+  "dist-electron/main/ipc/index.js",
+  "dist-electron/main/ipc/ipcHelper.js",
+  "dist-electron/main/ipc/accountIpc.js",
+  "dist-electron/main/ipc/profileIpc.js",
+  "dist-electron/main/ipc/launchIpc.js",
+  "dist-electron/main/ipc/contentIpc.js",
+  "dist-electron/main/ipc/modrinthIpc.js",
+  "dist-electron/main/ipc/systemIpc.js",
+  "dist-electron/main/ipc/statsIpc.js",
 ];
 
 const missingFiles = requiredFiles.filter((file) => {
@@ -20,14 +30,14 @@ if (missingFiles.length > 0) {
   process.exit(1);
 }
 
-// Ensure prepareWorker still requires the download-manager module by relative path
+// Ensure prepareWorker still requires the downloadManager module by relative path
 const prepareWorker = fs.readFileSync(
   path.resolve("dist-electron/main/workers/prepareWorker.js"),
   "utf8",
 );
-if (!prepareWorker.includes("../services/download-manager")) {
+if (!prepareWorker.includes("../services/system/downloadManager")) {
   console.error(
-    "prepareWorker.js does not require ../services/download-manager — check imports.",
+    "prepareWorker.js does not require ../services/system/downloadManager — check imports.",
   );
   process.exit(1);
 }
