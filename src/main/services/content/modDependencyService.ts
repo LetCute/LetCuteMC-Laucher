@@ -1,5 +1,6 @@
-import fs from 'node:fs/promises'
+﻿import fs from 'node:fs/promises'
 import path from 'node:path'
+import { asyncPool } from '../../utils/asyncPool'
 // adm-zip is lazy-loaded to reduce cold-start time
 import type {
   ModDependencyInfo,
@@ -97,12 +98,25 @@ const MOD_ID_TO_MODRINTH_MAP: Record<string, string> = {
 
 // ─── Caches & Concurrency Optimization ───────────────────────────────────────
 
+// ponytail: LRU-bounded caches — evict oldest when exceeding limit
+const JAR_CACHE_MAX = 200
+const MODRINTH_CACHE_MAX = 200
+
 /** In-memory cache for parsed JAR metadata: key -> { mtimeMs, size, info } */
 const jarMetadataCache = new Map<string, { mtimeMs: number; size: number; info: ScannedModInfo | null }>()
 
 /** In-memory cache for Modrinth lookup: key -> { timestamp, data } (TTL: 15 min) */
 const modrinthLookupCache = new Map<string, { timestamp: number; data: MissingModDependency['resolvedProject'] | null }>()
 const MODRINTH_CACHE_TTL_MS = 15 * 60 * 1000
+
+function lruSet<K, V>(map: Map<K, V>, key: K, value: V, maxSize: number) {
+  if (map.has(key)) map.delete(key) // move to end
+  map.set(key, value)
+  if (map.size > maxSize) {
+    const oldest = map.keys().next().value
+    if (oldest !== undefined) map.delete(oldest)
+  }
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -122,33 +136,6 @@ export function detectLoaderFromVersion(versionStr: string): 'fabric' | 'quilt' 
   if (lower.includes('neoforge')) return 'neoforge'
   if (lower.includes('forge')) return 'forge'
   return 'unknown'
-}
-
-/** Helper to run an async worker pool with limited concurrency */
-async function asyncPool<T, R>(
-  limit: number,
-  array: T[],
-  iteratorFn: (item: T, index: number) => Promise<R>
-): Promise<R[]> {
-  const ret: R[] = []
-  const executing = new Set<Promise<void>>()
-
-  for (let i = 0; i < array.length; i++) {
-    const item = array[i]
-    const p = Promise.resolve().then(() => iteratorFn(item, i))
-    ret.push(p as unknown as R)
-
-    const e: Promise<void> = p.then(() => {
-      executing.delete(e)
-    })
-    executing.add(e)
-
-    if (executing.size >= limit) {
-      await Promise.race(executing)
-    }
-  }
-
-  return Promise.all(ret)
 }
 
 // ─── Fast Metadata Parser (With File Caching) ────────────────────────────────
@@ -202,7 +189,7 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         dependencies,
       }
 
-      jarMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info })
+      lruSet(jarMetadataCache, jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info }, JAR_CACHE_MAX)
       return info
     }
 
@@ -246,7 +233,7 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         dependencies,
       }
 
-      jarMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info })
+      lruSet(jarMetadataCache, jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info }, JAR_CACHE_MAX)
       return info
     }
 
@@ -286,7 +273,7 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         dependencies,
       }
 
-      jarMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info })
+      lruSet(jarMetadataCache, jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info }, JAR_CACHE_MAX)
       return info
     }
 
@@ -320,13 +307,13 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
             dependencies,
           }
 
-          jarMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info })
+          lruSet(jarMetadataCache, jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info }, JAR_CACHE_MAX)
           return info
         }
       } catch {}
     }
 
-    jarMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info: null })
+    lruSet(jarMetadataCache, jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, info: null }, JAR_CACHE_MAX)
     return null
   } catch {
     return null
@@ -408,7 +395,7 @@ export async function resolveMissingDependencyOnModrinth(
     }
 
     if (!projectData || !Array.isArray(versionsData) || versionsData.length === 0) {
-      modrinthLookupCache.set(cacheKey, { timestamp: Date.now(), data: null })
+      lruSet(modrinthLookupCache, cacheKey, { timestamp: Date.now(), data: null }, MODRINTH_CACHE_MAX)
       return null
     }
 
@@ -416,7 +403,7 @@ export async function resolveMissingDependencyOnModrinth(
     const selectedVersion = versionsData.find((v: any) => v.version_type === 'release') || versionsData[0]
     const primaryFile = selectedVersion.files?.find((f: any) => f.primary) || selectedVersion.files?.[0]
     if (!primaryFile || !primaryFile.url) {
-      modrinthLookupCache.set(cacheKey, { timestamp: Date.now(), data: null })
+      lruSet(modrinthLookupCache, cacheKey, { timestamp: Date.now(), data: null }, MODRINTH_CACHE_MAX)
       return null
     }
 
@@ -433,10 +420,10 @@ export async function resolveMissingDependencyOnModrinth(
       fileSize: primaryFile.size || 0,
     }
 
-    modrinthLookupCache.set(cacheKey, { timestamp: Date.now(), data: resolved })
+    lruSet(modrinthLookupCache, cacheKey, { timestamp: Date.now(), data: resolved }, MODRINTH_CACHE_MAX)
     return resolved
   } catch {
-    modrinthLookupCache.set(cacheKey, { timestamp: Date.now(), data: null })
+    lruSet(modrinthLookupCache, cacheKey, { timestamp: Date.now(), data: null }, MODRINTH_CACHE_MAX)
     return null
   }
 }

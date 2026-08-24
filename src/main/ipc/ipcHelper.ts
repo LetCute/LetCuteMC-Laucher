@@ -84,3 +84,24 @@ export function createIpcThrottle<T extends (...args: any[]) => void>(
 
   return throttled
 }
+
+/**
+ * Deduplicate concurrent identical async calls by key.
+ * If a request with the same key is already in-flight, return the existing Promise.
+ */
+export function dedupAsync<TArgs extends any[], TResult>(
+  fn: (...args: TArgs) => Promise<TResult>,
+  keyFn?: (...args: TArgs) => string
+): (...args: TArgs) => Promise<TResult> {
+  const inflight = new Map<string, Promise<TResult>>()
+  return (...args: TArgs) => {
+    const key = keyFn ? keyFn(...args) : JSON.stringify(args)
+    const existing = inflight.get(key)
+    if (existing) return existing
+    const p = fn(...args).finally(() => {
+      inflight.delete(key)
+    })
+    inflight.set(key, p)
+    return p
+  }
+}

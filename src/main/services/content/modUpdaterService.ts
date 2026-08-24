@@ -1,8 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import crypto from 'node:crypto'
-import https from 'node:https'
-import { createWriteStream } from 'node:fs'
+import { createReadStream, createWriteStream } from 'node:fs'
 import type {
   ModUpdateItem,
   ModUpdateCheckResult,
@@ -11,92 +10,67 @@ import type {
 } from '../../../shared/types'
 import { parseJarModInfo, extractBaseMinecraftVersion, detectLoaderFromVersion } from './modDependencyService'
 import { getDefaultMinecraftDirectory } from '../system/storageService'
+import { asyncPool } from '../../utils/asyncPool'
 
 const USER_AGENT = 'LetCuteMC-Launcher/1.0 (contact@letcute.com)'
 
-// Helper to compute sha1 and sha512
+// ponytail: stream-based dual hash — reads file once, computes both sha1+sha512
 async function computeFileHashes(filePath: string): Promise<{ sha1: string; sha512: string } | null> {
   try {
-    const buffer = await fs.readFile(filePath)
-    const sha1 = crypto.createHash('sha1').update(buffer).digest('hex')
-    const sha512 = crypto.createHash('sha512').update(buffer).digest('hex')
-    return { sha1, sha512 }
+    const sha1 = crypto.createHash('sha1')
+    const sha512 = crypto.createHash('sha512')
+    const stream = createReadStream(filePath)
+    for await (const chunk of stream) {
+      sha1.update(chunk)
+      sha512.update(chunk)
+    }
+    return { sha1: sha1.digest('hex'), sha512: sha512.digest('hex') }
   } catch {
     return null
   }
 }
 
-// Download file helper
-function downloadFile(url: string, destination: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    const file = createWriteStream(destination)
-    https.get(url, { headers: { 'User-Agent': USER_AGENT } }, (res) => {
-      if (res.statusCode === 301 || res.statusCode === 302) {
-        const redirect = res.headers.location
-        if (redirect) {
-          file.close()
-          return downloadFile(redirect, destination).then(resolve).catch(reject)
-        }
-      }
-      if (res.statusCode !== 200) {
-        file.close()
-        return reject(new Error(`Tải file thất bại với mã lỗi HTTP ${res.statusCode}`))
-      }
-      res.pipe(file)
-      file.on('finish', () => {
-        file.close()
-        resolve()
-      })
-    }).on('error', (err) => {
-      file.close()
-      reject(err)
-    })
-  })
+// ponytail: unified fetch-based download — drops legacy https.get, streams to disk
+async function downloadFile(url: string, destination: string): Promise<void> {
+  const { Readable } = await import('node:stream')
+  const { pipeline } = await import('node:stream/promises')
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), 30000)
+  const res = await fetch(url, {
+    headers: { 'User-Agent': USER_AGENT },
+    signal: controller.signal,
+    redirect: 'follow',
+  }).finally(() => clearTimeout(timeoutId))
+  if (!res.ok) throw new Error(`Tải file thất bại với mã lỗi HTTP ${res.status}`)
+  if (!res.body) throw new Error('Response body is null')
+  await pipeline(Readable.fromWeb(res.body as any), createWriteStream(destination))
 }
 
-// Modrinth API call helper
-async function fetchModrinthJson<T>(endpoint: string, options: https.RequestOptions & { body?: string } = {}): Promise<T | null> {
-  return new Promise((resolve) => {
-    const url = new URL(endpoint.startsWith('http') ? endpoint : `https://api.modrinth.com/v2${endpoint}`)
-    const req = https.request(
-      url,
-      {
-        ...options,
-        headers: {
-          'User-Agent': USER_AGENT,
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          ...(options.headers || {}),
-        },
+// ponytail: unified fetch-based JSON call — drops https.request, includes timeout
+async function fetchModrinthJson<T>(
+  endpoint: string,
+  options: { method?: string; body?: string; headers?: Record<string, string> } = {}
+): Promise<T | null> {
+  try {
+    const url = endpoint.startsWith('http') ? endpoint : `https://api.modrinth.com/v2${endpoint}`
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), 12000)
+    const res = await fetch(url, {
+      method: options.method || 'GET',
+      headers: {
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...(options.headers || {}),
       },
-      (res) => {
-        if (res.statusCode && res.statusCode >= 400) {
-          resolve(null)
-          return
-        }
-        let data = ''
-        res.on('data', (chunk) => {
-          data += chunk
-        })
-        res.on('end', () => {
-          try {
-            resolve(JSON.parse(data))
-          } catch {
-            resolve(null)
-          }
-        })
-      }
-    )
-    req.on('error', () => resolve(null))
-    req.setTimeout(12000, () => {
-      req.destroy()
-      resolve(null)
-    })
-    if (options.method === 'POST' && (options as any).body) {
-      req.write((options as any).body)
-    }
-    req.end()
-  })
+      body: options.body,
+      signal: controller.signal,
+    }).finally(() => clearTimeout(timeoutId))
+    if (!res.ok) return null
+    return (await res.json()) as T
+  } catch {
+    return null
+  }
 }
 
 // Compare semantic / string versions
@@ -152,20 +126,8 @@ export class ModUpdaterService {
       return { totalMods: 0, upToDateCount: 0, updatesAvailableCount: 0, updates: [] }
     }
 
-    // Step 1: Parse local mods metadata & compute hashes
-    const localMods: Array<{
-      fileName: string
-      filePath: string
-      modId: string
-      modName: string
-      version: string
-      sha1?: string
-      sha512?: string
-    }> = []
-
-    const sha1List: string[] = []
-
-    for (const jar of jarFiles) {
+    // Step 1: Scan local mods with concurrency
+    const localMods = await asyncPool(4, jarFiles, async (jar) => {
       const filePath = path.join(modsDir, jar.name)
       const parsed = await parseJarModInfo(filePath)
       const hashes = await computeFileHashes(filePath)
@@ -174,11 +136,7 @@ export class ModUpdaterService {
       const modName = parsed?.name || modId
       const version = parsed?.version || '1.0.0'
 
-      if (hashes?.sha1) {
-        sha1List.push(hashes.sha1)
-      }
-
-      localMods.push({
+      return {
         fileName: jar.name,
         filePath,
         modId,
@@ -186,8 +144,12 @@ export class ModUpdaterService {
         version,
         sha1: hashes?.sha1,
         sha512: hashes?.sha512,
-      })
-    }
+      }
+    })
+
+    const sha1List: string[] = localMods
+      .map(m => m.sha1)
+      .filter((hash): hash is string => Boolean(hash))
 
     // Step 2: Batch lookup file hashes on Modrinth
     let hashVersionMap: Record<string, any> = {}
@@ -284,16 +246,7 @@ export class ModUpdaterService {
       }
     }
 
-    // Run in parallel with concurrency pool of 4
-    const executing: Promise<void>[] = []
-    for (const mod of localMods) {
-      const p = checkMod(mod)
-      executing.push(p)
-      if (executing.length >= 4) {
-        await Promise.race(executing)
-      }
-    }
-    await Promise.all(executing)
+    await asyncPool(4, localMods, checkMod)
 
     return {
       totalMods: localMods.length,
@@ -352,23 +305,22 @@ export class ModUpdaterService {
   }
 
   /**
-   * Update all available mods sequentially
+   * Update all available mods concurrently
    */
   async updateAllMods(gameDir: string | undefined, items: ModUpdateItem[]): Promise<UpdateAllModsResult> {
-    const results: Array<{ modId: string; modName: string; success: boolean; error?: string }> = []
     let totalUpdated = 0
     let failedCount = 0
 
-    for (const item of items) {
+    const results = await asyncPool(3, items, async (item) => {
       const res = await this.updateSingleMod(gameDir, item)
       if (res.success) {
         totalUpdated++
-        results.push({ modId: item.modId, modName: item.modName, success: true })
+        return { modId: item.modId, modName: item.modName, success: true }
       } else {
         failedCount++
-        results.push({ modId: item.modId, modName: item.modName, success: false, error: res.error })
+        return { modId: item.modId, modName: item.modName, success: false, error: res.error }
       }
-    }
+    })
 
     return {
       success: failedCount === 0,

@@ -1,30 +1,52 @@
-import { Client } from 'discord-rpc'
+// discord-rpc is lazy-loaded to avoid cold-start penalty
+type DiscordRpcClient = import('discord-rpc').Client
 import { getSettings } from './settingsService'
+import { eventBus } from '../eventBus'
 
 // Thay mã Client ID của bạn vào đây (Tạo từ https://discord.com/developers/applications)
 // Hiện tại tôi đang để một mã giả để tránh lỗi, hãy thay thế nó sau!
 const CLIENT_ID = '1355902925607534592' // REPLACE_ME
 
-let rpcClient: Client | null = null
+let rpcClient: DiscordRpcClient | null = null
 let isConnected = false
 let reconnectTimer: NodeJS.Timeout | null = null
+let busInitialized = false
+
+function registerEventBusListeners(): void {
+  if (busInitialized) return
+  busInitialized = true
+
+  eventBus.on('game:started', (payload) => {
+    setPlaying(payload.versionId, payload.profileName)
+  })
+
+  eventBus.on('game:exited', () => {
+    setIdle()
+  })
+
+  eventBus.on('game:crashed', () => {
+    setIdle()
+  })
+}
 
 export async function initDiscordRpc(): Promise<void> {
+  registerEventBusListeners()
   const settings = await getSettings()
 
   if (rpcClient) return
 
+  const { Client } = await import('discord-rpc')
   rpcClient = new Client({ transport: 'ipc' })
 
   rpcClient.on('ready', () => {
     isConnected = true
-    console.log('[Discord RPC] Đã kết nối với Discord')
+    //console.log('[Discord RPC] Đã kết nối với Discord')
     setIdle()
   })
 
   rpcClient.on('disconnected', () => {
     isConnected = false
-    console.log('[Discord RPC] Bị ngắt kết nối')
+    //console.log('[Discord RPC] Bị ngắt kết nối')
     rpcClient = null
     reconnectTimer = setTimeout(initDiscordRpc, 15000)
   })
@@ -89,6 +111,6 @@ export async function stopDiscordRpc(): Promise<void> {
     }
     rpcClient = null
     isConnected = false
-    console.log('[Discord RPC] Đã đóng kết nối')
+    //console.log('[Discord RPC] Đã đóng kết nối')
   }
 }

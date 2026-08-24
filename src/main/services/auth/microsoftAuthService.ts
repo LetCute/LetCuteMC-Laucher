@@ -27,6 +27,18 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
     const port = 53248
     const redirectUri = `http://127.0.0.1:${port}`
 
+    const cleanup = () => {
+      clearTimeout(timeoutTimer)
+      try {
+        server.close()
+      } catch {}
+    }
+
+    const timeoutTimer = setTimeout(() => {
+      cleanup()
+      reject(new Error('Hết thời gian chờ đăng nhập Microsoft (quá 3 phút).'))
+    }, 180000)
+
     const server = http.createServer((req, res) => {
       const urlObj = new URL(req.url || '', `http://${req.headers.host}`)
 
@@ -60,7 +72,7 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
             </body>
           </html>
         `)
-        server.close()
+        cleanup()
         authenticateMinecraftWithCode(code, redirectUri)
           .then(resolve)
           .catch(reject)
@@ -74,7 +86,7 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
             </body>
           </html>
         `)
-        server.close()
+        cleanup()
         reject(new Error(error))
       } else {
         // Do not close the server for other requests, just return 404
@@ -89,6 +101,7 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
     })
 
     server.on('error', (err) => {
+      cleanup()
       reject(new Error(`Không thể khởi động cổng đăng nhập nội bộ: ${err.message}`))
     })
   })

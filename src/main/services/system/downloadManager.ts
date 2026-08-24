@@ -1,6 +1,9 @@
 import path from 'node:path'
 import fs from 'node:fs/promises'
+import { createReadStream, createWriteStream } from 'node:fs'
 import crypto from 'node:crypto'
+import { Readable } from 'node:stream'
+import { pipeline } from 'node:stream/promises'
 import type { LauncherLogLevel } from '../../../shared/types'
 import { getUrlCandidates } from './mirrorService'
 import { initGlobalHttpDispatcher } from './httpAgent'
@@ -22,11 +25,17 @@ export interface DownloadProgress {
   percent: number
 }
 
+// ponytail: stream-based hash — avoids loading entire file into RAM
+async function streamSha1(filePath: string): Promise<string> {
+  const hash = crypto.createHash('sha1')
+  await pipeline(createReadStream(filePath), hash)
+  return hash.digest('hex')
+}
+
 async function fileHashMatches(filePath: string, expectedSha1: string | undefined): Promise<boolean> {
   if (!expectedSha1) return true
   try {
-    const data = await fs.readFile(filePath)
-    const hash = crypto.createHash('sha1').update(data).digest('hex')
+    const hash = await streamSha1(filePath)
     return hash.toLowerCase() === expectedSha1.toLowerCase()
   } catch {
     return false
@@ -98,10 +107,12 @@ export async function downloadTasks(
           const response = await fetch(currentUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
           if (!response.ok) throw new Error(`HTTP status ${response.status}`)
           
-          const arrayBuffer = await response.arrayBuffer()
-          const buffer = Buffer.from(arrayBuffer)
-          
-          await fs.writeFile(tmpPath, buffer)
+          // ponytail: stream to disk — avoids buffering entire file in RAM
+          if (!response.body) throw new Error('Response body is null')
+          await pipeline(
+            Readable.fromWeb(response.body as any),
+            createWriteStream(tmpPath)
+          )
 
           // Validate hash if expected
           if (task.sha1) {

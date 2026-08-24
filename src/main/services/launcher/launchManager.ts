@@ -46,9 +46,8 @@ let hiddenForGame = false
 
 
 import { getProfiles } from '../profile/profileService.js'
-import { setPlaying, setIdle } from '../system/discordRpcService.js'
+import { eventBus } from '../eventBus.js'
 import { taskManagerService } from '../system/taskManagerService.js'
-import { statsService } from '../media/statsService.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -109,7 +108,10 @@ function createIdleState(): LaunchJobState {
   }
 }
 
+let cachedLaunchWorkerPath: string | null = null
+
 function resolveWorkerPath(fileName: string): string {
+  if (cachedLaunchWorkerPath) return cachedLaunchWorkerPath
   // UtilityProcess supports asar natively.
   // When compiled, launchManager.js is in dist-electron/main/services/launcher/,
   // so worker is at dist-electron/main/workers/ (../../workers)
@@ -117,9 +119,16 @@ function resolveWorkerPath(fileName: string): string {
   const candidate2 = path.join(__dirname, '../workers', fileName)
   try {
     const fsSync = require('node:fs')
-    if (fsSync.existsSync(candidate1)) return candidate1
-    if (fsSync.existsSync(candidate2)) return candidate2
+    if (fsSync.existsSync(candidate1)) {
+      cachedLaunchWorkerPath = candidate1
+      return candidate1
+    }
+    if (fsSync.existsSync(candidate2)) {
+      cachedLaunchWorkerPath = candidate2
+      return candidate2
+    }
   } catch {}
+  cachedLaunchWorkerPath = candidate1
   return candidate1
 }
 
@@ -202,7 +211,6 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       enqueueEvent({ type: 'status', jobId: msg.jobId, status: msg.status })
       if (msg.status === 'running') {
         hideLauncherForGame()
-        setPlaying(currentVersion, currentProfileName)
         if (activeJobId) {
           taskManagerService.completeTask(activeJobId, 'Game đang chạy')
           activeJobId = null
@@ -210,7 +218,6 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       }
       if (msg.status === 'closed' || msg.status === 'failed' || msg.status === 'cancelled') {
         showLauncherAfterGame()
-        setIdle()
       }
       break
     }
@@ -225,6 +232,13 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
       if (msg.progress.status === 'running') {
         gameStartTime = Date.now()
         hideLauncherForGame()
+        eventBus.emit('game:started', {
+          jobId: msg.jobId,
+          profileId: currentProfileId,
+          profileName: currentProfileName,
+          versionId: currentVersion,
+          gameDir: currentGameDir,
+        })
         if (activeJobId) {
           taskManagerService.completeTask(activeJobId, 'Game đang chạy')
           activeJobId = null
@@ -254,26 +268,36 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
     case 'finished': {
       currentState.endedAt = now()
 
-      // Record Playtime Session if game was running
-      if (gameStartTime && currentProfileId && currentGameDir) {
-        const durationSeconds = Math.max(1, (Date.now() - gameStartTime) / 1000)
-        try {
-          statsService.recordPlaySession(currentGameDir, currentProfileId, durationSeconds)
-        } catch (err) {
-          console.error('[LaunchManager] Failed to record play session:', err)
-        }
+      let durationMs: number | undefined
+      if (gameStartTime) {
+        durationMs = Date.now() - gameStartTime
         gameStartTime = null
       }
 
       if (!msg.ok && currentState.status !== 'cancelled') {
         currentState.status = 'failed'
         currentState.error = msg.message
-        // worker already dumps to log_error
-      }
-
-      // If the game closed normally, mark it
-      if (msg.ok && currentState.status !== 'cancelled') {
-        currentState.status = 'closed'
+        eventBus.emit('game:crashed', {
+          jobId: msg.jobId,
+          profileId: currentProfileId,
+          profileName: currentProfileName,
+          versionId: currentVersion,
+          gameDir: currentGameDir,
+          error: msg.message,
+        })
+      } else {
+        if (currentState.status !== 'cancelled') {
+          currentState.status = 'closed'
+        }
+        eventBus.emit('game:exited', {
+          jobId: msg.jobId,
+          profileId: currentProfileId,
+          profileName: currentProfileName,
+          versionId: currentVersion,
+          gameDir: currentGameDir,
+          code: 0,
+          durationMs,
+        })
       }
 
       if (activeJobId) {
@@ -428,6 +452,14 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
       taskManagerService.failTask(activeJobId, err)
       activeJobId = null
     }
+    eventBus.emit('game:crashed', {
+      jobId,
+      profileId: currentProfileId,
+      profileName: currentProfileName,
+      versionId: currentVersion,
+      gameDir: currentGameDir,
+      error: err,
+    })
     void writeErrorLog('launchManager:worker', new Error(err), { jobId, status: currentState.status })
     enqueueEvent({ type: 'finished', jobId, state: getLaunchState() })
     currentWorker = null
@@ -442,6 +474,15 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
         taskManagerService.failTask(activeJobId, currentState.error)
         activeJobId = null
       }
+      eventBus.emit('game:crashed', {
+        jobId,
+        profileId: currentProfileId,
+        profileName: currentProfileName,
+        versionId: currentVersion,
+        gameDir: currentGameDir,
+        error: currentState.error,
+        exitCode: code,
+      })
       void writeErrorLog('launchManager:workerExit', new Error(`exit ${code}`), { jobId, code, status: currentState.status })
     }
     currentWorker = null

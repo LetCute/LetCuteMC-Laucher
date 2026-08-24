@@ -1,6 +1,7 @@
 import path from 'node:path';
 import fs from 'node:fs/promises';
-import { Version, launch as xmclLaunch, type ResolvedVersion } from '@xmcl/core';
+// @xmcl/core is lazy-loaded inside launchMinecraft to reduce startup cost
+type ResolvedVersion = import('@xmcl/core').ResolvedVersion;
 import type {
   LaunchInput,
   LaunchResult,
@@ -188,6 +189,9 @@ export async function launchMinecraft(
         percent: 85,
       });
     }
+
+    // XMCL: lazy load @xmcl/core
+    const { Version, launch: xmclLaunch } = await import('@xmcl/core');
 
     // XMCL: resolve version (auto inheritance, guarantees downloads.client)
     const resolved: ResolvedVersion = await Version.parse(versionParseRoot, input.version);

@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { shell } from 'electron'
+import { eventBus } from '../eventBus'
 import type {
   ProfileLauncherStats,
   ProfileFullStats,
@@ -81,6 +82,19 @@ const MOB_DICTIONARY: Record<
 }
 
 export class StatsService {
+  constructor() {
+    this.initEventListeners()
+  }
+
+  private initEventListeners(): void {
+    eventBus.on('game:exited', (payload) => {
+      if (payload.gameDir && payload.durationMs) {
+        const durationSeconds = payload.durationMs / 1000
+        this.recordPlaySession(payload.gameDir, payload.profileId, durationSeconds, payload.code ?? undefined)
+      }
+    })
+  }
+
   private getLauncherStatsFilePath(gameDir: string): string {
     return path.join(gameDir, 'launcher-stats.json')
   }

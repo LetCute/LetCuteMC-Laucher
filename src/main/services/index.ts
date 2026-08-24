@@ -1,3 +1,6 @@
+// Event Bus
+export * from './eventBus'
+
 // Auth Services
 export * from './auth/accountService'
 export * from './auth/microsoftAuthService'

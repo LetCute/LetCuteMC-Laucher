@@ -7,7 +7,6 @@ import { registerSystemIpc } from './systemIpc'
 import { registerStatsIpc } from './statsIpc'
 
 export function registerIpcHandlers(): void {
-  console.log('[IPC] Registering all IPC handlers...')
   registerAccountIpc()
   registerProfileIpc()
   registerLaunchIpc()
@@ -15,7 +14,6 @@ export function registerIpcHandlers(): void {
   registerModrinthIpc()
   registerSystemIpc()
   registerStatsIpc()
-  console.log('[IPC] All IPC handlers registered.')
 }
 
 export { handleIpc, handleIpcSafe, createIpcThrottle } from './ipcHelper'

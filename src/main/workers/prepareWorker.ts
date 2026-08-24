@@ -20,8 +20,7 @@ import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion
 import { getUrlCandidates } from '../services/system/mirrorService'
 import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
 
-initGlobalHttpDispatcher()
-
+// initGlobalHttpDispatcher is deferred into startPrepare to avoid worker spawn overhead
 
 async function checkFileHash(filePath: string, expectedHash: string): Promise<boolean> {
   try {
@@ -215,6 +214,9 @@ async function startPrepare(profile: LauncherProfile, settings: LauncherSettings
   const isModpackProfile = hasMcRootDir || (isInProfilesSubfolder && gameDir.toLowerCase() !== mcRoot.toLowerCase())
 
   postLog('info', `[PrepareWorker] START prepare profile=${profileId} version=${version} gameDir=${gameDir} mcRoot=${mcRoot} isModpackProfile=${isModpackProfile}`)
+
+  // ponytail: init http pool only when download work starts
+  initGlobalHttpDispatcher()
 
   try {
     postProgress(profileId, version, {

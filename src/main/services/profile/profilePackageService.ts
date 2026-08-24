@@ -237,6 +237,7 @@ export class ProfilePackageService {
         .trim()
       const profileFolder = `${sanitizedName}_${Date.now().toString(36)}`
       const targetGameDir = path.join(baseMcDir, 'profiles', profileFolder)
+      const normalizedTarget = path.resolve(targetGameDir)
 
       fs.mkdirSync(targetGameDir, { recursive: true })
 
@@ -247,18 +248,24 @@ export class ProfilePackageService {
 
       for (const entry of zipEntries) {
         if (entry.entryName === 'letcute-profile.json') continue
+
+        // Zip Slip security protection
+        const resolvedEntry = path.resolve(targetGameDir, entry.entryName)
+        if (!resolvedEntry.startsWith(normalizedTarget + path.sep) && resolvedEntry !== normalizedTarget) {
+          console.warn(`[ProfilePackageService] Security warning: skipping suspicious entry ${entry.entryName}`)
+          continue
+        }
+
         if (entry.isDirectory) {
-          const dirPath = path.join(targetGameDir, entry.entryName)
-          if (!fs.existsSync(dirPath)) {
-            fs.mkdirSync(dirPath, { recursive: true })
+          if (!fs.existsSync(resolvedEntry)) {
+            fs.mkdirSync(resolvedEntry, { recursive: true })
           }
         } else {
-          const entryPath = path.join(targetGameDir, entry.entryName)
-          const parentDir = path.dirname(entryPath)
+          const parentDir = path.dirname(resolvedEntry)
           if (!fs.existsSync(parentDir)) {
             fs.mkdirSync(parentDir, { recursive: true })
           }
-          fs.writeFileSync(entryPath, entry.getData())
+          fs.writeFileSync(resolvedEntry, entry.getData())
         }
       }
 

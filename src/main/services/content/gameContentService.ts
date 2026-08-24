@@ -124,29 +124,21 @@ export async function scanMods(gameDir: string): Promise<GameContentItem[]> {
     return []
   }
 
-  const mods: GameContentItem[] = []
-
   try {
     const entries = await fs.readdir(modsDir, { withFileTypes: true })
+    const modEntries = entries.filter(entry => {
+      if (entry.isDirectory()) return false
+      const ext = getExtension(entry.name)
+      return ext === '.jar' || entry.name.endsWith('.jar.disabled')
+    })
 
-    for (const entry of entries) {
-      const fullPath = path.join(modsDir, entry.name)
-
-      if (!entry.isDirectory()) {
-        const ext = getExtension(entry.name)
-        const isJar = ext === '.jar'
+    const mods = await Promise.all(
+      modEntries.map(async (entry) => {
+        const fullPath = path.join(modsDir, entry.name)
         const isDisabled = entry.name.endsWith('.jar.disabled')
-
-        if (!isJar && !isDisabled) continue
-
         const stat = await fs.stat(fullPath)
-        let status: GameContentStatus = 'enabled'
-        let displayName = entry.name
-
-        if (isDisabled) {
-          status = 'disabled'
-          displayName = entry.name.replace('.jar.disabled', '.jar')
-        }
+        const status: GameContentStatus = isDisabled ? 'disabled' : 'enabled'
+        const displayName = isDisabled ? entry.name.replace('.jar.disabled', '.jar') : entry.name
 
         const mod: GameContentItem = {
           id: generateId(),
@@ -161,15 +153,15 @@ export async function scanMods(gameDir: string): Promise<GameContentItem[]> {
           isDirectory: false,
           metadata: { loader: 'unknown' },
         }
+        return mod
+      })
+    )
 
-        mods.push(mod)
-      }
-    }
+    return mods
   } catch (error) {
     console.error(`Error scanning mods: ${error}`)
+    return []
   }
-
-  return mods
 }
 
 // ─── Resource Pack Scanner ────────────────────────────────────────────────────
@@ -186,61 +178,61 @@ export async function scanResourcePacks(gameDir: string): Promise<GameContentIte
     return []
   }
 
-  const packs: GameContentItem[] = []
-
   try {
     const entries = await fs.readdir(rpDir, { withFileTypes: true })
 
-    for (const entry of entries) {
-      const fullPath = path.join(rpDir, entry.name)
+    const packs = (
+      await Promise.all(
+        entries.map(async (entry): Promise<GameContentItem | null> => {
+          const fullPath = path.join(rpDir, entry.name)
+          let isValid = false
+          let metadata: GameContentMetadata = {}
 
-      let isValid = false
-      let metadata: GameContentMetadata = {}
-
-      if (entry.isDirectory()) {
-        const metaPath = path.join(fullPath, 'pack.mcmeta')
-        if (await pathExists(metaPath)) {
-          isValid = true
-          try {
-            const metaContent = await fs.readFile(metaPath, 'utf-8')
-            const metaJson = JSON.parse(metaContent)
-            metadata = {
-              description: metaJson.pack?.description,
-              packFormat: metaJson.pack?.pack_format,
+          if (entry.isDirectory()) {
+            const metaPath = path.join(fullPath, 'pack.mcmeta')
+            if (await pathExists(metaPath)) {
+              isValid = true
+              try {
+                const metaContent = await fs.readFile(metaPath, 'utf-8')
+                const metaJson = JSON.parse(metaContent)
+                metadata = {
+                  description: metaJson.pack?.description,
+                  packFormat: metaJson.pack?.pack_format,
+                }
+              } catch {
+                // ignore metadata parse errors
+              }
             }
-          } catch {
-            // ignore metadata parse errors
+          } else if (getExtension(entry.name) === '.zip') {
+            isValid = true
           }
-        }
-      } else if (getExtension(entry.name) === '.zip') {
-        isValid = true
-      }
 
-      if (!isValid) continue
+          if (!isValid) return null
 
-      const stat = await fs.stat(fullPath)
+          const stat = await fs.stat(fullPath)
 
-      const pack: GameContentItem = {
-        id: generateId(),
-        type: 'resource_pack',
-        name: entry.name,
-        fileName: entry.name,
-        path: fullPath,
-        sizeBytes: stat.size,
-        updatedAt: stat.mtime.toISOString(),
-        status: 'enabled',
-        extension: entry.isDirectory() ? '' : getExtension(entry.name),
-        isDirectory: entry.isDirectory(),
-        metadata,
-      }
+          return {
+            id: generateId(),
+            type: 'resource_pack',
+            name: entry.name,
+            fileName: entry.name,
+            path: fullPath,
+            sizeBytes: stat.size,
+            updatedAt: stat.mtime.toISOString(),
+            status: 'enabled',
+            extension: entry.isDirectory() ? '' : getExtension(entry.name),
+            isDirectory: entry.isDirectory(),
+            metadata,
+          }
+        })
+      )
+    ).filter((item): item is GameContentItem => item !== null)
 
-      packs.push(pack)
-    }
+    return packs
   } catch (error) {
     console.error(`Error scanning resource packs: ${error}`)
+    return []
   }
-
-  return packs
 }
 
 // ─── Shader Pack Scanner ──────────────────────────────────────────────────────
@@ -257,36 +249,35 @@ export async function scanShaderPacks(gameDir: string): Promise<GameContentItem[
     return []
   }
 
-  const packs: GameContentItem[] = []
-
   try {
     const entries = await fs.readdir(spDir, { withFileTypes: true })
 
-    for (const entry of entries) {
-      const fullPath = path.join(spDir, entry.name)
-      const stat = await fs.stat(fullPath)
+    const packs = await Promise.all(
+      entries.map(async (entry): Promise<GameContentItem> => {
+        const fullPath = path.join(spDir, entry.name)
+        const stat = await fs.stat(fullPath)
 
-      const pack: GameContentItem = {
-        id: generateId(),
-        type: 'shader_pack',
-        name: entry.name,
-        fileName: entry.name,
-        path: fullPath,
-        sizeBytes: stat.size,
-        updatedAt: stat.mtime.toISOString(),
-        status: 'enabled',
-        extension: entry.isDirectory() ? '' : getExtension(entry.name),
-        isDirectory: entry.isDirectory(),
-        metadata: {},
-      }
+        return {
+          id: generateId(),
+          type: 'shader_pack',
+          name: entry.name,
+          fileName: entry.name,
+          path: fullPath,
+          sizeBytes: stat.size,
+          updatedAt: stat.mtime.toISOString(),
+          status: 'enabled',
+          extension: entry.isDirectory() ? '' : getExtension(entry.name),
+          isDirectory: entry.isDirectory(),
+          metadata: {},
+        }
+      })
+    )
 
-      packs.push(pack)
-    }
+    return packs
   } catch (error) {
     console.error(`Error scanning shader packs: ${error}`)
+    return []
   }
-
-  return packs
 }
 
 // ─── Scan All Game Content ────────────────────────────────────────────────────

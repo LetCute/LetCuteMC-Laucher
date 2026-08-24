@@ -1,7 +1,17 @@
-import { autoUpdater } from 'electron-updater'
 import { app, BrowserWindow } from 'electron'
 
-export function initAutoUpdater() {
+// electron-updater is lazy-loaded to reduce startup cost
+let _autoUpdater: typeof import('electron-updater').autoUpdater | null = null
+async function getAutoUpdater() {
+  if (!_autoUpdater) {
+    const { autoUpdater } = await import('electron-updater')
+    _autoUpdater = autoUpdater
+  }
+  return _autoUpdater
+}
+
+export async function initAutoUpdater() {
+  const autoUpdater = await getAutoUpdater()
   // Config autoUpdater
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
@@ -36,15 +46,13 @@ export function initAutoUpdater() {
   })
 }
 
-export function checkForUpdates() {
-  console.log('[AutoUpdater] Kiểm tra bản cập nhật mới...')
-
+export async function checkForUpdates() {
   if (!app.isPackaged) {
-    console.log('[AutoUpdater] Chế độ lập trình (Dev Mode) - Bỏ qua cập nhật.')
     sendUpdateEvent('update-not-available', 'Đang ở chế độ lập trình, bỏ qua kiểm tra.')
     return Promise.resolve(null)
   }
 
+  const autoUpdater = await getAutoUpdater()
   return autoUpdater.checkForUpdatesAndNotify().catch((err) => {
     console.error('[AutoUpdater] Lỗi khi checkForUpdatesAndNotify:', err)
     sendUpdateEvent('update-error', 'Lỗi kiểm tra cập nhật.', err.message)
@@ -52,8 +60,9 @@ export function checkForUpdates() {
   })
 }
 
-export function quitAndInstallUpdate() {
+export async function quitAndInstallUpdate() {
   console.log('[AutoUpdater] Cài đặt bản cập nhật và khởi động lại...')
+  const autoUpdater = await getAutoUpdater()
   autoUpdater.quitAndInstall(true, true)
 }
 

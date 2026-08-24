@@ -78,10 +78,20 @@ export function registerSystemIpc(): void {
 
   // Version Folder management
   handleIpc('versions:open-folder', async (versionPath: string) => {
+    if (!versionPath || typeof versionPath !== 'string') return false
     await shell.openPath(versionPath)
     return true
   })
   handleIpc('versions:delete', async (versionPath: string) => {
+    if (!versionPath || typeof versionPath !== 'string') {
+      throw new Error('Đường dẫn phiên bản không hợp lệ.')
+    }
+    const pathMod = await import('node:path')
+    const normalized = pathMod.normalize(versionPath).toLowerCase()
+    // Path safety check: ensure the target is actually inside a "versions" folder and not root/system
+    if (!normalized.includes(`${pathMod.sep}versions${pathMod.sep}`) && !normalized.endsWith(`${pathMod.sep}versions`)) {
+      throw new Error('Chỉ được phép xóa thư mục phiên bản hợp lệ trong versions.')
+    }
     const fs = await import('node:fs/promises')
     await fs.rm(versionPath, { recursive: true, force: true })
     return true

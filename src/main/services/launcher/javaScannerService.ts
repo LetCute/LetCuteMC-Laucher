@@ -66,13 +66,9 @@ export function readJavaProperty(output: string, key: string): string | null {
   return value ? value : null
 }
 
-function logScanner(message: string): void {
-  console.log(`[JavaScanner] ${message}`)
-}
+function logScanner(_message: string): void {}
 
-function logSelector(message: string): void {
-  console.log(`[JavaSelector] ${message}`)
-}
+function logSelector(_message: string): void {}
 
 async function pathExists(targetPath: string): Promise<boolean> {
   try {

@@ -14,6 +14,8 @@ import { getPreparedProfilesCachePath } from '../system/storageService.js'
 
 let currentWorker: UtilityProcess | null = null
 let activeProfileId: string | null = null
+let cachedWorkerPath: string | null = null
+let memoryProfilesCache: Record<string, PreparedProfileState> | null = null
 
 async function pathExists(p: string): Promise<boolean> {
   try {
@@ -30,15 +32,23 @@ function getCachePath(): string {
 
 /** Resolve prepareWorker path for both dev and packaged builds. */
 function resolvePrepareWorkerPath(): string {
+  if (cachedWorkerPath) return cachedWorkerPath
   // When compiled, prepareGameService.js is in dist-electron/main/services/launcher/,
   // so worker is at dist-electron/main/workers/prepareWorker.js (../../workers)
   const candidate1 = path.join(__dirname, '../../workers/prepareWorker.js')
   const candidate2 = path.join(__dirname, '../workers/prepareWorker.js')
   try {
     const fsSync = require('node:fs')
-    if (fsSync.existsSync(candidate1)) return candidate1
-    if (fsSync.existsSync(candidate2)) return candidate2
+    if (fsSync.existsSync(candidate1)) {
+      cachedWorkerPath = candidate1
+      return candidate1
+    }
+    if (fsSync.existsSync(candidate2)) {
+      cachedWorkerPath = candidate2
+      return candidate2
+    }
   } catch {}
+  cachedWorkerPath = candidate1
   return candidate1
 }
 
@@ -47,13 +57,19 @@ function getMainWindow(): BrowserWindow | null {
 }
 
 export async function getPreparedProfiles(): Promise<Record<string, PreparedProfileState>> {
+  if (memoryProfilesCache) return memoryProfilesCache
   const filePath = getCachePath()
-  if (!(await pathExists(filePath))) return {}
+  if (!(await pathExists(filePath))) {
+    memoryProfilesCache = {}
+    return memoryProfilesCache
+  }
   try {
     const data = await fs.readFile(filePath, 'utf8')
-    return JSON.parse(data)
+    memoryProfilesCache = JSON.parse(data)
+    return memoryProfilesCache || {}
   } catch {
-    return {}
+    memoryProfilesCache = {}
+    return memoryProfilesCache
   }
 }
 
@@ -64,11 +80,13 @@ export async function savePreparedProfileState(
   await fs.mkdir(path.dirname(filePath), { recursive: true })
   const all = await getPreparedProfiles()
   all[state.profileId] = state
+  memoryProfilesCache = all
   await fs.writeFile(filePath, JSON.stringify(all, null, 2), 'utf8')
 }
 
 export async function clearPreparedProfilesCache(): Promise<boolean> {
   const filePath = getCachePath()
+  memoryProfilesCache = null
   try {
     if (await pathExists(filePath)) {
       await fs.unlink(filePath)

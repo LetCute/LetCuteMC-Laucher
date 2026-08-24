@@ -19,11 +19,11 @@ import type {
   AuthSession,
   MinecraftVersionType,
 } from '../../shared/types'
-import { Version, launch as xmclLaunch, type ResolvedVersion } from '@xmcl/core'
+// @xmcl/core and optimizerService are lazy-loaded inside startLaunch to reduce worker spawn overhead
+type ResolvedVersion = import('@xmcl/core').ResolvedVersion
 import { selectBestJavaRuntime } from '../services/launcher/javaScannerService'
 import { getSettings } from '../services/system/settingsService'
 import { writeErrorLog } from '../services/media/errorLogService'
-import { optimizerService } from '../services/system/optimizerService'
 
 const parentPort = process.parentPort
 if (!parentPort) {
@@ -352,6 +352,8 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     const parseRoot = isModpackProfile ? input.gameDir : resourcePath
 
     postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile}, hasVersionInGameDir=${hasVersionInGameDir})`)
+    const { Version, launch: xmclLaunch } = await import('@xmcl/core')
+    const { optimizerService } = await import('../services/system/optimizerService')
     const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
 
     // Filter out unsupported JVM flags for Java < 24 (e.g. UseCompactObjectHeaders)

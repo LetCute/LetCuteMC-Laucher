@@ -66,6 +66,7 @@ export async function readJsonFile<T>(filePath: string, fallback: T): Promise<T>
     if (e.code === 'ENOENT') {
       return fallback
     }
+    console.warn(`[storageService] Corrupted JSON in ${filePath}, backing up and using fallback. Error:`, err)
     const timestamp = Date.now()
     const corruptPath = `${filePath}.corrupt-${timestamp}`
     try {
@@ -78,9 +79,17 @@ export async function readJsonFile<T>(filePath: string, fallback: T): Promise<T>
 }
 
 export async function writeJsonFile<T>(filePath: string, data: T): Promise<void> {
-  await fs.mkdir(path.dirname(filePath), { recursive: true })
+  const dir = path.dirname(filePath)
+  await fs.mkdir(dir, { recursive: true })
   const raw = JSON.stringify(data, null, 2)
-  await fs.writeFile(filePath, raw, 'utf-8')
+  const tempPath = `${filePath}.${Date.now()}.${Math.random().toString(36).slice(2, 8)}.tmp`
+  await fs.writeFile(tempPath, raw, 'utf-8')
+  try {
+    await fs.rename(tempPath, filePath)
+  } catch {
+    await fs.copyFile(tempPath, filePath)
+    await fs.unlink(tempPath).catch(() => {})
+  }
 }
 
 export async function pathExists(p: string): Promise<boolean> {
@@ -102,7 +111,7 @@ export async function ensureGameDirectoryStructure(gameDir: string): Promise<voi
     throw new Error(`Lỗi quyền ghi: Không thể tạo thư mục game tại "${gameDir}". Chi tiết: ${(err as Error).message}`)
   }
 
-  // 2. Create subdirectories
+  // 2. Create subdirectories concurrently
   const subdirs = [
     'assets',
     'assets/indexes',
@@ -117,13 +126,12 @@ export async function ensureGameDirectoryStructure(gameDir: string): Promise<voi
     'logs'
   ]
 
-  for (const subdir of subdirs) {
-    const fullPath = path.join(gameDir, subdir)
-    try {
-      await fs.mkdir(fullPath, { recursive: true })
-    } catch (err) {
-      throw new Error(`Lỗi quyền ghi: Không thể tạo thư mục con "${subdir}" tại "${gameDir}". Chi tiết: ${(err as Error).message}`)
-    }
+  try {
+    await Promise.all(
+      subdirs.map(subdir => fs.mkdir(path.join(gameDir, subdir), { recursive: true }))
+    )
+  } catch (err) {
+    throw new Error(`Lỗi quyền ghi: Không thể tạo thư mục con tại "${gameDir}". Chi tiết: ${(err as Error).message}`)
   }
 
   // 3. Handle launcher_profiles.json
