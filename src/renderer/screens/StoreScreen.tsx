@@ -113,11 +113,10 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
   const handleInstall = async (version: ModrinthVersion) => {
     if (!selectedProject) return
     setInstalling(version.id)
-    showToast('info', `Bắt đầu cài đặt ${selectedProject.title}... Vui lòng chờ vài phút.`)
     try {
       if (projectType === 'modpack') {
         await window.launcherApi.installModrinthModpack(version.id, `${selectedProject.title} (${version.version_number})`)
-        showToast('success', `Đã thêm vào Tiến trình. Bạn có thể xem trong tab Tiến trình.`)
+        showToast('success', `Đã thêm vào Tiến trình tải xuống`)
         setSelectedProject(null)
       } else {
         const targetProfile = profiles.find(p => p.id === targetProfileId)
@@ -138,7 +137,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
         }
 
         await window.launcherApi.installStoreMod(version.id, targetProfile.gameDir)
-        showToast('success', `Đã cài đặt xong Mod: ${selectedProject.title} vào cấu hình ${targetProfile.name}`)
+        showToast('success', `Đã cài đặt: ${selectedProject.title}`)
 
         // Refresh installations if we installed to the currently viewed gameDir
         if (targetProfile.gameDir === gameDir) {
