@@ -30,14 +30,14 @@ if (missingFiles.length > 0) {
   process.exit(1);
 }
 
-// Ensure prepareWorker still requires the downloadManager module by relative path
-const prepareWorker = fs.readFileSync(
-  path.resolve("dist-electron/main/workers/prepareWorker.js"),
+// Ensure prepareWorker or versionResolver requires downloadManager
+const versionResolver = fs.readFileSync(
+  path.resolve("dist-electron/main/services/launcher/versionResolver.js"),
   "utf8",
 );
-if (!prepareWorker.includes("../services/system/downloadManager")) {
+if (!versionResolver.includes("../system/downloadManager")) {
   console.error(
-    "prepareWorker.js does not require ../services/system/downloadManager — check imports.",
+    "versionResolver.js does not require ../system/downloadManager — check imports.",
   );
   process.exit(1);
 }

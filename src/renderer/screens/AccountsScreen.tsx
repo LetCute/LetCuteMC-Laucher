@@ -1094,21 +1094,26 @@ export const AccountsScreen = ({
       >
         <div className="flex flex-col gap-3">
           {/* Microsoft Option */}
-          <button
-            onClick={handleMicrosoftLogin} disabled={isWorking}
-            className="group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
-          >
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
-              <Key size={20} />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-bold text-foreground">Tài khoản Microsoft</p>
-              <p className="text-xs text-muted-foreground mt-0.5">Đăng nhập bản quyền Microsoft</p>
-            </div>
-            <div className="shrink-0 text-muted-foreground group-hover:text-emerald-400">
-              <PlusCircle size={18} />
-            </div>
-          </button>
+          <div className="space-y-1.5">
+            <button
+              onClick={handleMicrosoftLogin} disabled={isWorking}
+              className="w-full group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
+            >
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
+                <Key size={20} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-bold text-foreground">Tài khoản Microsoft</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Đăng nhập bản quyền Microsoft / Xbox</p>
+              </div>
+              <div className="shrink-0 text-muted-foreground group-hover:text-emerald-400">
+                <PlusCircle size={18} />
+              </div>
+            </button>
+            <p className="text-[10px] text-muted-foreground/75 px-1 leading-relaxed">
+              * Xác thực OAuth2 sử dụng Client ID của Prism Launcher để kết nối tới Microsoft. LetCuteMC không lưu mật khẩu.
+            </p>
+          </div>
 
           {/* Local Option */}
           {!showLocalInput ? (

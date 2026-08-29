@@ -276,9 +276,9 @@ export const SettingsScreen = ({
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-foreground/80">Cài đặt & Tối ưu hóa</h2>
+          <h2 className="text-xl font-bold text-foreground/80">Cài đặt</h2>
           <p className="text-sm text-muted-foreground mt-0.5">
-            Thiết lập hiệu năng JVM, bộ nhớ RAM, Java runtime và dọn dẹp ổ đĩa
+            Tối ưu hiệu năng, RAM và Java
           </p>
         </div>
         <Button onClick={handleSave} disabled={isWorking} variant="primary" className="gap-1.5 shadow-md">
@@ -304,14 +304,14 @@ export const SettingsScreen = ({
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h3 className="text-sm font-bold text-emerald-200">
-                  Tối Ưu Cho Máy Siêu Yếu & Chống Khựng Đứng
+                  Tối ưu máy yếu
                 </h3>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap shrink-0">
-                  ⚡ Chống Khựng Đứng
+                  ⚡ Chống giật lag
                 </span>
               </div>
               <p className="text-xs text-muted-foreground mt-0.5">
-                Triệt tiêu giật lag, rút ngắn thời gian gom rác xuống 15ms, tắt sinh Mipmap và cấu hình render siêu nhẹ cho máy RAM 2-4GB / GPU Onboard.
+                Cài mod tăng tốc và giảm tải đồ họa cho máy 2-4GB RAM / Card onboard.
               </p>
             </div>
           </div>
@@ -323,7 +323,7 @@ export const SettingsScreen = ({
             className="h-9 px-4 text-xs font-bold gap-1.5 bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 hover:border-emerald-400 transition-all shrink-0 shadow-sm"
           >
             <Sparkles size={14} className="text-emerald-400" />
-            Mở Bộ Tinh Chỉnh Máy Yếu
+            Mở bộ tinh chỉnh
           </Button>
         </div>
 
@@ -333,14 +333,14 @@ export const SettingsScreen = ({
             <div>
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
                 <Palette className="h-5 w-5 text-primary" />
-                Hiệu ứng Giao diện & Đồ họa (UI Effects Quality)
+                Giao diện ứng dụng
               </CardTitle>
               <p className="text-[11px] text-muted-foreground mt-0.5">
-                Tự động giảm tải CSS, tắt làm mờ kính và bóng đổ để cuộn siêu mượt 60 FPS trên máy yếu
+                Mức độ hiệu ứng mờ kính và bóng đổ
               </p>
             </div>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-              60 FPS Scroll
+              60 FPS
             </span>
           </CardHeader>
           <CardContent>
@@ -348,43 +348,43 @@ export const SettingsScreen = ({
               {[
                 {
                   id: 'auto' as const,
-                  name: 'Tự động theo máy',
+                  name: 'Tự động',
                   badge: 'Khuyến nghị',
                   badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
-                  tagline: 'Tự nhận diện phần cứng',
-                  detail: `Đang chạy: ${
+                  tagline: 'Theo máy của bạn',
+                  detail: `Đang dùng: ${
                     sysInfo
                       ? sysInfo.isLowEnd || (sysInfo.totalRamGb != null && sysInfo.totalRamGb <= 6) || (sysInfo.cpuCores != null && sysInfo.cpuCores <= 4)
-                        ? 'Tối ưu máy yếu (Low)'
+                        ? 'Máy yếu (Low)'
                         : sysInfo.isMidEnd || (sysInfo.totalRamGb != null && sysInfo.totalRamGb <= 12)
                           ? 'Cân bằng (Medium)'
-                          : 'Hiệu ứng cao (High)'
+                          : 'Đầy đủ (High)'
                       : 'Đang kiểm tra...'
                   }`,
                 },
                 {
                   id: 'low' as const,
-                  name: 'Tối ưu máy yếu',
+                  name: 'Máy yếu',
                   badge: 'Siêu nhẹ',
                   badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
-                  tagline: 'Tắt mờ nền & bóng đổ',
-                  detail: 'Cuộn 60 FPS mượt mà cho RAM ≤ 4GB & Card onboard',
+                  tagline: 'Tắt bóng & làm mờ',
+                  detail: 'Mượt mà cho RAM ≤ 4GB',
                 },
                 {
                   id: 'medium' as const,
                   name: 'Cân bằng',
                   badge: 'Mượt & Đẹp',
                   badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
-                  tagline: 'Làm mờ nhẹ (Light blur)',
-                  detail: 'Giảm tải GPU, giữ phong cách kính tối hiện đại',
+                  tagline: 'Làm mờ nhẹ',
+                  detail: 'Vừa mượt vừa đẹp mắt',
                 },
                 {
                   id: 'high' as const,
-                  name: 'Hiệu ứng tối đa',
-                  badge: 'Glassmorphism',
+                  name: 'Đầy đủ hiệu ứng',
+                  badge: 'Đẹp nhất',
                   badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
-                  tagline: 'Kính mờ & Ambient Glow',
-                  detail: 'Đầy đủ hiệu ứng phát sáng cho máy cấu hình mạnh',
+                  tagline: 'Kính mờ & phát sáng',
+                  detail: 'Dành cho máy mạnh',
                 },
               ].map((opt) => {
                 const isSelected = (formData.uiGraphicQuality || 'auto') === opt.id
@@ -449,10 +449,10 @@ export const SettingsScreen = ({
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Zap className="h-5 w-5 text-primary" />
-              Bộ Cờ JVM & Tối ưu hóa Game (JVM Optimizer)
+              Tối ưu hiệu năng game
             </CardTitle>
             <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
-              FPS Boost
+              Tăng FPS
             </span>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -465,7 +465,7 @@ export const SettingsScreen = ({
                     key={preset.id}
                     onClick={() => handleChange('jvmPreset', preset.id)}
                     className={cn(
-                      'p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-sm',
+                      'p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-1.5 shadow-sm',
                       isSelected
                         ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/40'
                         : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700'
@@ -484,7 +484,7 @@ export const SettingsScreen = ({
                           </span>
                           {preset.recommended && (
                             <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                              Khuyến nghị
+                              Khuyên dùng
                             </span>
                           )}
                           {preset.minJavaVersion > 8 && (
@@ -493,7 +493,7 @@ export const SettingsScreen = ({
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-muted-foreground leading-snug">
+                        <p className="text-[11px] text-zinc-400 leading-snug">
                           {preset.tagline}
                         </p>
                       </div>
@@ -509,10 +509,6 @@ export const SettingsScreen = ({
                         {isSelected && <Check size={10} strokeWidth={3} />}
                       </div>
                     </div>
-
-                    <p className="text-[10px] text-zinc-400/90 leading-tight">
-                      {preset.description}
-                    </p>
                   </div>
                 )
               })}
@@ -528,7 +524,7 @@ export const SettingsScreen = ({
                 >
                   <Terminal size={13} />
                   <span>
-                    {showFlagsList ? 'Ẩn danh sách cờ JVM của Preset' : `Xem chi tiết ${selectedPreset.flags.length} cờ JVM của ${selectedPreset.name}`}
+                    {showFlagsList ? 'Ẩn thông số' : `Xem chi tiết ${selectedPreset.flags.length} thông số (${selectedPreset.name})`}
                   </span>
                   {showFlagsList ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                 </button>
@@ -548,13 +544,13 @@ export const SettingsScreen = ({
             {/* Custom Extra JVM Args Input */}
             <div className="space-y-1.5 pt-2 border-t border-zinc-800/80">
               <label className="text-xs font-semibold text-zinc-300 flex items-center justify-between">
-                <span>Cờ JVM Tùy biến Bổ sung (Custom Extra JVM Arguments)</span>
-                <span className="text-[10px] text-muted-foreground">Tùy chọn nâng cao</span>
+                <span>Lệnh Java tùy chỉnh</span>
+                <span className="text-[10px] text-muted-foreground">Không bắt buộc</span>
               </label>
               <Input
                 value={formData.customJvmArgs || ''}
                 onChange={(e) => handleChange('customJvmArgs', e.target.value)}
-                placeholder="VD: -Dminecraft.debug=true -XX:+AlwaysActAsServerClassMachine"
+                placeholder="VD: -Dminecraft.debug=true"
                 className="h-8 text-xs font-mono bg-zinc-900/90 border-zinc-800"
               />
             </div>
@@ -572,8 +568,8 @@ export const SettingsScreen = ({
               <div className="flex items-center gap-2.5 min-w-0">
                 <Monitor size={18} className={cn(formData.enableDedicatedGpu ? 'text-primary' : 'text-zinc-500')} />
                 <div>
-                  <p className="text-xs font-bold text-foreground">Ép chạy Card đồ họa rời (NVIDIA / AMD GPU Boost)</p>
-                  <p className="text-[10px] text-zinc-400">Tự động nạp biến môi trường hiệu năng cao để game luôn dùng GPU rời</p>
+                  <p className="text-xs font-bold text-foreground">Dùng Card đồ họa rời (NVIDIA / AMD)</p>
+                  <p className="text-[10px] text-zinc-400">Ưu tiên card rời để game mượt hơn nếu máy có 2 card màn hình</p>
                 </div>
               </div>
 
@@ -596,7 +592,7 @@ export const SettingsScreen = ({
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Cpu className="h-5 w-5 text-primary" />
-              Phân bổ Bộ nhớ (RAM)
+              Bộ nhớ RAM cho game
             </CardTitle>
             <Button
               type="button"
@@ -606,17 +602,17 @@ export const SettingsScreen = ({
               className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-primary hover:bg-zinc-800 gap-1.5"
             >
               <Sparkles size={12} />
-              Tối ưu RAM theo máy
+              Tự chọn mức hợp lý
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <div className="flex justify-between items-center">
                 <span className="text-xs font-semibold text-zinc-300">
-                  Dung lượng RAM tối đa (Max Memory)
+                  RAM tối đa cấp cho game
                 </span>
                 <span className="text-xs font-mono font-bold px-2 py-0.5 bg-primary/15 border border-primary/30 rounded-lg text-primary">
-                  {formData.defaultMaxMemoryMb} MB ({((formData.defaultMaxMemoryMb || 4096) / 1024).toFixed(1)} GB)
+                  {((formData.defaultMaxMemoryMb || 4096) / 1024).toFixed(1)} GB ({formData.defaultMaxMemoryMb} MB)
                 </span>
               </div>
               <input
@@ -631,9 +627,9 @@ export const SettingsScreen = ({
                 className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-zinc-800 accent-primary"
               />
               <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
-                <span>1024 MB (1 GB)</span>
+                <span>1 GB</span>
                 <span>
-                  Hệ thống: {sysInfo?.totalRamGb || 8} GB RAM ({Math.max(8192, (sysInfo?.totalRamGb || 8) * 1024)} MB)
+                  RAM máy: {sysInfo?.totalRamGb || 8} GB
                 </span>
               </div>
             </div>
@@ -645,7 +641,7 @@ export const SettingsScreen = ({
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Layers className="h-5 w-5 text-primary" />
-              Java Runtime
+              Phiên bản Java
             </CardTitle>
             <Button
               type="button"
@@ -656,58 +652,25 @@ export const SettingsScreen = ({
               className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', javaScanning && 'animate-spin')} />
-              Quét lại Java
+              Tìm Java trên máy
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground">Chọn Java Runtime</p>
+              <p className="text-xs font-semibold text-muted-foreground">Java đang dùng</p>
               <Select
                 value={selectedJavaPath}
                 onChange={(val) => handleSelectRuntime(String(val))}
                 disabled={!javaSelection?.candidates || javaSelection.candidates.length === 0}
-                placeholder="Chọn một runtime..."
+                placeholder="Chọn Java..."
                 options={[
                   ...(javaSelection?.candidates ?? []).map((rt) => ({
                     value: rt.javaPath,
-                    label: `Java ${rt.version} (major ${rt.majorVersion}) — ${sourceLabel(rt.source)}`,
+                    label: `Java ${rt.version} (Java ${rt.majorVersion}) — ${sourceLabel(rt.source)}`,
                   })),
                 ]}
               />
             </div>
-
-            {javaSelection?.candidates && javaSelection.candidates.length > 0 && (
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  Runtimes phát hiện ({javaSelection.candidates.length})
-                </p>
-                <div className="max-h-44 overflow-y-auto space-y-1.5">
-                  {javaSelection.candidates.map((rt) => {
-                    const actual = rt.majorVersion
-                    const req = requiredMajor
-                    const ok = req != null && actual === req
-                    return (
-                      <div
-                        key={rt.id || rt.javaPath}
-                        className="rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-2.5 text-xs space-y-1"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-foreground">
-                            Java {rt.version}
-                          </span>
-                          <span className={ok ? 'text-emerald-400 font-semibold' : 'text-amber-300'}>
-                            {ok ? 'Tương thích' : req != null ? `Yêu cầu: Java ${req}` : 'Đã phát hiện'}
-                          </span>
-                        </div>
-                        <p className="font-mono text-[10px] text-muted-foreground break-all">
-                          {rt.javaPath}
-                        </p>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
 
             {javaSelection?.warning && (
               <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
@@ -731,10 +694,10 @@ export const SettingsScreen = ({
             <div className="space-y-0.5">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
                 <HardDrive className="h-5 w-5 text-primary" />
-                Dọn dẹp Bộ nhớ đệm & Ổ đĩa (Cache Cleaner)
+                Dọn rác & Bộ nhớ đệm
               </CardTitle>
               <p className="text-[11px] text-muted-foreground">
-                Quét và xóa an toàn các tệp logs cũ, báo cáo lỗi và bộ nhớ đệm để giải phóng ổ cứng
+                Xóa file log cũ và dữ liệu tạm để giải phóng ổ cứng
               </p>
             </div>
             <div className="flex items-center gap-1.5">
@@ -747,7 +710,7 @@ export const SettingsScreen = ({
                 className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isScanningCache && 'animate-spin')} />
-                Quét lại
+                Quét
               </Button>
               <Button
                 type="button"
@@ -787,7 +750,7 @@ export const SettingsScreen = ({
               </div>
             ) : (
               <p className="text-xs text-muted-foreground text-center py-4">
-                {isScanningCache ? 'Đang quét bộ nhớ đệm...' : 'Không có tệp rác nào cần dọn dẹp.'}
+                {isScanningCache ? 'Đang quét...' : 'Không có tệp rác nào.'}
               </p>
             )}
           </CardContent>

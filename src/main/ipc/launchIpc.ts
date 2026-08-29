@@ -10,7 +10,6 @@ import type {
   LaunchStatus,
   LauncherLogLevel,
 } from '../../shared/types'
-import { launchMinecraft as coreLaunch } from '../services/launcher/minecraftService'
 import {
   startLaunchJob,
   safeStartLaunchJob,
@@ -88,79 +87,13 @@ export function registerLaunchIpc(): void {
   handleIpc('cache:clear-manifest', () => clearVersionManifestCache())
   handleIpc('cache:clear-prepared', () => clearPreparedProfilesCache())
 
-  // Legacy single-thread launch API
-  handleIpc('minecraft:launch', async (input: LaunchInput, profile: LauncherProfile): Promise<LaunchResult> => {
-    if (launcherState.status === 'launching' || launcherState.status === 'running') {
-      return {
-        ok: false,
-        status: launcherState.status,
-        message: 'Minecraft đang được khởi động hoặc đang chạy.',
-      }
-    }
-
-    setLaunchStatus('launching')
-    appendLauncherLog('info', `Khởi động profile: ${profile.name}`)
-    setLauncherProgress({
-      stage: 'checking',
-      title: 'Chuẩn bị Minecraft',
-      message: 'Đang kiểm tra cấu hình...',
-      percent: 5,
-    })
-
-    try {
-      const { serverListService } = await import('../services/media/serverListService.js')
-      serverListService
-        .injectServersToProfile(profile.id, 1, input.version)
-        .catch((err: any) => console.error('[minecraft:launch] Failed to inject servers:', err))
-    } catch (err) {
-      console.error('[minecraft:launch] Failed to load serverListService:', err)
-    }
-
-    try {
-      const result = await coreLaunch(
-        input,
-        profile,
-        (level, msg) => appendLauncherLog(level, msg),
-        (progress) => setLauncherProgress(progress),
-        (_code) => {
-          setLaunchStatus('idle')
-          setLauncherProgress({
-            stage: 'idle',
-            title: 'Sẵn sàng',
-            message: 'Minecraft đã kết thúc.',
-            percent: 0,
-            updatedAt: new Date().toISOString(),
-          })
-          const wins = BrowserWindow.getAllWindows()
-          if (wins.length > 0) {
-            wins[0].show()
-          }
-        }
-      )
-
-      setLaunchStatus(result.status)
-
-      if (result.ok) {
-        const wins = BrowserWindow.getAllWindows()
-        if (wins.length > 0) {
-          wins[0].minimize()
-        }
-      } else {
-        setLaunchStatus('idle')
-      }
-
-      return result
-    } catch (error) {
-      const errMsg = error instanceof Error ? error.message : 'Unknown error'
-      setLaunchStatus('idle')
-      appendLauncherLog('error', errMsg)
-      setLauncherProgress({
-        stage: 'failed',
-        title: 'Khởi động thất bại',
-        message: errMsg,
-        percent: 100,
-      })
-      return { ok: false, status: 'failed', message: errMsg }
+  // Legacy single-thread launch API -> redirected to launch job
+  handleIpc('minecraft:launch', async (input: LaunchInput, _profile: LauncherProfile): Promise<LaunchResult> => {
+    const jobRes = await safeStartLaunchJob(input)
+    return {
+      ok: jobRes.ok,
+      status: jobRes.ok ? 'running' : 'idle',
+      message: jobRes.message,
     }
   })
 

@@ -88,9 +88,9 @@ async function fetchModrinthJson<T>(endpoint: string): Promise<T | null> {
 export const JVM_PRESETS: JvmPresetInfo[] = [
   {
     id: 'aikar',
-    name: "Aikar's Flags (G1GC)",
-    tagline: 'Khuyến nghị toàn diện cho FPS ổn định & giảm giật đứng',
-    description: 'Bộ cờ chuẩn được tối ưu hóa chuyên sâu cho Minecraft. Phân bổ vùng nhớ G1GC hợp lý, ngăn chặn tình trạng drop FPS đột ngột khi load chunk.',
+    name: "Aikar's Flags",
+    tagline: 'Ổn định FPS, chống giật drop đột ngột',
+    description: 'Bộ cờ chuẩn cân bằng nhất cho hầu hết máy tính.',
     minJavaVersion: 8,
     recommended: true,
     flags: [
@@ -115,9 +115,9 @@ export const JVM_PRESETS: JvmPresetInfo[] = [
   },
   {
     id: 'ultra_low_end',
-    name: '⚡ Siêu Nhẹ & Chống Khựng Đứng (Ultra Anti-Stutter)',
-    tagline: 'Gom rác 15ms, PreTouch phân bổ RAM trước & gộp chuỗi trùng lặp cho máy yếu',
-    description: 'Tối ưu triệt để cho máy yếu (2-4GB RAM, CPU 2 nhân). Rút ngắn thời gian tạm dừng của GC xuống tối đa 15ms để triệt tiêu tình trạng khựng đứng/đơ hình.',
+    name: 'Chống khựng đứng (Anti-Stutter)',
+    tagline: 'Rút ngắn gom rác cho máy yếu',
+    description: 'Giảm tối đa đơ hình cho máy 2-4GB RAM, CPU 2 nhân.',
     minJavaVersion: 8,
     recommended: false,
     flags: [
@@ -142,8 +142,8 @@ export const JVM_PRESETS: JvmPresetInfo[] = [
   {
     id: 'shenandoah',
     name: 'Shenandoah GC',
-    tagline: 'Độ trễ siêu thấp (Ultra-Low Latency) cho máy RAM > 8GB',
-    description: 'Bộ thu gom rác thế hệ mới của Red Hat / OpenJDK. Thực hiện gom rác song song mà không cần dừng luồng game, giảm thời gian giật (pause time) xuống dưới 3ms.',
+    tagline: 'Độ trễ thấp cho máy RAM > 8GB',
+    description: 'Gom rác song song, giữ FPS mượt cho máy mạnh.',
     minJavaVersion: 17,
     recommended: false,
     flags: [
@@ -157,9 +157,9 @@ export const JVM_PRESETS: JvmPresetInfo[] = [
   },
   {
     id: 'zgc',
-    name: 'ZGC Generational (Java 21+)',
-    tagline: 'Bộ thu gom rác tối tân nhất với độ trễ < 1ms',
-    description: 'Z Garbage Collector dạng phân tầng thế hệ (Generational ZGC). Quản lý bộ nhớ mượt mà, tối ưu nhất cho Minecraft các phiên bản mới trên Java 21+.',
+    name: 'ZGC (Java 21+)',
+    tagline: 'Thu gom rác thế hệ mới',
+    description: 'Tối ưu độ trễ thấp nhất cho các bản Minecraft mới.',
     minJavaVersion: 21,
     recommended: false,
     flags: [
@@ -173,9 +173,9 @@ export const JVM_PRESETS: JvmPresetInfo[] = [
   },
   {
     id: 'low_end',
-    name: 'Máy Cấu hình Yếu / Low-End PC',
-    tagline: 'Tiết kiệm CPU & RAM, bật nén chuỗi String Deduplication',
-    description: 'Tối ưu cho laptop hoặc máy tính cấu hình văn phòng/yếu. Tối thiểu hóa mức chiếm dụng CPU của bộ thu gom rác và gộp các chuỗi bộ nhớ trùng lặp.',
+    name: 'Tiết kiệm CPU & RAM',
+    tagline: 'Giảm tải cho máy văn phòng/yếu',
+    description: 'Gộp chuỗi trùng lặp và giảm mức chiếm dụng CPU.',
     minJavaVersion: 8,
     recommended: false,
     flags: [
@@ -189,9 +189,9 @@ export const JVM_PRESETS: JvmPresetInfo[] = [
   },
   {
     id: 'default',
-    name: 'Mặc định Java (Vanilla Default)',
-    tagline: 'Sử dụng cấu hình GC nguyên bản của máy ảo Java',
-    description: 'Không áp dụng thêm cờ tối ưu hóa bộ nhớ nào, giữ nguyên các thông số mặc định của Java Runtime.',
+    name: 'Mặc định (Vanilla)',
+    tagline: 'Cấu hình gốc của Java',
+    description: 'Không áp dụng cờ tối ưu hóa bổ sung.',
     minJavaVersion: 8,
     recommended: false,
     flags: [],

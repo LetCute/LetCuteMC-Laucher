@@ -17,26 +17,23 @@ import type {
   WorkerOutputMessage,
   LaunchInput,
   AuthSession,
-  MinecraftVersionType,
 } from '../../shared/types'
-// @xmcl/core and optimizerService are lazy-loaded inside startLaunch to reduce worker spawn overhead
 type ResolvedVersion = import('@xmcl/core').ResolvedVersion
-import { selectBestJavaRuntime } from '../services/launcher/javaScannerService'
+import { ensureJavaRuntime } from '../services/launcher/javaResolver'
+import { diagnoseAndRecoverCrash } from '../services/launcher/crashDiagnostic'
 import { getSettings } from '../services/system/settingsService'
 import { writeErrorLog } from '../services/media/errorLogService'
+import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
+import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
 
 const parentPort = process.parentPort
 if (!parentPort) {
   throw new Error('launchWorker must run inside a utilityProcess.')
 }
 
-// ─── State ────────────────────────────────────────────────────────────────────
-
 let activeJobId: string | null = null
 let isCancelled = false
 let latestProgressKey = ''
-
-// ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function now(): string {
   return new Date().toISOString()
@@ -62,374 +59,108 @@ function postStatus(jobId: string, status: LaunchStatus): void {
   postMsg({ type: 'status', jobId, status })
 }
 
-let lastLaunchProgressTime = 0
-let pendingLaunchProgress: { jobId: string; progress: Omit<LaunchJobProgress, 'updatedAt'> } | null = null
-let launchProgressTimer: ReturnType<typeof setTimeout> | null = null
-
-function postProgress(jobId: string, progress: Omit<LaunchJobProgress, 'updatedAt'>, forceImmediate = false): void {
-  const currentTime = Date.now()
-  const elapsed = currentTime - lastLaunchProgressTime
-
-  if (launchProgressTimer) {
-    clearTimeout(launchProgressTimer)
-    launchProgressTimer = null
-  }
-
-  if (forceImmediate || progress.percent === 0 || progress.percent === 100 || elapsed >= 120) {
-    lastLaunchProgressTime = currentTime
-    pendingLaunchProgress = null
-    postMsg({
-      type: 'progress',
-      jobId,
-      progress: { ...progress, updatedAt: now() },
-    })
-    return
-  }
-
-  pendingLaunchProgress = { jobId, progress }
-  launchProgressTimer = setTimeout(() => {
-    if (pendingLaunchProgress) {
-      lastLaunchProgressTime = Date.now()
-      postMsg({
-        type: 'progress',
-        jobId: pendingLaunchProgress.jobId,
-        progress: { ...pendingLaunchProgress.progress, updatedAt: now() },
-      })
-      pendingLaunchProgress = null
-      launchProgressTimer = null
-    }
-  }, 120 - elapsed)
-}
-
-/** Only post progress if key (status:percent:message) actually changed */
-function postProgressThrottled(
-  jobId: string,
-  progress: Omit<LaunchJobProgress, 'updatedAt'>
-): void {
-  const key = `${progress.status}:${progress.percent}:${progress.message}`
+function postProgress(jobId: string, progress: Omit<LaunchJobProgress, 'updatedAt'>): void {
+  const key = `${progress.status}:${Math.floor(progress.percent)}:${progress.message}`
   if (key === latestProgressKey) return
   latestProgressKey = key
-  postProgress(jobId, progress)
+  postMsg({
+    type: 'progress',
+    jobId,
+    progress: { ...progress, updatedAt: now() },
+  })
 }
 
 function assertNotCancelled(): void {
-  if (isCancelled) throw new Error('Launch cancelled.')
+  if (isCancelled) throw new Error('LAUNCH_CANCELLED')
 }
 
-function resolveLauncherCoreVersionType(
-  versionType: MinecraftVersionType
-): 'release' | 'snapshot' | 'old_beta' | 'old_alpha' {
-  switch (versionType) {
-    case 'release': return 'release'
-    case 'snapshot': return 'snapshot'
-    case 'old_beta': return 'old_beta'
-    case 'old_alpha': return 'old_alpha'
-    default: return 'release'
-  }
-}
-
-function validateAuth(auth: AuthSession | null | undefined): string | null {
+function validateRealLaunchAuth(auth: AuthSession | null | undefined): string | null {
   if (!auth) return 'Bạn cần thông tin tài khoản để chơi.'
   if (auth.type === 'virtual') {
     if (!auth.username) return 'Tên người chơi Local không được rỗng.'
     return null
   }
   if (auth.type !== 'microsoft') return 'Phiên đăng nhập không hợp lệ.'
-  if (!auth.username || !auth.uuid || !auth.accessToken)
-    return 'Phiên Microsoft auth bị thiếu thông tin.'
+  if (!auth.username || !auth.uuid || !auth.accessToken) return 'Phiên Microsoft auth bị thiếu thông tin.'
   return null
 }
 
-function validateInput(input: LaunchInput): string | null {
+function validateLaunchInput(input: LaunchInput): string | null {
   if (!input.profileId) return 'Thiếu profile ID.'
   if (!input.version) return 'Chưa chọn Minecraft version.'
   if (!input.gameDir) return 'Chưa có thư mục .minecraft.'
   if (input.minMemoryMb < 512) return 'RAM tối thiểu phải từ 512 MB.'
-  if (input.maxMemoryMb < input.minMemoryMb) return 'RAM max phải lớn hơn hoặc bằng RAM min.'
+  if (input.maxMemoryMb < input.minMemoryMb) return 'RAM tối đa không thể nhỏ hơn RAM tối thiểu.'
   return null
 }
-
-// ─── Main launch routine ──────────────────────────────────────────────────────
-
-async function injectDefaultOptions(gameDir: string, jobId: string): Promise<void> {
-  const optionsPath = path.join(gameDir, 'options.txt')
-  try {
-    let lines: string[] = []
-    try {
-      const content = await fs.readFile(optionsPath, 'utf8')
-      lines = content.split(/\r?\n/)
-    } catch (err) {
-      // Ignore if file doesn't exist
-    }
-
-    let hasLang = false
-    let hasUnicode = false
-    let hasSkipWarning = false
-
-    for (let i = 0; i < lines.length; i++) {
-      if (lines[i].startsWith('lang:')) {
-        lines[i] = 'lang:vi_vn'
-        hasLang = true
-      } else if (lines[i].startsWith('forceUnicodeFont:')) {
-        lines[i] = 'forceUnicodeFont:true'
-        hasUnicode = true
-      } else if (lines[i].startsWith('skipMultiplayerWarning:')) {
-        lines[i] = 'skipMultiplayerWarning:true'
-        hasSkipWarning = true
-      }
-    }
-
-    if (!hasLang) lines.push('lang:vi_vn')
-    if (!hasUnicode) lines.push('forceUnicodeFont:true')
-    if (!hasSkipWarning) lines.push('skipMultiplayerWarning:true')
-
-    await fs.writeFile(optionsPath, lines.join('\n').trim() + '\n', 'utf8')
-    postLog(jobId, 'info', 'Đã thiết lập ngôn ngữ mặc định thành tiếng Việt (vi_vn), bật Unicode và ẩn cảnh báo Multiplayer.')
-  } catch (err) {
-    postLog(jobId, 'warn', `Không thể thiết lập tùy chọn mặc định (options.txt): ${(err as Error).message}`)
-  }
-}
-
 
 async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
   activeJobId = jobId
   isCancelled = false
-  latestProgressKey = ''
-  postLog(jobId, 'info', `[LaunchWorker] START jobId=${jobId} version=${input.version} gameDir=${input.gameDir}`)
+  initGlobalHttpDispatcher()
 
   try {
-    // ── Validate input ────────────────────────────────────────────────────
-    postStatus(jobId, 'validating')
-    postProgress(jobId, {
-      status: 'validating',
-      title: 'Kiểm tra cấu hình',
-      message: 'Đang kiểm tra profile...',
-      percent: 2,
-    })
-
-    const inputErr = validateInput(input)
-    if (inputErr) throw new Error(inputErr)
-
-    const authErr = validateAuth(input.auth)
-    if (authErr) throw new Error(authErr)
-
-    assertNotCancelled()
-
-    const auth = input.auth!
-    postLog(jobId, 'info', `Người chơi: ${auth.username} (${auth.type === 'virtual' ? 'Local Offline' : 'Microsoft'})`)
-    postLog(jobId, 'info', `UUID: ${auth.uuid}`)
-    postLog(jobId, 'info', `Thư mục game: ${input.gameDir}`)
-    postLog(jobId, 'info', `Minecraft version: ${input.version}`)
-    postLog(jobId, 'info', `Loader: vanilla`)
-
-    // ── Check Java ────────────────────────────────────────────────────────
-    postStatus(jobId, 'checking_java')
-    postProgress(jobId, {
-      status: 'checking_java',
-      title: 'Kiểm tra Java',
-      message: 'Đang tìm Java runtime...',
-      percent: 8,
-    })
-    assertNotCancelled()
-
-    // Static import (CommonJS output, no .js extension)
+    const inputErr = validateLaunchInput(input)
+    if (inputErr) {
+      postLog(jobId, 'error', `[Validation] ${inputErr}`)
+      postStatus(jobId, 'failed')
+      postProgress(jobId, { status: 'failed', title: 'Lỗi khởi động', message: inputErr, percent: 100 })
+      return
+    }
 
     const settings = await getSettings()
-    const scanDirs = [...settings.customJavaScanDirs]
-    const mcRoot = settings.minecraftDirectory
+    const resourcePath = input.resourcePath || settings.minecraftDirectory || input.gameDir
+    const auth = input.auth
 
-    // resourcePath: thư mục chứa versions/, libraries/, assets/
-    // Với profile modpack có gameDir riêng: dùng input.resourcePath (mcRootDir của profile)
-    // Với profile thường: dùng mcRoot từ settings
-    const resourcePath = (input.resourcePath && input.resourcePath.trim() !== '')
-      ? input.resourcePath
-      : mcRoot
-
-    let javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
-      gameDir: resourcePath,
-      preferredJavaPath: input.javaPath,
-      allowNewer: false,
-    })
-
-    if (!javaSelection.found || !javaSelection.selectedRuntime) {
-      postLog(jobId, 'warn', `[LaunchWorker] Không tìm thấy Java tương thích. Bắt đầu tự động tải Java...`)
-
-      const { resolveRequiredJavaMajor } = await import('../services/launcher/javaScannerService')
-      const { autoInstallJava, getDefaultJavaInstallDir } = await import('../services/launcher/javaInstallerService')
-
-      const requiredMajor = await resolveRequiredJavaMajor(input.version, resourcePath)
-      const installDir = getDefaultJavaInstallDir()
-
-      const installResult = await autoInstallJava(
-        requiredMajor,
-        installDir,
-        (progress: any) => {
-          postProgress(jobId, {
-            status: 'checking_java',
-            title: `Đang tải Java ${requiredMajor}`,
-            message: progress.message,
-            percent: progress.percent,
-          })
-          postLog(jobId, 'info', `[AutoJava] ${progress.message}`)
-        }
-      )
-
-      if (installResult.success && installResult.javaPath) {
-        postLog(jobId, 'success', `[LaunchWorker] Đã tải thành công Java tại: ${installResult.javaPath}`)
-
-        javaSelection = await selectBestJavaRuntime(input.version, scanDirs, {
-          gameDir: resourcePath,
-          preferredJavaPath: installResult.javaPath,
-          forceRefresh: true,
-          allowNewer: false,
-        })
-      } else {
-        throw new Error(installResult.message || `Lỗi không xác định khi tải Java ${requiredMajor}`)
-      }
-
-      if (!javaSelection.found || !javaSelection.selectedRuntime) {
-        throw new Error(javaSelection.message)
-      }
+    const authErr = validateRealLaunchAuth(auth)
+    if (authErr) {
+      postLog(jobId, 'error', `[Auth] ${authErr}`)
+      postStatus(jobId, 'failed')
+      postProgress(jobId, { status: 'failed', title: 'Lỗi tài khoản', message: authErr, percent: 100 })
+      return
     }
 
-    if (javaSelection.warning) {
-      postLog(jobId, 'warn', javaSelection.warning)
-    }
-
-    const javaPath = javaSelection.selectedRuntime.javaPath
-    const javaVer = javaSelection.selectedRuntime.majorVersion
-    postLog(jobId, 'success', `Dùng Java ${javaVer}: ${javaPath}`)
-
-    // ── Check version installed ───────────────────────────────────────────
-    postStatus(jobId, 'checking_version')
-    postProgress(jobId, {
-      status: 'checking_version',
-      title: 'Kiểm tra phiên bản',
-      message: `Đang kiểm tra ${input.version}...`,
-      percent: 15,
-    })
-    assertNotCancelled()
-
-    // Tìm version JSON tại resourcePath (nơi cài Fabric/Vanilla)
-    const checkDir = path.join(resourcePath, 'versions', input.version)
-    const versionJson = path.join(checkDir, `${input.version}.json`)
-    const isInstalled = await pathExists(versionJson)
-
-    if (!isInstalled) {
-      postLog(jobId, 'info', `Phiên bản ${input.version} chưa cài. Sẽ tải xuống...`)
-    } else {
-      postLog(jobId, 'info', 'Phiên bản đã cài. Đang kiểm tra thư viện...')
-    }
-
-    // ── Prepare & Launch ──────────────────────────────────────────────────
     postStatus(jobId, 'preparing')
-    postProgressThrottled(jobId, {
-      status: 'preparing',
-      title: 'Chuẩn bị khởi động',
-      message: 'Đang khởi tạo launcher...',
-      percent: 20,
-    })
+    postProgress(jobId, { status: 'preparing', title: 'Chuẩn bị khởi động', message: 'Đang kiểm tra tài nguyên...', percent: 10 })
+
+    // 1. Resolve Java Runtime
     assertNotCancelled()
+    postProgress(jobId, { status: 'preparing', title: 'Kiểm tra Java', message: 'Đang xác thực môi trường Java...', percent: 25 })
+    const javaResult = await ensureJavaRuntime({
+      mcVersion: input.version,
+      customJavaPath: input.javaPath,
+      log: (level, msg) => postLog(jobId, level, msg),
+    })
 
-    await injectDefaultOptions(input.gameDir, jobId)
-
-    // ── Check & Auto-Fix Mod Dependencies & Incompatibilities ────────────
-    try {
-      const modsFolder = path.join(input.gameDir, 'mods')
-      const hasMods = await pathExists(modsFolder)
-      if (hasMods) {
-        const { detectLoaderFromVersion, inspectModDependencies, autoFixModDependencies } = await import('../services/content/modDependencyService')
-        const { ModConflictService } = await import('../services/content/modConflictService')
-        const conflictService = new ModConflictService()
-        const detectedLoader = detectLoaderFromVersion(input.version)
-
-        // 1. Pre-flight check incompatible mods (e.g. wrong MC version or wrong loader)
-        try {
-          const conflictResult = await conflictService.checkModConflicts(input.gameDir, input.version, detectedLoader)
-          const autoDisableConflicts = conflictResult.conflicts.filter(
-            (c) => c.severity === 'critical' && c.recommendedAction === 'disable_mod' && c.targetFileName
-          )
-          for (const conflict of autoDisableConflicts) {
-            if (conflict.targetFileName) {
-              await conflictService.resolveConflict(
-                input.gameDir,
-                { conflictId: conflict.id, action: 'disable_mod', targetFileName: conflict.targetFileName },
-                input.version,
-                detectedLoader
-              )
-              postLog(
-                jobId,
-                'warn',
-                `[AutoShield] Đã tự động vô hiệu hóa mod không tương thích: ${conflict.targetFileName} (${conflict.title})`
-              )
-            }
-          }
-        } catch (conflictErr) {
-          postLog(jobId, 'warn', `[AutoShield] Bỏ qua kiểm tra xung đột: ${conflictErr instanceof Error ? conflictErr.message : String(conflictErr)}`)
+    // 2. Mod dependency check
+    assertNotCancelled()
+    const modsDir = path.join(input.gameDir, 'mods')
+    if (await pathExists(modsDir)) {
+      try {
+        const loader = detectLoaderFromVersion(input.version)
+        const inspection = await inspectModDependencies(input.gameDir, input.version, loader)
+        if (inspection.missingDependencies.length > 0) {
+          postLog(jobId, 'warn', `Phát hiện ${inspection.missingDependencies.length} mod còn thiếu dependency. Đang tự tải bổ sung...`)
+          await autoFixModDependencies(input.gameDir, input.version, loader, (msg) => postLog(jobId, 'info', msg))
         }
-
-        // 2. Scan & auto-fix missing dependencies
-        const scanResult = await inspectModDependencies(input.gameDir, input.version, detectedLoader)
-
-        if (scanResult.missingDependencies.length > 0) {
-          postLog(jobId, 'warn', `[LaunchWorker] Phát hiện ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu: ${scanResult.missingDependencies.map(d => d.modId).join(', ')}`)
-          postProgress(jobId, {
-            status: 'preparing',
-            title: 'Tự động tải Mod thiếu',
-            message: `Đang tải ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu...`,
-            percent: 25,
-          })
-
-          const fixResult = await autoFixModDependencies(
-            input.gameDir,
-            input.version,
-            detectedLoader,
-            (msg) => {
-              postLog(jobId, 'info', `[LaunchWorker] ${msg}`)
-            }
-          )
-
-          if (fixResult.downloadedMods.length > 0) {
-            postLog(jobId, 'success', `[LaunchWorker] ${fixResult.message}`)
-          }
-          if (fixResult.unresolvedMods.length > 0) {
-            postLog(jobId, 'warn', `[LaunchWorker] Chưa thể tự động tải các mod: ${fixResult.unresolvedMods.join(', ')}`)
-          }
-        }
+      } catch (modErr) {
+        postLog(jobId, 'warn', `Bỏ qua kiểm tra mod: ${modErr instanceof Error ? modErr.message : String(modErr)}`)
       }
-    } catch (modErr) {
-      postLog(jobId, 'warn', `[LaunchWorker] Bỏ qua kiểm tra mod: ${modErr instanceof Error ? modErr.message : String(modErr)}`)
     }
 
-    // XMCL parse version:
-    // - Với profile modpack (có mcRootDir hoặc gameDir nằm trong profiles/):
-    //   version files đã được copy vào gameDir/versions/ bởi prepareWorker
-    //   Nên parse tại gamePath (input.gameDir) để XMCL tìm được đúng JSON
-    // - Với profile thường (Vanilla/Fabric/Quilt/Forge/NeoForge): parse tại resourcePath (mcRoot)
-    // - Quan trọng: chỉ dùng gameDir khi version JSON thực sự tồn tại ở đó
-    const hasResourcePath = input.resourcePath && input.resourcePath.trim() !== '' &&
-      input.resourcePath.toLowerCase() !== input.gameDir.toLowerCase()
-    const isInProfilesPath = input.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) ||
-      input.gameDir.toLowerCase().includes('/profiles/')
+    // 3. Resolve Version & JVM flags
+    assertNotCancelled()
+    const versionInGameDir = path.join(input.gameDir, 'versions', input.version, `${input.version}.json`)
+    const parseRoot = (await pathExists(versionInGameDir)) ? input.gameDir : resourcePath
 
-    // Kiểm tra xem version JSON có tồn tại trong gameDir không (modpack case)
-    const versionJsonInGameDir = path.join(input.gameDir, 'versions', input.version, `${input.version}.json`)
-    const hasVersionInGameDir = await pathExists(versionJsonInGameDir)
-
-    const isModpackProfile = hasVersionInGameDir && (hasResourcePath || (isInProfilesPath && input.gameDir.toLowerCase() !== resourcePath.toLowerCase()))
-    const parseRoot = isModpackProfile ? input.gameDir : resourcePath
-
-    postLog(jobId, 'info', `Parse version tại: ${parseRoot} (isModpackProfile=${isModpackProfile}, hasVersionInGameDir=${hasVersionInGameDir})`)
     const { Version, launch: xmclLaunch } = await import('@xmcl/core')
     const { optimizerService } = await import('../services/system/optimizerService')
     const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
 
-    // Filter out unsupported JVM flags for Java < 24 (e.g. UseCompactObjectHeaders)
-    if (javaVer < 24 && (resolved as any).arguments?.jvm) {
-      ; (resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
-        if (typeof arg === 'string') {
-          return !arg.includes('UseCompactObjectHeaders')
-        }
+    // Filter incompatible JVM flags
+    if (javaResult.majorVersion < 24 && (resolved as any).arguments?.jvm) {
+      ;(resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
+        if (typeof arg === 'string') return !arg.includes('UseCompactObjectHeaders')
         if (arg && typeof arg === 'object' && Array.isArray(arg.value)) {
           arg.value = arg.value.filter((v: string) => !v.includes('UseCompactObjectHeaders'))
           return arg.value.length > 0
@@ -438,83 +169,52 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       })
     }
 
-    // ── Launch ────────────────────────────────────────────────────────────
+    // 4. Launch game process
     assertNotCancelled()
     postStatus(jobId, 'launching')
-    postProgress(jobId, {
-      status: 'launching',
-      title: 'Khởi động Minecraft',
-      message: 'Đang mở Minecraft...',
-      percent: 90,
-    })
+    postProgress(jobId, { status: 'launching', title: 'Khởi động Minecraft', message: 'Đang mở Minecraft...', percent: 90 })
 
     const jvmPreset = input.jvmPreset || settings.jvmPreset || 'aikar'
-    const customJvmArgs = input.customJvmArgs ?? settings.customJvmArgs ?? ''
-    const enableDedicatedGpu = input.enableDedicatedGpu ?? settings.enableDedicatedGpu ?? true
-
     const customArgs = optimizerService.buildOptimizedJvmArgs({
       preset: jvmPreset,
-      customJvmArgs,
-      javaMajorVersion: javaVer,
+      customJvmArgs: input.customJvmArgs ?? settings.customJvmArgs ?? '',
+      javaMajorVersion: javaResult.majorVersion,
       maxRamMb: input.maxMemoryMb,
     })
-    const gpuEnv = optimizerService.getGpuEnvironmentVariables(enableDedicatedGpu)
+    const gpuEnv = optimizerService.getGpuEnvironmentVariables(input.enableDedicatedGpu ?? settings.enableDedicatedGpu ?? true)
 
-    postLog(jobId, 'info', `Tối ưu hóa JVM [${jvmPreset}]: Đã nạp ${customArgs.length} cờ JVM. GPU rời=${enableDedicatedGpu}`)
-
-    // XMCL launch:
-    // - gamePath: thư mục chứa saves/, mods/, config/ (profile riêng của modpack)
-    // - resourcePath: thư mục chứa versions/, libraries/, assets/ (mcRoot)
     const child = await xmclLaunch({
       gamePath: input.gameDir,
-      resourcePath: resourcePath,
-      javaPath,
+      resourcePath,
+      javaPath: javaResult.javaPath,
       version: resolved,
-      accessToken: auth.accessToken,
-      gameProfile: { name: auth.username, id: auth.uuid },
+      accessToken: auth!.accessToken,
+      gameProfile: { name: auth!.username, id: auth!.uuid },
       minMemory: input.minMemoryMb,
       maxMemory: input.maxMemoryMb,
       extraJVMArgs: customArgs,
       server: input.serverAddress ? { ip: input.serverAddress } : undefined,
       spawn: (command: string, args?: readonly string[], options?: any) => {
-        // Filter out unsupported JVM args for Java <= 21
-        // (like --sun-misc-unsafe-memory-access=allow which was added in newer Java but crashes Java 21)
         let filteredArgs = (args || []) as string[]
-        if (javaSelection!.selectedRuntime!.majorVersion <= 21) {
-          filteredArgs = filteredArgs.filter(a => a !== '--sun-misc-unsafe-memory-access=allow')
+        if (javaResult.majorVersion <= 21) {
+          filteredArgs = filteredArgs.filter((a) => a !== '--sun-misc-unsafe-memory-access=allow')
         }
-        const mergedEnv = {
-          ...(options?.env || process.env),
-          ...gpuEnv,
-        }
-        return spawn(command, filteredArgs, { ...options, env: mergedEnv })
-      }
+        return spawn(command, filteredArgs, { ...options, env: { ...(options?.env || process.env), ...gpuEnv } })
+      },
     })
 
-    const minecraftPid = child.pid ?? null
-    if (minecraftPid) {
-      postLog(jobId, 'info', `Minecraft process started with PID ${minecraftPid}.`)
-      const boosted = optimizerService.applyGameProcessBoost(minecraftPid)
-      if (boosted) {
-        postLog(jobId, 'info', 'Đã tăng ưu tiên tiến trình CPU (High Priority) để chống giật đứng/khựng khung hình.')
-      }
-      if ((child as any).spawnargs) {
-        postLog(jobId, 'info', `Command: ${(child as any).spawnargs.join(' ')}`)
-      }
+    if (child.pid) {
+      postLog(jobId, 'info', `Minecraft process started with PID ${child.pid}.`)
+      optimizerService.applyGameProcessBoost(child.pid)
     }
 
-    let lastErrorSummary = ''
     const accumulatedLogs: string[] = []
-
     child.stdout?.on('data', (data: Buffer) => {
       const text = data.toString('utf8').trim()
       if (text) {
         postLog(jobId, 'info', text)
         accumulatedLogs.push(text)
         if (accumulatedLogs.length > 200) accumulatedLogs.shift()
-        if (text.includes('Exception') || text.includes('Error') || text.includes('IncompatibleModException') || text.includes('net.fabricmc.loader')) {
-          lastErrorSummary = text
-        }
       }
     })
 
@@ -524,131 +224,51 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
         postLog(jobId, 'error', text)
         accumulatedLogs.push(text)
         if (accumulatedLogs.length > 200) accumulatedLogs.shift()
-        lastErrorSummary = text
       }
     })
 
     child.on('exit', async (code) => {
       const ok = code === 0 || code === null
       if (!ok) {
-        // Tự động phân tích nguyên nhân crash và vô hiệu hóa mod gây crash nếu phát hiện
-        let disabledModMessage = ''
-        try {
-          const logCombined = accumulatedLogs.join('\n')
-          // Đọc thêm tệp crash-reports mới nhất nếu có
-          let crashReportContent = ''
-          const crashDir = path.join(input.gameDir, 'crash-reports')
-          if (await pathExists(crashDir)) {
-            const crashEntries = await fs.readdir(crashDir).catch(() => [])
-            const crashFiles = crashEntries.filter((f) => f.endsWith('.txt') || f.endsWith('.log'))
-            if (crashFiles.length > 0) {
-              crashFiles.sort()
-              const latestCrashFile = path.join(crashDir, crashFiles[crashFiles.length - 1])
-              const stat = await fs.stat(latestCrashFile).catch(() => null)
-              if (stat && Date.now() - stat.mtimeMs < 60000) {
-                crashReportContent = await fs.readFile(latestCrashFile, 'utf8').catch(() => '')
-              }
-            }
-          }
-
-          const fullDiagnosticText = `${crashReportContent}\n${logCombined}`
-          const patterns = [
-            /from mod ([a-zA-Z0-9_\-]+) failed injection/i,
-            /in config \[([a-zA-Z0-9_\-]+)(?:\.mixins?)?\.json\]/i,
-            /\[([a-zA-Z0-9_\-]+)(?:\.mixins?)?\.json:[^\]]+\]/i,
-            /mixins\.([a-zA-Z0-9_\-]+)\.json/i,
-            /([a-zA-Z0-9_\-]+)\.mixins\.json/i,
-            /net\.fabricmc\.loader\.impl\.FormattedException:\s+Mod\s+'([^']+)'/i,
-            /ModLoadingException:\s+Mod\s+([a-zA-Z0-9_\-]+)/i,
-          ]
-
-          let offendingModId: string | null = null
-          for (const p of patterns) {
-            const match = fullDiagnosticText.match(p)
-            if (match && match[1]) {
-              const candidate = match[1].toLowerCase().replace(/_/g, '-')
-              if (!['fabric', 'minecraft', 'sponge', 'asm', 'default', 'client', 'common'].includes(candidate)) {
-                offendingModId = candidate
-                break
-              }
-            }
-          }
-
-          if (offendingModId) {
-            const modsDir = path.join(input.gameDir, 'mods')
-            if (await pathExists(modsDir)) {
-              const modFiles = await fs.readdir(modsDir).catch(() => [])
-              const jarFiles = modFiles.filter((f) => f.endsWith('.jar'))
-              const targetJar = jarFiles.find((f) => f.toLowerCase().replace(/_/g, '-').includes(offendingModId!))
-              if (targetJar) {
-                const currentPath = path.join(modsDir, targetJar)
-                const disabledPath = `${currentPath}.disabled`
-                await fs.rename(currentPath, disabledPath).catch(() => {})
-                disabledModMessage = ` [AutoShield: Đã tự động tắt mod '${targetJar}' để tránh crash]`
-                postLog(
-                  jobId,
-                  'warn',
-                  `[AutoShield] Phát hiện lỗi do mod ${targetJar}. Đã tự động vô hiệu hóa thành ${targetJar}.disabled.`
-                )
-              }
-            }
-          }
-        } catch (diagErr) {
-          // Ignore diagnosis error
+        const recovery = await diagnoseAndRecoverCrash(input.gameDir, accumulatedLogs)
+        if (recovery) {
+          postLog(jobId, 'warn', `[AutoRecovery] ${recovery.summary}`)
         }
-
-        const errMsg = lastErrorSummary
-          ? `Lỗi khởi chạy Minecraft (mã ${code}): ${lastErrorSummary.slice(0, 200)}${disabledModMessage}`
-          : `Minecraft thoát lỗi với mã: ${code}${disabledModMessage}`
-        postLog(jobId, 'error', errMsg)
         postStatus(jobId, 'failed')
-        postMsg({ type: 'finished', jobId, ok: false, message: errMsg })
+        postProgress(jobId, { status: 'failed', title: 'Minecraft bị đóng đột ngột', message: `Tiến trình kết thúc với mã ${code}.`, percent: 100 })
+        postMsg({ type: 'finished', jobId, ok: false, message: `Minecraft crash với mã thoát ${code}` })
       } else {
-        postLog(jobId, 'success', 'Minecraft kết thúc bình thường.')
-        postStatus(jobId, 'closed')
-        postMsg({ type: 'finished', jobId, ok: true, message: `Minecraft closed with code ${code}.` })
+        postStatus(jobId, 'idle')
+        postProgress(jobId, { status: 'idle', title: 'Sẵn sàng', message: 'Minecraft đã kết thúc bình thường.', percent: 0 })
+        postMsg({ type: 'finished', jobId, ok: true, message: 'Game kết thúc bình thường' })
       }
+      activeJobId = null
     })
 
     postStatus(jobId, 'running')
-    postProgress(jobId, {
-      status: 'running',
-      title: 'Minecraft đang chạy',
-      message: 'Game process đã khởi động.',
-      percent: 100,
-    })
+    postProgress(jobId, { status: 'running', title: 'Minecraft đang chạy', message: 'Chúc bạn chơi game vui vẻ!', percent: 100 })
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Launch failed.'
-    const status: LaunchStatus = message === 'Launch cancelled.' ? 'cancelled' : 'failed'
-
-    postStatus(jobId, status)
-    postLog(jobId, status === 'cancelled' ? 'warn' : 'error', message)
-    if (status !== 'cancelled') {
-      void writeErrorLog('launchWorker', error, {
-        jobId,
-        version: input.version,
-        gameDir: input.gameDir,
-        javaPath: input.javaPath,
-        authType: input.auth?.type,
-      })
+    if ((error as Error)?.message === 'LAUNCH_CANCELLED' || isCancelled) {
+      postLog(jobId, 'info', 'Khởi động game đã bị huỷ.')
+      postStatus(jobId, 'cancelled')
+      postMsg({ type: 'finished', jobId, ok: false, message: 'Launch cancelled' })
+      return
     }
-    postMsg({ type: 'error', jobId, message })
-    postMsg({ type: 'finished', jobId, ok: false, message })
+    const errMsg = error instanceof Error ? error.message : String(error)
+    postLog(jobId, 'error', `Khởi động thất bại: ${errMsg}`)
+    void writeErrorLog('launchWorker', error, { jobId, profileId: input.profileId, version: input.version })
+    postStatus(jobId, 'failed')
+    postProgress(jobId, { status: 'failed', title: 'Lỗi khởi động', message: errMsg, percent: 100 })
+    postMsg({ type: 'error', jobId, message: errMsg })
   }
 }
 
-// ─── Message handler ──────────────────────────────────────────────────────────
-
 parentPort.on('message', (e: any) => {
-  const message = e.data as WorkerInputMessage
-  if (message.type === 'cancel') {
-    if (message.jobId === activeJobId) {
-      isCancelled = true
-    }
-    return
-  }
-
+  const message = (e.data || e) as WorkerInputMessage
   if (message.type === 'start') {
     void startLaunch(message.jobId, message.input)
+  } else if (message.type === 'cancel' && activeJobId === message.jobId) {
+    isCancelled = true
+    postLog(message.jobId, 'info', 'Nhận tín hiệu huỷ tiến trình khởi động...')
   }
 })

@@ -3,22 +3,15 @@ import {
   HelpCircle,
   Heart,
   Zap,
-  Package,
-  Layers,
-  Sparkles,
   Cpu,
   Globe,
   Sliders,
   FolderArchive,
-  Camera,
-  FileText,
-  BarChart3,
   Shirt,
   UserCheck,
   CheckCircle2,
   Boxes,
   ShieldAlert,
-  ArrowUpCircle,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import pkg from '../../../package.json'
@@ -40,178 +33,90 @@ const FEATURE_LIST: FeatureItem[] = [
   {
     id: 'engine',
     category: 'engine',
-    title: 'Lõi Khởi Động Đa Nền Tảng (Multi-Loader Engine)',
-    tagline: 'Hỗ trợ Forge, NeoForge, Fabric, Quilt & Vanilla',
-    description: 'Chạy game trên luồng Worker độc lập (UtilityProcess) đảm bảo Launcher luôn mượt mà không bị đơ lag.',
+    title: 'Khởi động đa nền tảng',
+    tagline: 'Forge, NeoForge, Fabric, Quilt & Vanilla',
+    description: 'Chạy game mượt mà, hỗ trợ tất cả phiên bản và loader Minecraft.',
     icon: Zap,
     iconColor: 'text-amber-400 bg-amber-500/15 border-amber-500/30',
-    badge: 'Đa Nền Tảng',
-    highlights: ['Hỗ trợ Windows & Linux & macOS', 'Worker I/O biệt lập', 'Tự giải phóng bộ nhớ'],
-  },
-  {
-    id: 'java',
-    category: 'engine',
-    title: 'Quét & Tự Cài Đặt Java Thông Minh',
-    tagline: 'Tự động phát hiện và tải OpenJDK Temurin chuẩn',
-    description: 'Quét sâu hệ thống (JDK 8, 17, 21, 24), tự động đối soát phiên bản yêu cầu và tải cài đặt 1-click.',
-    icon: Cpu,
-    iconColor: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/30',
-    badge: 'Tự Động 100%',
-    highlights: ['Adoptium Temurin OpenJDK', 'Quét PATH, SDKMAN, jEnv', 'Tự cấu hình Java Home'],
+    badge: 'Lõi Game',
+    highlights: ['Hỗ trợ đầy đủ Loader', 'Tiết kiệm tài nguyên', 'Tải game siêu tốc'],
   },
   {
     id: 'store',
     category: 'management',
-    title: 'Cửa Hàng Modrinth Tích Hợp',
-    tagline: 'Cài đặt Modpacks, Mods, Shaders & Texture Packs 1-click',
-    description: 'Duyệt và tìm kiếm hàng triệu tài nguyên từ Modrinth, tự động phân tích và tải kèm các mod phụ thuộc.',
+    title: 'Kho Mod Modrinth',
+    tagline: 'Cài Mod, Modpack & Shader 1-click',
+    description: 'Tìm kiếm và tải trực tiếp hàng ngàn tài nguyên miễn phí.',
     icon: Boxes,
     iconColor: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30',
-    badge: 'Kho Mod Khủng',
-    highlights: ['Cài modpack hoàn chỉnh', 'Tự tải mod phụ thuộc', 'Tìm kiếm & Lọc siêu nhanh'],
+    badge: 'Kho Mod',
+    highlights: ['Cài modpack 1-click', 'Tự tải kèm mod phụ thuộc', 'Tìm kiếm & lọc nhanh'],
   },
   {
-    id: 'share_backup',
-    category: 'management',
-    title: 'Sao Lưu & Chia Sẻ Trọn Gói (.letcutepack)',
-    tagline: 'Đóng gói toàn bộ cấu hình để gửi bạn bè chỉ với 1 click',
-    description: 'Nén mods, config, phím bấm, shader thành tệp .letcutepack hoặc .zip, hỗ trợ Kéo & Thả để chơi ngay.',
-    icon: FolderArchive,
-    iconColor: 'text-primary bg-primary/15 border-primary/30',
-    badge: '1-Click Share',
-    highlights: ['Kéo thả tệp tiện lợi', 'Đính kèm phím & cài đặt', 'Tạo cấu hình tức thì'],
+    id: 'java',
+    category: 'engine',
+    title: 'Tự động cài Java',
+    tagline: 'Tự phát hiện và tải Java chuẩn',
+    description: 'Tự tìm và tải phiên bản Java tương thích nhất, không cần cài thủ công.',
+    icon: Cpu,
+    iconColor: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/30',
+    badge: 'Tự Động',
+    highlights: ['OpenJDK chính thức', 'Quét Java trên máy', 'Khắc phục lỗi Java'],
   },
   {
     id: 'optimizer',
     category: 'engine',
-    title: 'Tối Ưu Hóa Game & Cờ JVM Nâng Cao',
-    tagline: '5 Bộ cờ Aikar, Shenandoah, ZGC, Low-End PC & Dọn Cache',
-    description: 'Tối ưu bộ thu gom rác (GC) chống drop FPS, ép chạy Card đồ họa rời (NVIDIA/AMD) và dọn dẹp ổ đĩa.',
+    title: 'Tối ưu hóa & Tăng FPS',
+    tagline: 'Bộ cờ mượt mà và dọn rác',
+    description: 'Tối ưu bộ nhớ RAM, ép dùng card đồ họa rời giúp game ổn định.',
     icon: Sliders,
     iconColor: 'text-purple-400 bg-purple-500/15 border-purple-500/30',
-    badge: 'FPS Boost',
-    highlights: ["Aikar's Flags & ZGC", 'Ép chạy GPU rời', 'Dọn dẹp rác ổ cứng'],
-  },
-  {
-    id: 'worlds',
-    category: 'management',
-    title: 'Quản Lý Thế Giới (Worlds & Saves Studio)',
-    tagline: 'Xem Seed, Datapacks, Đổi chế độ chơi & Sao lưu .zip',
-    description: 'Quản lý toàn diện thế giới chơi đơn, nhân bản bản đồ, đổi độ khó, quản lý gói dữ liệu (Datapacks).',
-    icon: Globe,
-    iconColor: 'text-teal-400 bg-teal-500/15 border-teal-500/30',
-    badge: 'Quản Lý Saves',
-    highlights: ['Xem & Copy Seed', 'Sao lưu & Phục hồi .zip', 'Quản lý Datapacks'],
+    badge: 'Tăng FPS',
+    highlights: ['Cấu hình tăng FPS', 'Ưu tiên card rời', 'Dọn rác bộ nhớ đệm'],
   },
   {
     id: 'mod_conflict',
     category: 'management',
-    title: 'Kiểm Tra Xung Đột & Dự Đoán Crash (Conflict Predictor)',
-    tagline: 'Quét xung đột OptiFine vs Sodium, sai Loader & tự động sửa 1-click',
-    description: 'Chẩn đoán các lỗi xung đột rendering, trùng ID mod, thiếu Indium và cung cấp nút sửa tự động trước khi game mở.',
+    title: 'Chẩn đoán xung đột mod',
+    tagline: 'Phát hiện mod lỗi trước khi mở game',
+    description: 'Tự nhận diện mod không tương thích hoặc sai Loader để tránh crash.',
     icon: ShieldAlert,
     iconColor: 'text-rose-400 bg-rose-500/15 border-rose-500/30',
-    badge: 'Chẩn Đoán Crash',
-    highlights: ['OptiFine vs Sodium/Iris', 'Phát hiện sai Loader', 'Tự động sửa 1-click'],
-  },
-  {
-    id: 'mod_updater',
-    category: 'management',
-    title: 'Tự Động Cập Nhật Mod (1-Click Mod Auto-Updater)',
-    tagline: 'Đối soát SHA1/SHA512 với Modrinth & Cập nhật an toàn với Backup',
-    description: 'Kiểm tra phiên bản mới của toàn bộ mod, xem nhật ký thay đổi (Changelog) và cập nhật 1 mod hoặc toàn bộ.',
-    icon: ArrowUpCircle,
-    iconColor: 'text-cyan-400 bg-cyan-500/15 border-cyan-500/30',
-    badge: 'Auto Update',
-    highlights: ['Đối soát băm SHA1/SHA512', 'Xem Changelog chi tiết', 'Tự động sao lưu bản cũ'],
-  },
-  {
-    id: 'mod_fixer',
-    category: 'management',
-    title: 'Tự Động Sửa Lỗi Thiếu Mod (Auto-Fixer)',
-    tagline: 'Quét file JAR và 1-click tải mod thiếu từ Modrinth',
-    description: 'Quét phân tích fabric.mod.json / mods.toml, phát hiện mod thiếu và tự động tìm bản tải tương thích.',
-    icon: Package,
-    iconColor: 'text-blue-400 bg-blue-500/15 border-blue-500/30',
     badge: 'Chống Crash',
-    highlights: ['Quét phụ thuộc mod', 'Tải 1-click tự động', 'Bật / Tắt / Xóa mod nhanh'],
+    highlights: ['Phát hiện mod xung đột', 'Báo sai phiên bản', 'Sửa lỗi 1-click'],
   },
   {
-    id: 'shaders_resource',
+    id: 'share_backup',
     category: 'management',
-    title: 'Quản Lý Shaders & Resource Packs',
-    tagline: 'Bật / Tắt và sắp xếp gói đổ bóng & kết cấu',
-    description: 'Dễ dàng nhập, bật tắt các gói shader rực rỡ và gói kết cấu HD chỉ với các thao tác click chuột.',
-    icon: Sparkles,
-    iconColor: 'text-pink-400 bg-pink-500/15 border-pink-500/30',
-    badge: 'Đồ Họa Đẹp',
-    highlights: ['Hỗ trợ Iris / OptiFine', 'Nhập tệp kéo thả', 'Mở thư mục nhanh'],
-  },
-  {
-    id: 'screenshots',
-    category: 'studio',
-    title: 'Thư Viện Ảnh Chụp Màn Hình (Lightbox)',
-    tagline: 'Phóng to ảnh chất lượng cao & Copy trực tiếp Clipboard',
-    description: 'Duyệt toàn bộ khoảnh khắc trong game, xem chi tiết, sao chép ảnh nhanh để dán lên Discord / Facebook.',
-    icon: Camera,
-    iconColor: 'text-sky-400 bg-sky-500/15 border-sky-500/30',
-    badge: 'Gallery',
-    highlights: ['Lightbox phóng to', 'Copy ảnh vào Clipboard', 'Xóa chọn lọc nhanh'],
-  },
-  {
-    id: 'logs',
-    category: 'studio',
-    title: 'Phân Tích Nhật Ký & Crash Analyzer',
-    tagline: 'Tự động chẩn đoán lỗi & Upload 1-click lên mclo.gs',
-    description: 'Bộ lọc mức log (Error, Warn, Info), phân tích thông minh nguyên nhân lỗi và gửi link chia sẻ trực tiếp.',
-    icon: FileText,
-    iconColor: 'text-orange-400 bg-orange-500/15 border-orange-500/30',
-    badge: 'Chẩn Đoán Lỗi',
-    highlights: ['Upload mclo.gs ra trình duyệt', 'Phát hiện mod gây crash', 'Tìm kiếm & Lọc dòng log'],
-  },
-  {
-    id: 'stats',
-    category: 'studio',
-    title: 'Bảng Thống Kê Giờ Chơi & Hoạt Động (Stats)',
-    tagline: 'Theo dõi thời gian chơi, khai khoáng, boss & di chuyển',
-    description: 'Bảng dashboard theo dõi tiến trình sinh tồn: Kim cương đào được, số rồng đã hạ, km di chuyển bằng Elytra.',
-    icon: BarChart3,
-    iconColor: 'text-indigo-400 bg-indigo-500/15 border-indigo-500/30',
-    badge: 'Playtime & Stats',
-    highlights: ['Tổng giờ chơi launcher', 'Bảng vàng khai khoáng', 'Boss & Quái vật đã diệt'],
+    title: 'Sao lưu & Chia sẻ',
+    tagline: 'Gửi gói game cho bạn bè qua 1 file',
+    description: 'Đóng gói mod, phím bấm và cài đặt để chia sẻ hoặc khôi phục nhanh.',
+    icon: FolderArchive,
+    iconColor: 'text-primary bg-primary/15 border-primary/30',
+    badge: 'Chia Sẻ',
+    highlights: ['Gửi mod cho bạn bè', 'Giữ nguyên cài đặt & phím', 'Khôi phục tức thì'],
   },
   {
     id: 'skin_cape',
     category: 'studio',
-    title: 'Studio Skin & Áo Choàng 3D (3D Skin Studio)',
-    tagline: 'Xem 3D xoay 360 độ & Kho 400+ Skin hot NameMC',
-    description: 'Tùy biến nhân vật trực quan với Skinview3D, đổi mẫu tay Slim/Classic, tải và áp dụng skin tức thì.',
+    title: 'Kho Skin 3D',
+    tagline: 'Đổi skin và xem trước chuyển động 3D',
+    description: 'Xem trước trang phục nhân vật 360 độ và kho 400+ skin đẹp có sẵn.',
     icon: Shirt,
     iconColor: 'text-violet-400 bg-violet-500/15 border-violet-500/30',
-    badge: '3D Viewer',
-    highlights: ['Xoay 3D tương tác', '400+ skin NameMC', 'Đổi skin Local & Microsoft'],
+    badge: 'Skin 3D',
+    highlights: ['Xem trước chuyển động 3D', 'Kho 400+ skin có sẵn', 'Hỗ trợ tay nhỏ & to'],
   },
   {
     id: 'accounts',
     category: 'studio',
-    title: 'Quản Lý Tài Khoản (Microsoft & Offline)',
-    tagline: 'Đăng nhập bảo mật OAuth2 & Tài khoản Khách (Guest)',
-    description: 'Lưu trữ nhiều tài khoản cùng lúc, chuyển đổi tài khoản tức thì, đồng bộ avatar và trang phục.',
+    title: 'Quản lý tài khoản',
+    tagline: 'Hỗ trợ Microsoft & Offline',
+    description: 'Lưu nhiều tài khoản và chuyển đổi qua lại nhanh chóng.',
     icon: UserCheck,
     iconColor: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30',
     badge: 'Tài Khoản',
-    highlights: ['Microsoft OAuth2 chính chủ', 'Tài khoản Local Offline', 'Chuyển đổi tức thì'],
-  },
-  {
-    id: 'navigation',
-    category: 'engine',
-    title: 'Menu Trượt 2 Tầng & Giao Diện Solid Dark SaaS',
-    tagline: 'Thiết kế hiện đại, tinh gọn với Drawer Navigation',
-    description: 'Thanh bên Sidebar phân cấp thông minh gom nhóm Quản lý Game (9 mục), giao diện kính tối sang trọng.',
-    icon: Layers,
-    iconColor: 'text-emerald-400 bg-emerald-500/15 border-emerald-500/30',
-    badge: 'UI / UX',
-    highlights: ['Solid Dark SaaS Aesthetic', '2-Level Drawer Slider', 'Không giật lag'],
+    highlights: ['Đăng nhập Microsoft', 'Tài khoản Offline miễn phí', 'Đổi tài khoản 1-click'],
   },
 ]
 
@@ -244,11 +149,11 @@ export function AboutScreen() {
                   v{pkg.version}
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                  FREE & Open Source
+                  Miễn phí
                 </span>
               </div>
               <p className="text-xs text-muted-foreground leading-relaxed max-w-xl">
-                Minecraft Launcher thế hệ mới dành cho game thủ: Khởi động siêu tốc, tối ưu FPS, tích hợp kho Mod Modrinth, 3D Skin Studio và sao lưu cấu hình 1-click.
+                Minecraft Launcher nhẹ mượt: Khởi động nhanh, tối ưu FPS, tải Modrinth trực tiếp và hỗ trợ 3D Skin Studio.
               </p>
             </div>
           </div>
@@ -261,7 +166,7 @@ export function AboutScreen() {
               onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
             >
               <HelpCircle size={13} />
-              Discord Báo Lỗi
+              Discord hỗ trợ
             </Button>
             <Button
               size="sm"
@@ -269,20 +174,18 @@ export function AboutScreen() {
               onClick={() => window.launcherApi.openExternal('https://letcute.com')}
             >
               <Globe size={13} />
-              Trang Chủ
+              Trang chủ
             </Button>
           </div>
         </div>
 
         {/* Tech Stack Badges */}
         <div className="mt-4 pt-3 border-t border-zinc-800/80 flex items-center gap-2 flex-wrap text-[11px] text-muted-foreground">
-          <span className="font-semibold text-zinc-300">Công nghệ:</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-zinc-300">Electron 43</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-cyan-400">React 19 & Vite</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-zinc-300">TailwindCSS</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-primary">XMCL Core Engine</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-purple-400">Skinview3D</span>
-          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-emerald-400">Adoptium Temurin</span>
+          <span className="font-semibold text-zinc-300">Nền tảng:</span>
+          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-zinc-300">Electron</span>
+          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-cyan-400">React & Vite</span>
+          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-primary">XMCL Core</span>
+          <span className="px-2 py-0.5 rounded-md bg-zinc-950/70 border border-zinc-800 text-emerald-400">OpenJDK Temurin</span>
         </div>
       </div>
 
@@ -290,8 +193,8 @@ export function AboutScreen() {
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div>
-            <h3 className="text-base font-bold text-foreground">Hệ Thống Tính Năng Toàn Diện ({FEATURE_LIST.length} Tính năng)</h3>
-            <p className="text-xs text-muted-foreground">Khám phá các công nghệ & tiện ích được tích hợp sẵn trong LetCuteMC</p>
+            <h3 className="text-base font-bold text-foreground">Tính năng nổi bật ({FEATURE_LIST.length})</h3>
+            <p className="text-xs text-muted-foreground">Các tiện ích có sẵn trong LetCuteMC</p>
           </div>
 
           {/* Category Tabs */}
@@ -316,7 +219,7 @@ export function AboutScreen() {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              🚀 Hiệu Năng & Khởi Động
+              Hiệu năng
             </button>
             <button
               onClick={() => setActiveCategory('management')}
@@ -327,7 +230,7 @@ export function AboutScreen() {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              📦 Quản Lý & Mods
+              Quản lý Mod
             </button>
             <button
               onClick={() => setActiveCategory('studio')}
@@ -338,7 +241,7 @@ export function AboutScreen() {
                   : 'text-muted-foreground hover:text-foreground'
               )}
             >
-              🎨 Studio & Thống Kê
+              Tiện ích & Skin
             </button>
           </div>
         </div>
@@ -418,10 +321,13 @@ export function AboutScreen() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap pt-1 text-[11px] text-muted-foreground">
-            <span>Bản quyền © 2026 LetCuteMC · All Rights Reserved</span>
+            <span>Bản quyền © 2026 LetCuteMC</span>
             <span>·</span>
             <span className="font-semibold text-zinc-300">Made with ❤️ in Vietnam</span>
           </div>
+          <p className="text-[10px] text-muted-foreground/75 leading-relaxed">
+            * LetCuteMC không liên kết hay được chứng thực bởi Mojang, Microsoft hay Prism Launcher. Minecraft là thương hiệu của Mojang AB. Luồng đăng nhập Microsoft sử dụng OAuth ID chung của cộng đồng mã nguồn mở.
+          </p>
         </div>
 
         {/* Right Side: Sleek & Compact Donate Box */}
