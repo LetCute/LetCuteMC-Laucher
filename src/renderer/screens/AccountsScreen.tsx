@@ -394,7 +394,6 @@ export const AccountsScreen = ({
       if (base64Skin) {
         setPendingSkinFile(base64Skin)
         setPendingSkinModel(skin.model)
-        showToast('success', `Đã chọn skin: ${skin.name}`)
       } else {
         throw new Error('Không thể nạp skin này')
       }
@@ -411,14 +410,11 @@ export const AccountsScreen = ({
       const base64Cape = await window.launcherApi.fetchMojangTexture(cape.url)
       if (base64Cape) {
         setPendingCapeFile(base64Cape)
-        showToast('success', `Đã chọn áo choàng: ${cape.name}`)
       } else {
         setPendingCapeFile(cape.url)
-        showToast('success', `Đã chọn áo choàng: ${cape.name}`)
       }
     } catch {
       setPendingCapeFile(cape.url)
-      showToast('success', `Đã chọn áo choàng: ${cape.name}`)
     }
   }
 

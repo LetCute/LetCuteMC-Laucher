@@ -24,35 +24,29 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
-  // Cooldown tracker for recently dismissed or shown toasts (anti-spam window: 3s)
-  const dismissedHistoryRef = useRef<Map<string, number>>(new Map())
+  // Cooldown tracker for recently dismissed or shown toasts (anti-spam window: 1.5s)
+  const lastShownRef = useRef<{ message: string; time: number } | null>(null)
 
   const showToast = useCallback((type: ToastType, message: string) => {
     const now = Date.now()
-    const lastSeen = dismissedHistoryRef.current.get(message)
-    if (lastSeen && now - lastSeen < 3000) {
-      return // Ignore spam if closed/seen within last 3 seconds
+    if (lastShownRef.current && lastShownRef.current.message === message && now - lastShownRef.current.time < 1500) {
+      return // Ignore duplicate toast within 1.5s
     }
+    lastShownRef.current = { message, time: now }
 
     const id = crypto.randomUUID()
     setToasts(prev => {
-      // Prevent duplicate active messages
+      // If there is already a toast of same message, don't add duplicate
       if (prev.some(t => t.message === message)) {
         return prev
       }
-      // Limit to 3 max toasts
-      return [...prev, { id, type, message }].slice(-3)
+      // Replace existing toast or keep max 1 single toast to prevent stacking spam
+      return [{ id, type, message }]
     })
   }, [])
 
   const removeToast = useCallback((id: string) => {
-    setToasts(prev => {
-      const target = prev.find(t => t.id === id)
-      if (target) {
-        dismissedHistoryRef.current.set(target.message, Date.now())
-      }
-      return prev.filter(t => t.id !== id)
-    })
+    setToasts(prev => prev.filter(t => t.id !== id))
   }, [])
 
   return (
@@ -73,45 +67,38 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
-function ToastItem({ toast, index, total, onClose }: { toast: Toast; index: number; total: number; onClose: () => void }) {
+function ToastItem({ toast, onClose }: { toast: Toast; index: number; total: number; onClose: () => void }) {
   useEffect(() => {
-    const timer = setTimeout(onClose, 5000)
+    const timer = setTimeout(onClose, 3200)
     return () => clearTimeout(timer)
   }, [onClose])
 
   const icons = {
-    error: <AlertCircle className="h-5 w-5 text-destructive" />,
-    success: <CheckCircle className="h-5 w-5 text-green-500" />,
-    info: <Info className="h-5 w-5 text-blue-400" />,
+    error: <AlertCircle className="h-4 w-4 text-white shrink-0" />,
+    success: <CheckCircle className="h-4 w-4 text-white shrink-0" />,
+    info: <Info className="h-4 w-4 text-white shrink-0" />,
   }
 
   const bgColors = {
-    error: 'bg-destructive/90 border-destructive text-destructive-foreground',
-    success: 'bg-green-600/90 border-green-600 text-white',
-    info: 'bg-blue-600/90 border-blue-600 text-white',
+    error: 'bg-rose-600/95 border-rose-500 text-white',
+    success: 'bg-emerald-600/95 border-emerald-500 text-white',
+    info: 'bg-sky-600/95 border-sky-500 text-white',
   }
-
-  const offset = total - 1 - index;
 
   return (
     <div
       className={cn(
-        'absolute bottom-0 right-0 w-full flex items-center gap-3 rounded-lg border px-4 py-3 shadow-xl backdrop-blur-md pointer-events-auto transition-all duration-300 ease-out',
+        'w-full flex items-center gap-2.5 rounded-xl border px-3.5 py-2.5 shadow-2xl backdrop-blur-md pointer-events-auto transition-all duration-200 animate-in fade-in slide-in-from-bottom-2',
         bgColors[toast.type]
       )}
-      style={{
-        transform: `translateY(-${offset * 16}px) scale(${1 - offset * 0.05})`,
-        zIndex: 100 - offset,
-        opacity: offset > 2 ? 0 : 1 - offset * 0.15,
-      }}
     >
       {icons[toast.type]}
-      <p className="flex-1 text-sm font-medium">{toast.message}</p>
+      <p className="flex-1 text-xs font-semibold leading-snug truncate">{toast.message}</p>
       <button
         onClick={onClose}
-        className="opacity-70 hover:opacity-100 transition-opacity"
+        className="opacity-70 hover:opacity-100 transition-opacity p-0.5"
       >
-        <XIcon className="h-4 w-4" />
+        <XIcon className="h-3.5 w-3.5" />
       </button>
     </div>
   )
