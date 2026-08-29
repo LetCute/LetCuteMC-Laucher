@@ -26,7 +26,7 @@ import { writeErrorLog } from '../services/media/errorLogService'
 import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
 import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
 
-const parentPort = process.parentPort
+const parentPort = (process as any).parentPort
 if (!parentPort) {
   throw new Error('launchWorker must run inside a utilityProcess.')
 }
