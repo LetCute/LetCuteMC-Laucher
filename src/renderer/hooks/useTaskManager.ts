@@ -33,11 +33,16 @@ export function useTaskManager() {
     setTasks(newTasks)
   }
 
+  const cancelTask = async (taskId: string) => {
+    return await window.launcherApi.cancelTask(taskId)
+  }
+
   const activeTaskCount = tasks.filter(t => t.status === 'running').length
 
   return {
     tasks,
     activeTaskCount,
+    cancelTask,
     clearCompleted
   }
 }

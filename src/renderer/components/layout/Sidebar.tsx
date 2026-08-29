@@ -166,12 +166,18 @@ export function Sidebar({
     }
   }, [shouldLaunchAfterPrepare, prepareState?.isReady, isPreparing])
 
-  // Show error toast if launch fails
+  // Show error toast if launch fails (only once per error)
+  const lastShownErrorRef = useState<{ error: string | null }>({ error: null })[0]
   useEffect(() => {
     if (isFailed && state?.error) {
-      showToast('error', state.error)
+      if (lastShownErrorRef.error !== state.error) {
+        lastShownErrorRef.error = state.error
+        showToast('error', state.error)
+      }
+    } else if (!isFailed) {
+      lastShownErrorRef.error = null
     }
-  }, [isFailed, state?.error, showToast])
+  }, [isFailed, state?.error, showToast, lastShownErrorRef])
 
   const handlePlay = async () => {
 

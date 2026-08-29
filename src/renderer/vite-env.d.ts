@@ -181,6 +181,7 @@ declare global {
 
       // Task Manager API
       getAllTasks(): Promise<import('../shared/types').BackgroundTask[]>
+      cancelTask(taskId: string): Promise<boolean>
       clearCompletedTasks(): Promise<void>
       onTasksUpdate(callback: (events: import('../shared/types').TaskManagerEvent) => void): () => void
 

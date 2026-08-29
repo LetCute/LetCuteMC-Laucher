@@ -55,6 +55,7 @@ export async function downloadTasks(
   tasks: DownloadTask[],
   options: {
     concurrency: number
+    signal?: AbortSignal
     onProgress?: (progress: DownloadProgress) => void
     onLog?: (level: LauncherLogLevel, message: string) => void
   }
@@ -71,6 +72,10 @@ export async function downloadTasks(
   options.onLog?.('info', `Bắt đầu tải ${totalTasks} tệp tin bằng ${limit} kết nối song song...`)
 
   const executeTask = async (task: DownloadTask) => {
+    if (options.signal?.aborted) {
+      throw new Error('Download aborted')
+    }
+
     const destDir = path.dirname(task.destinationPath)
     await fs.mkdir(destDir, { recursive: true })
 
@@ -97,14 +102,32 @@ export async function downloadTasks(
 
     // Try candidates (Official primary -> High speed mirror fallback)
     for (let candidateIdx = 0; candidateIdx < urlCandidates.length && !success; candidateIdx++) {
+      if (options.signal?.aborted) {
+        throw new Error('Download aborted')
+      }
+
       const currentUrl = urlCandidates[candidateIdx]
       let retries = 2
 
       while (retries >= 0 && !success) {
+        if (options.signal?.aborted) {
+          throw new Error('Download aborted')
+        }
+
         try {
           const controller = new AbortController()
+          const abortListener = () => controller.abort()
+          options.signal?.addEventListener('abort', abortListener, { once: true })
           const timeoutId = setTimeout(() => controller.abort(), 20000)
-          const response = await fetch(currentUrl, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
+          
+          let response: Response
+          try {
+            response = await fetch(currentUrl, { signal: controller.signal })
+          } finally {
+            clearTimeout(timeoutId)
+            options.signal?.removeEventListener('abort', abortListener)
+          }
+
           if (!response.ok) throw new Error(`HTTP status ${response.status}`)
           
           // ponytail: stream to disk — avoids buffering entire file in RAM
@@ -129,6 +152,12 @@ export async function downloadTasks(
           await fs.rename(tmpPath, task.destinationPath)
           success = true
         } catch (err) {
+          if (options.signal?.aborted) {
+            if (await pathExists(tmpPath)) {
+              await fs.unlink(tmpPath).catch(() => {})
+            }
+            throw new Error('Download aborted')
+          }
           lastError = err
           retries--
           if (await pathExists(tmpPath)) {
@@ -154,6 +183,10 @@ export async function downloadTasks(
   }
 
   while (queue.length > 0 || activeTasks.size > 0) {
+    if (options.signal?.aborted) {
+      throw new Error('Download aborted')
+    }
+
     while (activeTasks.size < limit && queue.length > 0) {
       const nextTask = queue.shift()!
       const p = executeTask(nextTask).then(() => {

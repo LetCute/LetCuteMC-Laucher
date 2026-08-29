@@ -327,14 +327,6 @@ export function getLaunchState(): LaunchJobState {
 }
 
 export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchResult> {
-  console.log('[LaunchManager] startLaunchJob', {
-    profileId: input.profileId,
-    version: input.version,
-    gameDir: input.gameDir,
-    javaPath: input.javaPath,
-    authType: input.auth?.type,
-  })
-
   try {
     const store = await getProfiles()
     const p = store.profiles.find(p => p.id === input.profileId)
@@ -351,7 +343,6 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Deduplicate and block if prepare worker is running for the same profile
   const { isPrepareActiveForProfile } = await import('./prepareGameService.js')
   if (isPrepareActiveForProfile(input.profileId)) {
-    console.warn('[LaunchManager] Rejected: prepare worker is active for profile', input.profileId)
     return {
       ok: false,
       jobId: null,
@@ -361,7 +352,6 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
 
   const busy = ['validating', 'preparing', 'checking_java', 'checking_version', 'downloading', 'launching', 'running']
   if (currentWorker && busy.includes(currentState.status)) {
-    console.warn('[LaunchManager] Rejected: busy status=', currentState.status)
     return {
       ok: false,
       jobId: currentState.jobId,
@@ -371,13 +361,11 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
 
   // Terminate stale worker if any
   if (currentWorker) {
-    console.log('[LaunchManager] Terminating stale worker')
     currentWorker.kill()
     currentWorker = null
   }
 
   const jobId = crypto.randomUUID()
-  console.log('[LaunchManager] New jobId=', jobId)
 
   currentState = {
     jobId,
@@ -433,7 +421,6 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
 
   // Create worker
   const workerPath = getWorkerPath()
-  console.log('[LaunchManager] Spawning launchWorker at', workerPath)
 
   // Assert dependencies exist
   assertLaunchWorkerDependencies()

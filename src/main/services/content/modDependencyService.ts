@@ -56,6 +56,13 @@ const MOD_ID_TO_MODRINTH_MAP: Record<string, string> = {
   'kotlinforforge': 'kotlin-for-forge',
   'modmenu': 'modmenu',
 
+  // Minimap & Worldmap
+  'xaerominimap': 'xaeros-minimap',
+  'xaerominimapfair': 'xaeros-minimap-fair-play-edition',
+  'xaeroworldmap': 'xaeros-world-map',
+  'xaerolib': 'xaerolib',
+  'journeymap': 'journeymap',
+
   // Performance & Shaders
   'sodium': 'sodium',
   'rubidium': 'rubidium',
@@ -125,8 +132,17 @@ function normalizeModId(id: string): string {
 }
 
 export function extractBaseMinecraftVersion(version: string): string {
-  const match = version.match(/1\.\d+(?:\.\d+)?/)
-  return match ? match[0] : version
+  // Strip loader prefixes like fabric-loader-0.16.10-1.21.1 or 26.2-fabric0.19.3
+  const clean = version.replace(/^(?:fabric|quilt|neoforge|forge)-loader-[^-]+-/i, '')
+  // Match version format like 26.2-fabric0.19.3 -> 26.2
+  const matchLoaderSuffix = clean.match(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge)/i)
+  if (matchLoaderSuffix) return matchLoaderSuffix[1]
+  // Match standard 1.x or 1.x.y version
+  const match = clean.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
+  if (match) return match[1]
+  const matchGeneral = clean.match(/^(\d+\.\d+(?:\.\d+)?)/)
+  if (matchGeneral) return matchGeneral[1]
+  return clean
 }
 
 export function detectLoaderFromVersion(versionStr: string): 'fabric' | 'quilt' | 'forge' | 'neoforge' | 'unknown' {
@@ -164,6 +180,30 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         for (const p of json.provides) {
           if (typeof p === 'string') provides.push(p)
           else if (p && typeof p.id === 'string') provides.push(p.id)
+        }
+      }
+
+      // Check nested jars (JiJ - Jar-in-Jar) for provided mods/libraries
+      const nestedJarEntries = zip.getEntries().filter((e: any) => 
+        !e.isDirectory && (e.entryName.startsWith('META-INF/jars/') || e.entryName.startsWith('META-INF/jarjar/')) && e.entryName.endsWith('.jar')
+      )
+      for (const nestedEntry of nestedJarEntries) {
+        try {
+          const nestedBuf = nestedEntry.getData()
+          const nestedZip = new AdmZip(nestedBuf)
+          const nestedFabric = nestedZip.getEntry('fabric.mod.json')
+          if (nestedFabric) {
+            const nestedJson = JSON.parse(nestedZip.readAsText(nestedFabric))
+            if (nestedJson.id) provides.push(nestedJson.id)
+            if (Array.isArray(nestedJson.provides)) {
+              for (const np of nestedJson.provides) {
+                if (typeof np === 'string') provides.push(np)
+                else if (np && typeof np.id === 'string') provides.push(np.id)
+              }
+            }
+          }
+        } catch {
+          // ignore nested jar parse error
         }
       }
 
@@ -343,52 +383,73 @@ export async function resolveMissingDependencyOnModrinth(
 
   try {
     // 1. Try direct project versions lookup by candidate slug
-    const versionsUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(candidateSlug)}/version?game_versions=["${encodeURIComponent(baseMcVer)}"]&loaders=["${encodeURIComponent(targetLoader)}"]`
-    const controller = new AbortController()
-    const timeoutId = setTimeout(() => controller.abort(), 12000)
-    const res = await fetch(versionsUrl, {
-      signal: controller.signal,
-      headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
-    }).finally(() => clearTimeout(timeoutId))
-
-    let projectData: any = null
-    let versionsData: any[] = []
-
-    if (res.ok) {
-      versionsData = (await res.json()) as any[]
-      if (Array.isArray(versionsData) && versionsData.length > 0) {
-        // Fetch project metadata
-        const projRes = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(candidateSlug)}`, {
+    const fetchVersions = async (slugOrId: string) => {
+      const vUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(slugOrId)}/version?game_versions=["${encodeURIComponent(baseMcVer)}"]&loaders=["${encodeURIComponent(targetLoader)}"]`
+      const c = new AbortController()
+      const t = setTimeout(() => c.abort(), 12000)
+      try {
+        const r = await fetch(vUrl, {
+          signal: c.signal,
           headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
         })
-        if (projRes.ok) {
-          projectData = (await projRes.json()) as any
+        if (r.ok) {
+          const arr = (await r.json()) as any[]
+          if (Array.isArray(arr) && arr.length > 0) return arr
         }
+      } catch {} finally {
+        clearTimeout(t)
+      }
+      return []
+    }
+
+    let versionsData: any[] = await fetchVersions(candidateSlug)
+    let projectData: any = null
+
+    if (versionsData.length > 0) {
+      const projRes = await fetch(`https://api.modrinth.com/v2/project/${encodeURIComponent(candidateSlug)}`, {
+        headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
+      }).catch(() => null)
+      if (projRes && projRes.ok) {
+        projectData = await projRes.json().catch(() => null)
       }
     }
 
     // 2. Fallback to search if direct lookup returned empty
     if (!projectData || versionsData.length === 0) {
-      const searchUrl = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(normalizedId)}&facets=[["project_type:mod"],["versions:${encodeURIComponent(baseMcVer)}"],["categories:${encodeURIComponent(targetLoader)}"]]&limit=3`
-      const searchRes = await fetch(searchUrl, { headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' } })
-      if (searchRes.ok) {
-        const searchJson = (await searchRes.json()) as any
-        if (searchJson && searchJson.hits && searchJson.hits.length > 0) {
-          const topHit = searchJson.hits[0]
-          const hitProjectId = topHit.project_id || topHit.slug
+      // Generate multiple search terms to maximize hit rate for any dynamic/unknown mod IDs
+      const rawLetters = normalizedId.replace(/[^a-z0-9]/gi, '')
+      const spaced = normalizedId.replace(/[-_.]/g, ' ')
+      const withoutNumbersOrVersions = normalizedId.replace(/(?:-?v?\d+)+/g, '').replace(/[-_.]/g, ' ').trim()
+      const queryTerms = Array.from(new Set([
+        candidateSlug,
+        normalizedId,
+        spaced,
+        withoutNumbersOrVersions,
+        rawLetters,
+      ])).filter(Boolean)
 
-          // Get versions for top hit
-          const hitVerUrl = `https://api.modrinth.com/v2/project/${encodeURIComponent(hitProjectId)}/version?game_versions=["${encodeURIComponent(baseMcVer)}"]&loaders=["${encodeURIComponent(targetLoader)}"]`
-          const hitVerRes = await fetch(hitVerUrl, { headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' } })
-          if (hitVerRes.ok) {
-            versionsData = (await hitVerRes.json()) as any[]
-            projectData = {
-              id: topHit.project_id,
-              slug: topHit.slug,
-              title: topHit.title,
-              icon_url: topHit.icon_url,
-              description: topHit.description,
+      for (const queryTerm of queryTerms) {
+        const searchUrl = `https://api.modrinth.com/v2/search?query=${encodeURIComponent(queryTerm)}&facets=[["project_type:mod"],["versions:${encodeURIComponent(baseMcVer)}"],["categories:${encodeURIComponent(targetLoader)}"]]&limit=5`
+        const searchRes = await fetch(searchUrl, { headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' } }).catch(() => null)
+        if (searchRes && searchRes.ok) {
+          const searchJson = (await searchRes.json().catch(() => null)) as any
+          if (searchJson && searchJson.hits && searchJson.hits.length > 0) {
+            for (const hit of searchJson.hits) {
+              const hitId = hit.project_id || hit.slug
+              const hitVers = await fetchVersions(hitId)
+              if (hitVers.length > 0) {
+                versionsData = hitVers
+                projectData = {
+                  id: hit.project_id,
+                  slug: hit.slug,
+                  title: hit.title,
+                  icon_url: hit.icon_url,
+                  description: hit.description,
+                }
+                break
+              }
             }
+            if (projectData && versionsData.length > 0) break
           }
         }
       }

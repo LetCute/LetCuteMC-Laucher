@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import type {
   LauncherProfile,
@@ -9,6 +10,7 @@ import type {
 import {
   getProfilesFilePath,
   getLauncherDataDirectory,
+  getDefaultMinecraftDirectory,
   ensureLauncherDataDirectory,
   readJsonFile,
   writeJsonFile,
@@ -60,6 +62,70 @@ function normalizeProfile(raw: any): LauncherProfile {
   };
 }
 
+/**
+ * Auto-discover profile directories under .minecraft/profiles/ and register any missing profiles.
+ */
+async function discoverDiskProfiles(existingProfiles: LauncherProfile[]): Promise<LauncherProfile[]> {
+  const discovered: LauncherProfile[] = [];
+  try {
+    const defaultMcDir = getDefaultMinecraftDirectory();
+    const profilesBaseDir = path.join(defaultMcDir, 'profiles');
+    if (!(await pathExists(profilesBaseDir))) return discovered;
+
+    const entries = await fs.readdir(profilesBaseDir, { withFileTypes: true });
+    const rec = recommendPerformance();
+
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      const folderName = entry.name;
+      const folderPath = path.join(profilesBaseDir, folderName);
+
+      // Check if already registered by path or name
+      const alreadyExists = existingProfiles.some(
+        p => (p.gameDir && path.resolve(p.gameDir) === path.resolve(folderPath)) ||
+             p.name.trim().toLowerCase() === folderName.trim().toLowerCase()
+      );
+      if (alreadyExists) continue;
+
+      // Determine best minecraftVersion from versions/ subfolder
+      let detectedVersion = '1.21.1';
+      const versionsDir = path.join(folderPath, 'versions');
+      if (await pathExists(versionsDir)) {
+        try {
+          const versionEntries = await fs.readdir(versionsDir, { withFileTypes: true });
+          const versionFolders = versionEntries.filter(e => e.isDirectory()).map(e => e.name);
+          if (versionFolders.length > 0) {
+            // Prefer version with loader if present, or first found
+            const loaderVer = versionFolders.find(v => v.includes('fabric') || v.includes('forge') || v.includes('neoforge') || v.includes('quilt'));
+            detectedVersion = loaderVer || versionFolders[0];
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      const now = new Date().toISOString();
+      const newProfile: LauncherProfile = {
+        id: crypto.randomUUID(),
+        name: folderName,
+        minecraftVersion: detectedVersion,
+        gameDir: folderPath,
+        mcRootDir: defaultMcDir,
+        minMemoryMb: rec.recommendedMinRam,
+        maxMemoryMb: rec.recommendedMaxRam,
+        javaPath: null,
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      discovered.push(newProfile);
+    }
+  } catch (err) {
+    console.warn('[profileService] Error scanning profiles directory on disk:', err);
+  }
+
+  return discovered;
+}
 
 export async function getProfiles(): Promise<ProfilesStore> {
   const filePath = getProfilesFilePath();
@@ -68,12 +134,25 @@ export async function getProfiles(): Promise<ProfilesStore> {
   // Migrate legacy profiles
   const migratedProfiles: LauncherProfile[] = (raw.profiles ?? []).map(normalizeProfile);
 
+  // Auto-discover profile folders in .minecraft/profiles/
+  const discovered = await discoverDiskProfiles(migratedProfiles);
+  if (discovered.length > 0) {
+    migratedProfiles.push(...discovered);
+  }
+
+  let activeProfileId = raw.activeProfileId ?? null;
+  if (!activeProfileId && migratedProfiles.length > 0) {
+    activeProfileId = migratedProfiles[0].id;
+  } else if (activeProfileId && !migratedProfiles.some(p => p.id === activeProfileId)) {
+    activeProfileId = migratedProfiles.length > 0 ? migratedProfiles[0].id : null;
+  }
+
   let store: ProfilesStore = {
-    activeProfileId: raw.activeProfileId ?? null,
+    activeProfileId,
     profiles: migratedProfiles,
   };
 
-  // Persist cleaned store if migration happened
+  // Persist cleaned/synchronized store if changes happened
   if (JSON.stringify(raw) !== JSON.stringify(store)) {
     await writeJsonFile(filePath, store);
   }

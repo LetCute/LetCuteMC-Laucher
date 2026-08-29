@@ -133,6 +133,9 @@ export function registerSystemIpc(): void {
 
   // Task Manager
   handleIpc('tasks:get-all', () => taskManagerService.getAllTasks())
+  handleIpc('tasks:cancel', async (taskId: string) => {
+    return taskManagerService.cancelTask(taskId)
+  })
   handleIpc('tasks:clear-completed', () => {
     taskManagerService.clearCompletedTasks()
   })

@@ -135,7 +135,6 @@ export class ServerListService {
    */
   async injectServersToProfile(profileId: string, page: number = 1, targetVersion?: string): Promise<boolean> {
     try {
-      console.log(`[ServerListService] Fetching top servers for injection (page ${page}, targetVersion ${targetVersion})`)
       let topServers = await this.getTopServers(page)
 
       // Filter out offline servers and private servers (whitelist)
@@ -150,7 +149,6 @@ export class ServerListService {
       })
 
       if (topServers.length === 0) {
-        console.warn('[ServerListService] No servers found to inject')
         return false
       }
 
@@ -257,7 +255,6 @@ export class ServerListService {
       const outBuffer = nbtModule.writeUncompressed(rootData)
       fs.writeFileSync(serversDatPath, outBuffer)
 
-      console.log(`[ServerListService] Successfully injected ${newServersNbt.length} servers into ${serversDatPath}`)
       return true
     } catch (error) {
       console.error('[ServerListService] Error injecting servers:', error)

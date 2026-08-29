@@ -4,7 +4,8 @@ import {
   XCircle,
   Loader2,
   Trash2,
-  Check
+  Check,
+  Ban
 } from 'lucide-react'
 import { useTaskManager } from '../hooks/useTaskManager'
 import type { BackgroundTask } from '../../shared/types'
@@ -12,7 +13,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Button } from '@/components/ui/button'
 
 export default function TasksScreen() {
-  const { tasks, clearCompleted } = useTaskManager()
+  const { tasks, clearCompleted, cancelTask } = useTaskManager()
 
   return (
     <div className="px-6 pt-2 pb-6 h-full flex flex-col gap-6">
@@ -53,7 +54,7 @@ export default function TasksScreen() {
             <div className="flex flex-col gap-3">
               <AnimatePresence mode="popLayout">
                 {tasks.map((task) => (
-                  <TaskCard key={task.id} task={task} />
+                  <TaskCard key={task.id} task={task} onCancel={cancelTask} />
                 ))}
               </AnimatePresence>
             </div>
@@ -64,10 +65,11 @@ export default function TasksScreen() {
   )
 }
 
-function TaskCard({ task }: { task: BackgroundTask }) {
+function TaskCard({ task, onCancel }: { task: BackgroundTask; onCancel: (id: string) => void }) {
   const isRunning = task.status === 'running'
   const isSuccess = task.status === 'success'
   const isError = task.status === 'error'
+  const isCancelled = task.status === 'cancelled'
 
   return (
     <motion.div
@@ -94,11 +96,14 @@ function TaskCard({ task }: { task: BackgroundTask }) {
               ? 'border-emerald-500 bg-emerald-500 text-white'
               : isError
                 ? 'border-red-500 bg-red-500 text-white'
-                : 'border-border bg-background',
+                : isCancelled
+                  ? 'border-amber-500 bg-amber-500 text-white'
+                  : 'border-border bg-background',
         ].join(' ')}>
           {isRunning && <Loader2 size={12} strokeWidth={3} className="animate-spin" />}
           {isSuccess && <Check size={12} strokeWidth={3} />}
           {isError && <XCircle size={12} strokeWidth={3} />}
+          {isCancelled && <Ban size={12} strokeWidth={3} />}
         </div>
 
         <div className="flex flex-col gap-1 min-w-0 flex-1">
@@ -116,11 +121,23 @@ function TaskCard({ task }: { task: BackgroundTask }) {
             )}
           </div>
 
-          <div className={`text-xs ${isError ? 'text-red-400/90' : 'text-muted-foreground'} line-clamp-1`}>
+          <div className={`text-xs ${isError ? 'text-red-400/90' : isCancelled ? 'text-amber-400/90' : 'text-muted-foreground'} line-clamp-1`}>
             {task.message}
           </div>
         </div>
       </div>
+
+      {isRunning && (
+        <Button
+          onClick={() => onCancel(task.id)}
+          variant="ghost"
+          size="sm"
+          className="h-8 px-2.5 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0 relative z-10"
+        >
+          <Ban size={13} className="mr-1" />
+          Hủy
+        </Button>
+      )}
     </motion.div>
   )
 }

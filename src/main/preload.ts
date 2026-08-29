@@ -398,6 +398,10 @@ const launcherApi = {
     return ipcRenderer.invoke('tasks:get-all')
   },
 
+  cancelTask(taskId: string): Promise<boolean> {
+    return ipcRenderer.invoke('tasks:cancel', taskId)
+  },
+
   clearCompletedTasks(): Promise<void> {
     return ipcRenderer.invoke('tasks:clear-completed')
   },

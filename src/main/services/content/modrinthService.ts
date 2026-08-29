@@ -142,22 +142,14 @@ async function _installMrpack(
 ): Promise<string> {
   // 3. Extract and parse modrinth.index.json
   taskManagerService.updateTaskProgress(taskId, 15, `Đang phân tích cấu trúc Modpack...`)
-  // ponytail: stream-based ZIP reading — avoids loading entire .mrpack into RAM
   const unzipper = await import('unzipper')
-  const { createReadStream: fsCreateReadStream } = await import('node:fs')
   
-  // First pass: read modrinth.index.json only
-  let indexData: any = null
-  const indexStream = fsCreateReadStream(mrpackPath).pipe(unzipper.Parse())
-  for await (const entry of indexStream) {
-    if (entry.path === 'modrinth.index.json') {
-      const content = await entry.buffer()
-      indexData = JSON.parse(content.toString('utf-8'))
-    } else {
-      entry.autodrain()
-    }
-  }
-  if (!indexData) throw new Error('File .mrpack không hợp lệ (thiếu modrinth.index.json)')
+  const zipDirectory = await unzipper.Open.file(mrpackPath)
+  const indexFile = zipDirectory.files.find((f: any) => f.path === 'modrinth.index.json')
+  if (!indexFile) throw new Error('File .mrpack không hợp lệ (thiếu modrinth.index.json)')
+
+  const indexContent = await indexFile.buffer()
+  const indexData = JSON.parse(indexContent.toString('utf-8'))
   
   const minecraftVersion = indexData.dependencies?.minecraft
   if (!minecraftVersion) throw new Error('Không xác định được phiên bản Minecraft')
@@ -179,6 +171,21 @@ async function _installMrpack(
     minMemoryMb: 2048,
     maxMemoryMb: 4096,
   })
+
+  // Register rollback callback in case task is cancelled
+  taskManagerService.registerCancelCallback(taskId, async () => {
+    try {
+      const { deleteProfile } = await import('../profile/profileService.js')
+      await deleteProfile(createdProfile.id)
+    } catch (rollbackErr) {
+      console.error('[Modrinth] Rollback failed on cancel:', rollbackErr)
+    }
+  })
+
+  if (taskManagerService.isCancelled(taskId)) {
+    throw new Error('Đã hủy tác vụ')
+  }
+
   taskManagerService.updateTaskProgress(taskId, 20, `Đã tạo Cấu hình game riêng biệt: ${profileName}`)
   
   if (iconUrl) {
@@ -289,6 +296,7 @@ async function _installMrpack(
     
     await downloadTasks(tasks, {
       concurrency: 8,
+      signal: taskManagerService.getAbortSignal(taskId),
       onProgress: (prog) => {
         if (prog.current % 10 === 0 || prog.current === prog.total) {
            const mappedPercent = 35 + (prog.percent * 0.45) // scale 0-100 to 35-80
@@ -303,32 +311,30 @@ async function _installMrpack(
     })
   }
   
-  // 7. Extract overrides & client-overrides to profileGameDir (streaming)
+  // 7. Extract overrides & client-overrides to profileGameDir
   const overrideFolders = [indexData.overrides || 'overrides', 'client-overrides']
   taskManagerService.updateTaskProgress(taskId, 85, `Đang giải nén tệp cấu hình (overrides)...`)
-  
-  // ponytail: second pass streams overrides — no full ZIP in RAM
-  const overrideStream = fsCreateReadStream(mrpackPath).pipe(unzipper.Parse())
-  for await (const entry of overrideStream) {
-    let matched = false
+
+  for (const file of zipDirectory.files) {
+    if (taskManagerService.isCancelled(taskId)) {
+      throw new Error('Đã hủy tác vụ')
+    }
     for (const folderName of overrideFolders) {
-      if (entry.path.startsWith(folderName + '/')) {
-        const relativePath = entry.path.substring(folderName.length + 1)
-        if (!relativePath) { entry.autodrain(); matched = true; break }
-        
+      if (file.path.startsWith(folderName + '/')) {
+        const relativePath = file.path.substring(folderName.length + 1)
+        if (!relativePath) break
+
         const destPath = path.join(profileGameDir, relativePath)
-        if (entry.type === 'Directory') {
+        if (file.type === 'Directory') {
           await fs.mkdir(destPath, { recursive: true })
-          entry.autodrain()
         } else {
           await fs.mkdir(path.dirname(destPath), { recursive: true })
-          await pipeline(entry, createWriteStream(destPath))
+          const buf = await file.buffer()
+          await fs.writeFile(destPath, buf)
         }
-        matched = true
         break
       }
     }
-    if (!matched) entry.autodrain()
   }
   
   taskManagerService.completeTask(taskId, `Cài đặt Modpack hoàn tất thành công! Đã tạo cấu hình ${profileName}.`, { profileId: createdProfile.id })
@@ -434,15 +440,44 @@ async function _installModrinthModRecursive(
   taskManagerService.updateTaskProgress(taskId, 50, `Đang tải ${primaryFile.filename}...`)
   
   // ponytail: stream download to disk
+  const signal = taskManagerService.getAbortSignal(taskId)
   const controller = new AbortController()
+  const abortListener = () => controller.abort()
+  signal?.addEventListener('abort', abortListener, { once: true })
   const timeoutId = setTimeout(() => controller.abort(), 60000)
-  const res = await fetch(primaryFile.url, { signal: controller.signal }).finally(() => clearTimeout(timeoutId))
+
+  let res: Response
+  try {
+    res = await fetch(primaryFile.url, { signal: controller.signal })
+  } finally {
+    clearTimeout(timeoutId)
+    signal?.removeEventListener('abort', abortListener)
+  }
+
+  if (taskManagerService.isCancelled(taskId)) {
+    throw new Error('Đã hủy tác vụ')
+  }
+
   if (!res.ok) throw new Error(`Failed to download ${primaryFile.url}`)
   if (!res.body) throw new Error('Response body is null')
   await pipeline(
     Readable.fromWeb(res.body as any),
     createWriteStream(destFile)
   )
+
+  // Track created file for rollback on cancel
+  taskManagerService.registerCancelCallback(taskId, async () => {
+    try {
+      await fs.unlink(destFile).catch(() => {})
+    } catch (err) {
+      console.error('[Modrinth] Error unlinking downloaded mod on cancel:', err)
+    }
+  })
+
+  if (taskManagerService.isCancelled(taskId)) {
+    await fs.unlink(destFile).catch(() => {})
+    throw new Error('Đã hủy tác vụ')
+  }
 
   const installations = await getStoreInstallations(gameDir)
   
@@ -480,12 +515,19 @@ async function _installModrinthModRecursive(
         } else if (dep.project_id) {
           taskManagerService.updateTaskProgress(taskId, 85, `Đang tải mod phụ thuộc...`)
           try {
-             const projVersions = await client.getProjectVersions(dep.project_id)
-             if (projVersions && projVersions.length > 0) {
-                 await _installModrinthModRecursive((projVersions[0] as any).id, gameDir, taskId, installedSet, depth + 1)
-             }
+            // Match dependencies with the parent mod's game versions and loaders
+            const parentGv = versionInfo.game_versions || []
+            const parentLoaders = versionInfo.loaders || []
+            const projVersions = await client.getProjectVersions(dep.project_id, {
+              gameVersions: parentGv.length > 0 ? parentGv : undefined,
+              loaders: parentLoaders.length > 0 ? parentLoaders : undefined,
+            })
+            if (projVersions && projVersions.length > 0) {
+              const matchedVer = (projVersions as any[]).find((v: any) => v.version_type === 'release') || projVersions[0]
+              await _installModrinthModRecursive((matchedVer as any).id, gameDir, taskId, installedSet, depth + 1)
+            }
           } catch(e) {
-             console.warn(`Không thể tải dependency dự án ${dep.project_id}`)
+            console.warn(`Không thể tải dependency dự án ${dep.project_id}`)
           }
         }
       }

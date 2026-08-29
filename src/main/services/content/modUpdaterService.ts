@@ -197,7 +197,7 @@ export class ModUpdaterService {
         return
       }
 
-      // Query versions for this project matching current Minecraft version & Loader
+      // Query versions for this project strictly matching current Minecraft version & Loader
       const gameVersionsQuery = encodeURIComponent(JSON.stringify([baseMcVersion]))
       const loadersQuery = encodeURIComponent(JSON.stringify([loader]))
       const versionsList = await fetchModrinthJson<any[]>(
@@ -209,8 +209,20 @@ export class ModUpdaterService {
         return
       }
 
-      // Latest release
-      const latestVerObj = versionsList[0]
+      // Filter to ensure version supports the exact Minecraft version and target loader
+      const compatibleVersions = versionsList.filter((v: any) => {
+        const hasMc = Array.isArray(v.game_versions) && v.game_versions.includes(baseMcVersion)
+        const hasLoader = Array.isArray(v.loaders) && v.loaders.includes(loader)
+        return hasMc && hasLoader
+      })
+
+      if (compatibleVersions.length === 0) {
+        upToDateCount++
+        return
+      }
+
+      // Latest release among compatible versions
+      const latestVerObj = compatibleVersions.find((v: any) => v.version_type === 'release') || compatibleVersions[0]
       const latestVerNumber = latestVerObj.version_number || latestVerObj.name || ''
       const primaryFile = (latestVerObj.files || []).find((f: any) => f.primary) || latestVerObj.files?.[0]
 

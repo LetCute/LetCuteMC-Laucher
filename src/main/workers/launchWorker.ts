@@ -333,6 +333,74 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
 
     await injectDefaultOptions(input.gameDir, jobId)
 
+    // ── Check & Auto-Fix Mod Dependencies & Incompatibilities ────────────
+    try {
+      const modsFolder = path.join(input.gameDir, 'mods')
+      const hasMods = await pathExists(modsFolder)
+      if (hasMods) {
+        const { detectLoaderFromVersion, inspectModDependencies, autoFixModDependencies } = await import('../services/content/modDependencyService')
+        const { ModConflictService } = await import('../services/content/modConflictService')
+        const conflictService = new ModConflictService()
+        const detectedLoader = detectLoaderFromVersion(input.version)
+
+        // 1. Pre-flight check incompatible mods (e.g. wrong MC version or wrong loader)
+        try {
+          const conflictResult = await conflictService.checkModConflicts(input.gameDir, input.version, detectedLoader)
+          const autoDisableConflicts = conflictResult.conflicts.filter(
+            (c) => c.severity === 'critical' && c.recommendedAction === 'disable_mod' && c.targetFileName
+          )
+          for (const conflict of autoDisableConflicts) {
+            if (conflict.targetFileName) {
+              await conflictService.resolveConflict(
+                input.gameDir,
+                { conflictId: conflict.id, action: 'disable_mod', targetFileName: conflict.targetFileName },
+                input.version,
+                detectedLoader
+              )
+              postLog(
+                jobId,
+                'warn',
+                `[AutoShield] Đã tự động vô hiệu hóa mod không tương thích: ${conflict.targetFileName} (${conflict.title})`
+              )
+            }
+          }
+        } catch (conflictErr) {
+          postLog(jobId, 'warn', `[AutoShield] Bỏ qua kiểm tra xung đột: ${conflictErr instanceof Error ? conflictErr.message : String(conflictErr)}`)
+        }
+
+        // 2. Scan & auto-fix missing dependencies
+        const scanResult = await inspectModDependencies(input.gameDir, input.version, detectedLoader)
+
+        if (scanResult.missingDependencies.length > 0) {
+          postLog(jobId, 'warn', `[LaunchWorker] Phát hiện ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu: ${scanResult.missingDependencies.map(d => d.modId).join(', ')}`)
+          postProgress(jobId, {
+            status: 'preparing',
+            title: 'Tự động tải Mod thiếu',
+            message: `Đang tải ${scanResult.missingDependencies.length} mod phụ thuộc còn thiếu...`,
+            percent: 25,
+          })
+
+          const fixResult = await autoFixModDependencies(
+            input.gameDir,
+            input.version,
+            detectedLoader,
+            (msg) => {
+              postLog(jobId, 'info', `[LaunchWorker] ${msg}`)
+            }
+          )
+
+          if (fixResult.downloadedMods.length > 0) {
+            postLog(jobId, 'success', `[LaunchWorker] ${fixResult.message}`)
+          }
+          if (fixResult.unresolvedMods.length > 0) {
+            postLog(jobId, 'warn', `[LaunchWorker] Chưa thể tự động tải các mod: ${fixResult.unresolvedMods.join(', ')}`)
+          }
+        }
+      }
+    } catch (modErr) {
+      postLog(jobId, 'warn', `[LaunchWorker] Bỏ qua kiểm tra mod: ${modErr instanceof Error ? modErr.message : String(modErr)}`)
+    }
+
     // XMCL parse version:
     // - Với profile modpack (có mcRootDir hoặc gameDir nằm trong profiles/):
     //   version files đã được copy vào gameDir/versions/ bởi prepareWorker
@@ -436,11 +504,14 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     }
 
     let lastErrorSummary = ''
+    const accumulatedLogs: string[] = []
 
     child.stdout?.on('data', (data: Buffer) => {
       const text = data.toString('utf8').trim()
       if (text) {
         postLog(jobId, 'info', text)
+        accumulatedLogs.push(text)
+        if (accumulatedLogs.length > 200) accumulatedLogs.shift()
         if (text.includes('Exception') || text.includes('Error') || text.includes('IncompatibleModException') || text.includes('net.fabricmc.loader')) {
           lastErrorSummary = text
         }
@@ -451,16 +522,84 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       const text = data.toString('utf8').trim()
       if (text) {
         postLog(jobId, 'error', text)
+        accumulatedLogs.push(text)
+        if (accumulatedLogs.length > 200) accumulatedLogs.shift()
         lastErrorSummary = text
       }
     })
 
-    child.on('exit', (code) => {
+    child.on('exit', async (code) => {
       const ok = code === 0 || code === null
       if (!ok) {
+        // Tự động phân tích nguyên nhân crash và vô hiệu hóa mod gây crash nếu phát hiện
+        let disabledModMessage = ''
+        try {
+          const logCombined = accumulatedLogs.join('\n')
+          // Đọc thêm tệp crash-reports mới nhất nếu có
+          let crashReportContent = ''
+          const crashDir = path.join(input.gameDir, 'crash-reports')
+          if (await pathExists(crashDir)) {
+            const crashEntries = await fs.readdir(crashDir).catch(() => [])
+            const crashFiles = crashEntries.filter((f) => f.endsWith('.txt') || f.endsWith('.log'))
+            if (crashFiles.length > 0) {
+              crashFiles.sort()
+              const latestCrashFile = path.join(crashDir, crashFiles[crashFiles.length - 1])
+              const stat = await fs.stat(latestCrashFile).catch(() => null)
+              if (stat && Date.now() - stat.mtimeMs < 60000) {
+                crashReportContent = await fs.readFile(latestCrashFile, 'utf8').catch(() => '')
+              }
+            }
+          }
+
+          const fullDiagnosticText = `${crashReportContent}\n${logCombined}`
+          const patterns = [
+            /from mod ([a-zA-Z0-9_\-]+) failed injection/i,
+            /in config \[([a-zA-Z0-9_\-]+)(?:\.mixins?)?\.json\]/i,
+            /\[([a-zA-Z0-9_\-]+)(?:\.mixins?)?\.json:[^\]]+\]/i,
+            /mixins\.([a-zA-Z0-9_\-]+)\.json/i,
+            /([a-zA-Z0-9_\-]+)\.mixins\.json/i,
+            /net\.fabricmc\.loader\.impl\.FormattedException:\s+Mod\s+'([^']+)'/i,
+            /ModLoadingException:\s+Mod\s+([a-zA-Z0-9_\-]+)/i,
+          ]
+
+          let offendingModId: string | null = null
+          for (const p of patterns) {
+            const match = fullDiagnosticText.match(p)
+            if (match && match[1]) {
+              const candidate = match[1].toLowerCase().replace(/_/g, '-')
+              if (!['fabric', 'minecraft', 'sponge', 'asm', 'default', 'client', 'common'].includes(candidate)) {
+                offendingModId = candidate
+                break
+              }
+            }
+          }
+
+          if (offendingModId) {
+            const modsDir = path.join(input.gameDir, 'mods')
+            if (await pathExists(modsDir)) {
+              const modFiles = await fs.readdir(modsDir).catch(() => [])
+              const jarFiles = modFiles.filter((f) => f.endsWith('.jar'))
+              const targetJar = jarFiles.find((f) => f.toLowerCase().replace(/_/g, '-').includes(offendingModId!))
+              if (targetJar) {
+                const currentPath = path.join(modsDir, targetJar)
+                const disabledPath = `${currentPath}.disabled`
+                await fs.rename(currentPath, disabledPath).catch(() => {})
+                disabledModMessage = ` [AutoShield: Đã tự động tắt mod '${targetJar}' để tránh crash]`
+                postLog(
+                  jobId,
+                  'warn',
+                  `[AutoShield] Phát hiện lỗi do mod ${targetJar}. Đã tự động vô hiệu hóa thành ${targetJar}.disabled.`
+                )
+              }
+            }
+          }
+        } catch (diagErr) {
+          // Ignore diagnosis error
+        }
+
         const errMsg = lastErrorSummary
-          ? `Lỗi khởi chạy Minecraft (mã ${code}): ${lastErrorSummary.slice(0, 200)}`
-          : `Minecraft thoát lỗi với mã: ${code}`
+          ? `Lỗi khởi chạy Minecraft (mã ${code}): ${lastErrorSummary.slice(0, 200)}${disabledModMessage}`
+          : `Minecraft thoát lỗi với mã: ${code}${disabledModMessage}`
         postLog(jobId, 'error', errMsg)
         postStatus(jobId, 'failed')
         postMsg({ type: 'finished', jobId, ok: false, message: errMsg })

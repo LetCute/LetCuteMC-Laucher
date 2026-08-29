@@ -1,5 +1,5 @@
 import type { LauncherProfile } from '../../shared/types'
-import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Share2, DownloadCloud, FileArchive } from 'lucide-react'
+import { Layers, Edit2, Trash2, Check, Play, PlusCircle, Share2, DownloadCloud, FileArchive, RefreshCw } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
@@ -17,6 +17,7 @@ interface ProfilesScreenProps {
   onEdit: (profile: LauncherProfile) => void
   onDelete: (id: string) => void
   onLaunchProfile: (id: string) => Promise<void>
+  onReloadProfiles?: () => Promise<void>
   isWorking?: boolean
 }
 
@@ -76,14 +77,26 @@ export const ProfilesScreen = ({
   onEdit,
   onDelete,
   onLaunchProfile,
+  onReloadProfiles,
   isWorking,
 }: ProfilesScreenProps) => {
   const [exportProfile, setExportProfile] = useState<LauncherProfile | null>(null)
   const [importPackagePath, setImportPackagePath] = useState<string | null>(null)
   const [isImportModalOpen, setIsImportModalOpen] = useState(false)
   const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const [isReloading, setIsReloading] = useState(false)
 
   const canLaunch = !isWorking
+
+  const handleReload = async () => {
+    if (!onReloadProfiles || isReloading) return
+    setIsReloading(true)
+    try {
+      await onReloadProfiles()
+    } finally {
+      setIsReloading(false)
+    }
+  }
 
   const handleLaunchProfileDirectly = async (profileId: string) => {
     onSetActive(profileId)
@@ -145,6 +158,20 @@ export const ProfilesScreen = ({
             </p>
           </div>
           <div className="flex items-center gap-2">
+            {onReloadProfiles && (
+              <Button
+                onClick={() => void handleReload()}
+                disabled={isWorking || isReloading}
+                variant="outline"
+                size="sm"
+                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+                title="Tải lại danh sách cấu hình và quét thư mục instance"
+              >
+                <RefreshCw size={14} className={cn("text-primary", isReloading && "animate-spin")} />
+                Tải lại
+              </Button>
+            )}
+
             <Button
               onClick={handleOpenImportFileDialog}
               disabled={isWorking}

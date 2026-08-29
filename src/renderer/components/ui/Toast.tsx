@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, type ReactNode } from 'react'
+import { useState, useEffect, createContext, useContext, useRef, useCallback, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 import { AlertCircle, CheckCircle, Info, XIcon } from 'lucide-react'
 
@@ -24,22 +24,36 @@ export function useToast() {
 
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<Toast[]>([])
+  // Cooldown tracker for recently dismissed or shown toasts (anti-spam window: 3s)
+  const dismissedHistoryRef = useRef<Map<string, number>>(new Map())
 
-  const showToast = (type: ToastType, message: string) => {
+  const showToast = useCallback((type: ToastType, message: string) => {
+    const now = Date.now()
+    const lastSeen = dismissedHistoryRef.current.get(message)
+    if (lastSeen && now - lastSeen < 3000) {
+      return // Ignore spam if closed/seen within last 3 seconds
+    }
+
     const id = crypto.randomUUID()
     setToasts(prev => {
-      // Prevent duplicate messages
+      // Prevent duplicate active messages
       if (prev.some(t => t.message === message)) {
-        return prev;
+        return prev
       }
       // Limit to 3 max toasts
-      return [...prev, { id, type, message }].slice(-3);
+      return [...prev, { id, type, message }].slice(-3)
     })
-  }
+  }, [])
 
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(t => t.id !== id))
-  }
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => {
+      const target = prev.find(t => t.id === id)
+      if (target) {
+        dismissedHistoryRef.current.set(target.message, Date.now())
+      }
+      return prev.filter(t => t.id !== id)
+    })
+  }, [])
 
   return (
     <ToastContext.Provider value={{ showToast }}>

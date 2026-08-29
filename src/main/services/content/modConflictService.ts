@@ -2,6 +2,8 @@ import fs from 'node:fs/promises'
 import path from 'node:path'
 import https from 'node:https'
 import { createWriteStream } from 'node:fs'
+// @ts-ignore: semver untyped import
+import semver from 'semver'
 import type {
   ModConflictItem,
   ModConflictCheckResult,
@@ -17,6 +19,43 @@ const USER_AGENT = 'LetCuteMC-Launcher/1.0 (contact@letcute.com)'
 // Helper to normalize modId
 function normalizeId(id: string): string {
   return id.trim().toLowerCase().replace(/_/g, '-')
+}
+
+/**
+ * Check if current Minecraft version satisfies mod dependency range
+ */
+export function checkMinecraftVersionMatch(currentMc: string, mcConstraint: string | string[]): boolean {
+  if (!mcConstraint || mcConstraint === '*' || mcConstraint === '') return true
+  const coercedMc = semver.coerce(currentMc)
+  if (!coercedMc) return true
+
+  const constraints = Array.isArray(mcConstraint) ? mcConstraint : [mcConstraint]
+  for (const c of constraints) {
+    if (!c || c === '*' || c === '') return true
+    if (c === currentMc || c === coercedMc.version) return true
+
+    // Wildcard like 26.2.x or 1.20.x
+    if (c.endsWith('.x') || c.endsWith('.*')) {
+      const prefix = c.slice(0, -2)
+      if (currentMc.startsWith(prefix) || coercedMc.version.startsWith(prefix)) return true
+    }
+
+    // Semver range matching
+    try {
+      const validRange = semver.validRange(c)
+      if (validRange && semver.satisfies(coercedMc, validRange, { includePrerelease: true })) {
+        return true
+      }
+    } catch {}
+
+    // Prefix match for ranges like ~26.2- or >=26.2
+    const cleanPrefix = c.replace(/^[~^>=< ]+/, '').replace(/[-+].*$/, '').trim()
+    if (cleanPrefix && (currentMc.startsWith(cleanPrefix) || coercedMc.version.startsWith(cleanPrefix))) {
+      return true
+    }
+  }
+
+  return false
 }
 
 // Download file helper
@@ -291,6 +330,28 @@ export class ModConflictService {
       }
     }
 
+    // ── RULE 5: Minecraft Version Incompatibility (Critical) ──────────────
+    // Check if mod explicitly declares depends.minecraft that does not match active version
+    for (const m of parsedMods) {
+      const mcDep = m.dependencies?.find((d) => d.modId === 'minecraft')
+      if (mcDep && mcDep.versionRange && mcDep.versionRange !== '*' && mcDep.versionRange !== '') {
+        const isCompatible = checkMinecraftVersionMatch(baseMcVersion, mcDep.versionRange)
+        if (!isCompatible) {
+          conflicts.push({
+            id: `conflict-mc-version-${m.modId}`,
+            severity: 'critical',
+            type: 'loader_mismatch',
+            title: `Mod không tương thích phiên bản: ${m.name} (${mcDep.versionRange})`,
+            description: `Tệp ${m.fileName} yêu cầu Minecraft ${mcDep.versionRange}, nhưng profile hiện tại là ${baseMcVersion}. Giữ mod này sẽ gây lỗi Mixin / crash game khi khởi động.`,
+            involvedMods: [{ fileName: m.fileName, modId: m.modId, name: m.name }],
+            recommendedAction: 'disable_mod',
+            actionLabel: `Vô hiệu hóa ${m.fileName}`,
+            targetFileName: m.fileName,
+          })
+        }
+      }
+    }
+
     // ── RULE 5: Duplicate Render Engines (Warning) ────────────────────────
     if (installedIds.has('sodium') && (installedIds.has('rubidium') || installedIds.has('embeddium'))) {
       const extraMod = parsedMods.find((m) =>
@@ -360,7 +421,7 @@ export class ModConflictService {
       }
 
       if (option.action === 'install_companion' && option.companionModSlug) {
-        // Query Modrinth for companion mod version
+        // Query Modrinth for companion mod version strictly matching Minecraft version and Loader
         const gameVersionsQuery = encodeURIComponent(JSON.stringify([baseMcVersion]))
         const loadersQuery = encodeURIComponent(JSON.stringify([loader]))
         const versions = await fetchModrinthJson<any[]>(
@@ -375,7 +436,21 @@ export class ModConflictService {
           }
         }
 
-        const latestVer = versions[0]
+        const compatibleVersions = versions.filter((v: any) => {
+          const hasMc = Array.isArray(v.game_versions) && v.game_versions.includes(baseMcVersion)
+          const hasLoader = Array.isArray(v.loaders) && v.loaders.includes(loader)
+          return hasMc && hasLoader
+        })
+
+        if (compatibleVersions.length === 0) {
+          return {
+            success: false,
+            message: `Không tìm thấy bản phát hành của mod ${option.companionModSlug} hỗ trợ chính xác Minecraft ${baseMcVersion} và ${loader}.`,
+            resolvedConflicts: [],
+          }
+        }
+
+        const latestVer = compatibleVersions.find((v: any) => v.version_type === 'release') || compatibleVersions[0]
         const primaryFile = (latestVer.files || []).find((f: any) => f.primary) || latestVer.files?.[0]
         if (!primaryFile?.url) {
           return {

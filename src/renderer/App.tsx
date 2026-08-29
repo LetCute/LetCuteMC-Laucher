@@ -484,6 +484,13 @@ function MainApp() {
                           onEdit={openEditProfile}
                           onDelete={handleDeleteProfile}
                           onLaunchProfile={handleLaunchProfileDirectly}
+                          onReloadProfiles={async () => {
+                            const profileStore = await launcherClient.getProfiles()
+                            setProfiles(profileStore.profiles)
+                            if (profileStore.activeProfileId) {
+                              setActiveProfileId(profileStore.activeProfileId)
+                            }
+                          }}
                           isWorking={isWorking}
                         />
                       </div>
