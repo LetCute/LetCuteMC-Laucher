@@ -427,7 +427,6 @@ export const AccountsScreen = ({
       // 1. Direct Data URL
       if (raw.startsWith('data:image')) {
         setPendingSkinFile(raw)
-        showToast('success', 'Đã nạp file skin ảnh!')
         setNamemcInput('')
         return
       }
@@ -443,7 +442,6 @@ export const AccountsScreen = ({
         const base64Skin = await window.launcherApi.fetchMojangTexture(mojangUrl)
         if (base64Skin) {
           setPendingSkinFile(base64Skin)
-          showToast('success', 'Đã nạp skin NameMC thành công!')
           setNamemcInput('')
           return
         }
@@ -454,7 +452,6 @@ export const AccountsScreen = ({
         const base64Skin = await window.launcherApi.fetchMojangTexture(raw)
         if (base64Skin) {
           setPendingSkinFile(base64Skin)
-          showToast('success', 'Đã nạp skin từ đường dẫn!')
           setNamemcInput('')
           return
         }
@@ -471,7 +468,6 @@ export const AccountsScreen = ({
             const base64Cape = await window.launcherApi.fetchMojangTexture(playerData.capeUrl)
             if (base64Cape) setPendingCapeFile(base64Cape)
           }
-          showToast('success', `Đã nạp skin người chơi ${playerData.username} (${playerData.model === 'slim' ? 'Tay mảnh' : 'Classic'})!`)
           setNamemcInput('')
           return
         }
