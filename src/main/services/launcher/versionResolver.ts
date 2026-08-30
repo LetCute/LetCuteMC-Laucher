@@ -137,7 +137,7 @@ export async function ensureLibrariesAndAssets(
   // 2. Libraries
   if (Array.isArray(version.libraries)) {
     for (const lib of version.libraries) {
-      const artifact = lib.downloads?.artifact || lib.download?.artifact
+      const artifact = lib.downloads?.artifact || lib.download?.artifact || lib.download
       if (artifact?.url && artifact?.path) {
         const dest = path.join(mcRootDir, 'libraries', artifact.path)
         const valid = (await pathExists(dest)) && (!artifact.sha1 || (await checkFileHash(dest, artifact.sha1)))

@@ -49,7 +49,7 @@ export function Select({
   }
 
   return (
-    <div ref={containerRef} className="flex flex-col gap-1.5 w-full relative z-20">
+    <div ref={containerRef} className={cn("flex flex-col gap-1.5 w-full relative", isOpen ? "z-50" : "z-10")}>
       {label && (
         <span className="text-sm font-medium text-foreground">
           {label}
@@ -83,7 +83,7 @@ export function Select({
         {isOpen && (
           <div
             className={cn(
-              "absolute z-[100] mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border dropdown-panel p-1 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700 shadow-2xl bg-zinc-900/95",
+              "absolute z-[100] mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border dropdown-panel p-1 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700 shadow-2xl bg-zinc-900",
               align === "right" ? "right-0" : "left-0"
             )}
           >

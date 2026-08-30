@@ -256,10 +256,13 @@ function handleWorkerMessage(msg: WorkerOutputMessage): void {
     case 'error': {
       currentState.error = msg.message
       currentState.status = 'failed'
+      currentState.endedAt = now()
       if (activeJobId) {
         taskManagerService.failTask(activeJobId, msg.message)
         activeJobId = null
       }
+      enqueueEvent({ type: 'status', jobId: msg.jobId, status: 'failed' })
+      enqueueEvent({ type: 'finished', jobId: msg.jobId, state: currentState })
       // worker already dumps to log_error
       showLauncherAfterGame()
       break
