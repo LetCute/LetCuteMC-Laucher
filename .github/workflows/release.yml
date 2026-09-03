@@ -33,6 +33,9 @@ jobs:
         run: npm ci
 
       - name: Build and Package
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_MIRROR: "https://npmmirror.com/mirrors/electron/"
         run: npm run dist
 
       - name: Release to GitHub
