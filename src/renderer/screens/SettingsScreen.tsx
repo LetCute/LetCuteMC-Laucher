@@ -680,9 +680,37 @@ export const SettingsScreen = ({
             )}
 
             {!javaSelection?.found && javaSelection?.message && (
-              <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{javaSelection.message}</span>
+              <div className="flex flex-col gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+                  <span>{javaSelection.message}</span>
+                </div>
+                {javaSelection?.requiredVersion && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={javaScanning}
+                    onClick={async () => {
+                      if (!window.launcherApi || !javaSelection?.requiredVersion) return
+                      setJavaScanning(true)
+                      try {
+                        const res = await window.launcherApi.autoInstallJava(javaSelection.requiredVersion)
+                        if (res.success) {
+                          await refreshJava(true)
+                        } else {
+                          alert(res.message)
+                        }
+                      } catch (err) {
+                        alert(err instanceof Error ? err.message : 'Cài đặt thất bại')
+                      } finally {
+                        setJavaScanning(false)
+                      }
+                    }}
+                    className="self-start h-7 px-3 text-xs bg-primary text-primary-foreground font-semibold hover:bg-primary/90 rounded-lg mt-1"
+                  >
+                    Tải & Cài đặt Java {javaSelection.requiredVersion} tự động
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
