@@ -169,7 +169,7 @@ declare global {
       installNeoForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
 
       // Modrinth API
-      searchModrinth(query: string, projectType: string, offset: number): Promise<import('../shared/types').ModrinthSearchResult>
+      searchModrinth(query: string, projectType: string, offset?: number, gameVersion?: string, loader?: string): Promise<import('../shared/types').ModrinthSearchResult>
       getModrinthVersions(projectId: string): Promise<import('../shared/types').ModrinthVersion[]>
       installModrinthModpack(versionId: string, profileName: string): Promise<string>
       installLocalModrinthModpack(mrpackPath: string, profileName: string): Promise<string>

@@ -48,6 +48,7 @@ let hiddenForGame = false
 import { getProfiles } from '../profile/profileService.js'
 import { eventBus } from '../eventBus.js'
 import { taskManagerService } from '../system/taskManagerService.js'
+import { getWorkerFilePath } from '../../utils/workerResolver.js'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -110,30 +111,10 @@ function createIdleState(): LaunchJobState {
 
 let cachedLaunchWorkerPath: string | null = null
 
-function resolveWorkerPath(fileName: string): string {
-  if (cachedLaunchWorkerPath) return cachedLaunchWorkerPath
-  // UtilityProcess supports asar natively.
-  // When compiled, launchManager.js is in dist-electron/main/services/launcher/,
-  // so worker is at dist-electron/main/workers/ (../../workers)
-  const candidate1 = path.join(__dirname, '../../workers', fileName)
-  const candidate2 = path.join(__dirname, '../workers', fileName)
-  try {
-    const fsSync = require('node:fs')
-    if (fsSync.existsSync(candidate1)) {
-      cachedLaunchWorkerPath = candidate1
-      return candidate1
-    }
-    if (fsSync.existsSync(candidate2)) {
-      cachedLaunchWorkerPath = candidate2
-      return candidate2
-    }
-  } catch {}
-  cachedLaunchWorkerPath = candidate1
-  return candidate1
-}
-
 function getWorkerPath(): string {
-  return resolveWorkerPath('launchWorker.js')
+  if (cachedLaunchWorkerPath) return cachedLaunchWorkerPath
+  cachedLaunchWorkerPath = getWorkerFilePath('launchWorker.js')
+  return cachedLaunchWorkerPath
 }
 
 export function assertLaunchWorkerDependencies(): void {

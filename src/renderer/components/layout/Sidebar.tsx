@@ -33,6 +33,7 @@ import type {
 } from '@/shared/types'
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
+import { buildLaunchAuthSession } from '../../../shared/auth'
 import { useAccounts } from '../../hooks/useAccounts'
 import { cn, formatVersionDisplay } from '@/lib/utils'
 import { SkinHead } from '../ui/SkinHead'
@@ -128,21 +129,7 @@ export function Sidebar({
   const triggerLaunch = async () => {
     if (!activeProfile) return
 
-    const auth: LaunchInput['auth'] =
-      isVirtual || !activeAccount
-        ? {
-            type: 'virtual',
-            username: displayUsername,
-            uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
-            accessToken: 'offline-token-placeholder',
-          }
-        : {
-            type: 'microsoft',
-            username: activeAccount.username,
-            uuid: activeAccount.uuid,
-            accessToken: activeAccount.accessToken || '',
-            expiresAt: activeAccount.expiresAt,
-          }
+    const auth = buildLaunchAuthSession(activeAccount, isVirtual, displayUsername)
 
     await startLaunch({
       profileId: activeProfile.id,

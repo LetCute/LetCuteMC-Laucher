@@ -38,14 +38,31 @@ function generateId(): string {
   return crypto.randomUUID()
 }
 
-// ─── Lazy Mod Metadata (stream-parse 1 jar, no full extract) ──────────────────
+// ─── Lazy Mod Metadata (stream-parse 1 jar with mtime/size cache) ─────────────
+
+interface ModMetadataCacheEntry {
+  mtimeMs: number
+  size: number
+  metadata: GameContentMetadata
+}
+
+const modMetadataCache = new Map<string, ModMetadataCacheEntry>()
+const MAX_METADATA_CACHE = 500
 
 async function readJarModMetadata(jarPath: string): Promise<GameContentMetadata> {
   try {
+    const stat = await fs.stat(jarPath).catch(() => null)
+    if (!stat) return { loader: 'unknown' }
+
+    const cached = modMetadataCache.get(jarPath)
+    if (cached && cached.mtimeMs === stat.mtimeMs && cached.size === stat.size) {
+      return cached.metadata
+    }
+
     const unzipper = await import('unzipper')
     const { createReadStream } = await import('node:fs')
 
-    return await new Promise((resolve) => {
+    const metadata = await new Promise<GameContentMetadata>((resolve) => {
       let settled = false
       const done = (meta: GameContentMetadata) => {
         if (!settled) {
@@ -100,6 +117,14 @@ async function readJarModMetadata(jarPath: string): Promise<GameContentMetadata>
         .on('error', () => done({ loader: 'unknown' }))
         .on('close', () => done({ loader: 'unknown' }))
     })
+
+    if (modMetadataCache.size >= MAX_METADATA_CACHE) {
+      const firstKey = modMetadataCache.keys().next().value
+      if (firstKey !== undefined) modMetadataCache.delete(firstKey)
+    }
+    modMetadataCache.set(jarPath, { mtimeMs: stat.mtimeMs, size: stat.size, metadata })
+
+    return metadata
   } catch {
     return { loader: 'unknown' }
   }

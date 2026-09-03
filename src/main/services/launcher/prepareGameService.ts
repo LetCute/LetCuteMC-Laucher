@@ -11,6 +11,7 @@ import type {
 } from '../../../shared/types'
 import { writeErrorLog } from '../media/errorLogService'
 import { getPreparedProfilesCachePath } from '../system/storageService.js'
+import { getWorkerFilePath } from '../../utils/workerResolver.js'
 
 let currentWorker: UtilityProcess | null = null
 let activeProfileId: string | null = null
@@ -33,23 +34,8 @@ function getCachePath(): string {
 /** Resolve prepareWorker path for both dev and packaged builds. */
 function resolvePrepareWorkerPath(): string {
   if (cachedWorkerPath) return cachedWorkerPath
-  // When compiled, prepareGameService.js is in dist-electron/main/services/launcher/,
-  // so worker is at dist-electron/main/workers/prepareWorker.js (../../workers)
-  const candidate1 = path.join(__dirname, '../../workers/prepareWorker.js')
-  const candidate2 = path.join(__dirname, '../workers/prepareWorker.js')
-  try {
-    const fsSync = require('node:fs')
-    if (fsSync.existsSync(candidate1)) {
-      cachedWorkerPath = candidate1
-      return candidate1
-    }
-    if (fsSync.existsSync(candidate2)) {
-      cachedWorkerPath = candidate2
-      return candidate2
-    }
-  } catch {}
-  cachedWorkerPath = candidate1
-  return candidate1
+  cachedWorkerPath = getWorkerFilePath('prepareWorker.js')
+  return cachedWorkerPath
 }
 
 function getMainWindow(): BrowserWindow | null {

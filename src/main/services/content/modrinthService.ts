@@ -30,13 +30,31 @@ async function getModrinthClient() {
 
 import { taskManagerService } from '../system/taskManagerService.js'
 
-export async function searchModrinth(query: string, projectType: string = 'modpack', offset: number = 0): Promise<ModrinthSearchResult> {
+export async function searchModrinth(
+  query: string,
+  projectType: string = 'modpack',
+  offset: number = 0,
+  gameVersion?: string,
+  loader?: string
+): Promise<ModrinthSearchResult> {
   const client = await getModrinthClient()
+  const facetList: string[] = [`project_type:${projectType}`]
+
+  if (gameVersion && gameVersion !== 'all') {
+    facetList.push(`versions:${gameVersion}`)
+  }
+
+  if (loader && loader !== 'all' && loader !== 'unknown') {
+    facetList.push(`categories:${loader}`)
+  }
+
+  const facets = JSON.stringify(facetList.map((f) => [f]))
+
   const res = await client.searchProjects({
     query,
-    facets: `[["project_type:${projectType}"]]`,
+    facets,
     offset,
-    limit: 20
+    limit: 20,
   })
   return res as unknown as ModrinthSearchResult
 }

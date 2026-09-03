@@ -366,8 +366,8 @@ const launcherApi = {
     return ipcRenderer.invoke('mojang:change-name', accessToken, newName)
   },
 
-  searchModrinth(query: string, projectType: string, offset?: number): Promise<any> {
-    return ipcRenderer.invoke('modrinth:search', { query, projectType, offset })
+  searchModrinth(query: string, projectType: string, offset?: number, gameVersion?: string, loader?: string): Promise<any> {
+    return ipcRenderer.invoke('modrinth:search', { query, projectType, offset, gameVersion, loader })
   },
 
   getModrinthVersions(projectId: string): Promise<any[]> {

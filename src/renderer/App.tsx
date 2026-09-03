@@ -1,22 +1,22 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Sidebar } from './components/layout/Sidebar'
 import { TopBar } from './components/layout/TopBar';
 import type { TabId } from './components/layout/Sidebar';
 
 import { ProfilesScreen } from './screens/ProfilesScreen';
 import { VersionsScreen } from './screens/VersionsScreen';
-import { WorldsScreen } from './screens/WorldsScreen';
-import { ModsScreen } from './screens/ModsScreen';
-import { ResourcePacksScreen } from './screens/ResourcePacksScreen';
-import { ShaderPacksScreen } from './screens/ShaderPacksScreen';
-import { ScreenshotsScreen } from './screens/ScreenshotsScreen';
-import { LogsScreen } from './screens/LogsScreen';
-import StatsScreen from './screens/StatsScreen';
+const WorldsScreen = lazy(() => import('./screens/WorldsScreen').then(m => ({ default: m.WorldsScreen })));
+const ModsScreen = lazy(() => import('./screens/ModsScreen').then(m => ({ default: m.ModsScreen })));
+const ResourcePacksScreen = lazy(() => import('./screens/ResourcePacksScreen').then(m => ({ default: m.ResourcePacksScreen })));
+const ShaderPacksScreen = lazy(() => import('./screens/ShaderPacksScreen').then(m => ({ default: m.ShaderPacksScreen })));
+const ScreenshotsScreen = lazy(() => import('./screens/ScreenshotsScreen').then(m => ({ default: m.ScreenshotsScreen })));
+const LogsScreen = lazy(() => import('./screens/LogsScreen').then(m => ({ default: m.LogsScreen })));
+const StatsScreen = lazy(() => import('./screens/StatsScreen'));
 import { SettingsScreen } from './screens/SettingsScreen';
 import { AccountsScreen } from './screens/AccountsScreen';
-import TasksScreen from './screens/TasksScreen';
-import { AboutScreen } from './screens/AboutScreen';
-import { StoreScreen } from './screens/StoreScreen';
+const TasksScreen = lazy(() => import('./screens/TasksScreen'));
+const AboutScreen = lazy(() => import('./screens/AboutScreen').then(m => ({ default: m.AboutScreen })));
+const StoreScreen = lazy(() => import('./screens/StoreScreen').then(m => ({ default: m.StoreScreen })));
 import { ProfileModal } from './components/profiles/ProfileModal';
 import { UpdaterScreen } from './screens/UpdaterScreen';
 import { ErrorBoundary } from './components/ErrorBoundary';
@@ -27,6 +27,7 @@ import { useLauncherJob } from './hooks/useLauncherJob';
 import { usePrepareGame } from './hooks/usePrepareGame';
 import { useAccounts } from './hooks/useAccounts';
 import { useKeepAliveTabs } from './hooks/useTabTransition';
+import { buildLaunchAuthSession } from '../shared/auth';
 
 import type {
   LauncherProfile,
@@ -187,15 +188,7 @@ function MainApp() {
       minMemoryMb: target.minMemoryMb || settings.defaultMinMemoryMb,
       maxMemoryMb: target.maxMemoryMb || settings.defaultMaxMemoryMb,
       serverAddress: undefined,
-      auth: isVirtual
-        ? { type: 'virtual', username: displayUsername, uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000', accessToken: 'offline-token-placeholder' }
-        : {
-          type: 'microsoft',
-          username: activeAccount!.username,
-          uuid: activeAccount!.uuid,
-          accessToken: activeAccount!.accessToken || '',
-          expiresAt: activeAccount!.expiresAt,
-        },
+      auth: buildLaunchAuthSession(activeAccount, isVirtual, displayUsername),
     })
   }
 
@@ -472,6 +465,12 @@ function MainApp() {
 
                 <div className="min-h-0 flex-1 tab-viewport">
                   <ErrorBoundary fallbackMessage="Màn hình này đang gặp sự cố. Vui lòng thử lại.">
+                    <Suspense fallback={
+                      <div className="flex h-full w-full items-center justify-center text-muted-foreground text-sm">
+                        <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
+                        Đang tải...
+                      </div>
+                    }>
 
                     {/* ── Persistent Keep-Alive Tabs with Zero-Reflow GPU Layer ── */}
                     {shouldMount('profiles') && (
@@ -631,6 +630,7 @@ function MainApp() {
                         />
                       </div>
                     )}
+                    </Suspense>
                   </ErrorBoundary>
                 </div>
               </main>

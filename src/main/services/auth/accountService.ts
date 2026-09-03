@@ -1,10 +1,37 @@
 import fsPromises from 'node:fs/promises'
 import crypto from 'node:crypto'
+import { safeStorage } from 'electron'
 import type { AccountState, AccountItem } from '../../../shared/types'
 import { getAccountConfigPath, ensureLauncherDataDirectory } from '../system/storageService.js'
 
 /** Single-flight MS token refresh — avoids TOO_MANY_REQUESTS on spam load */
 let refreshInFlight: Promise<void> | null = null
+
+const ENC_PREFIX = 'enc:'
+
+function encryptSecret(val?: string): string | undefined {
+  if (!val) return undefined
+  if (!safeStorage.isEncryptionAvailable()) return val
+  try {
+    const encrypted = safeStorage.encryptString(val)
+    return `${ENC_PREFIX}${encrypted.toString('base64')}`
+  } catch {
+    return val
+  }
+}
+
+function decryptSecret(val?: string): string | undefined {
+  if (!val) return undefined
+  if (!val.startsWith(ENC_PREFIX)) return val
+  if (!safeStorage.isEncryptionAvailable()) return val
+  try {
+    const base64Data = val.slice(ENC_PREFIX.length)
+    const buf = Buffer.from(base64Data, 'base64')
+    return safeStorage.decryptString(buf)
+  } catch {
+    return val
+  }
+}
 
 export function generateOfflineUuid(username: string): string {
   const input = `OfflinePlayer:${username}`
@@ -116,7 +143,13 @@ export async function getAccountState(): Promise<AccountState> {
     }
 
     const state = parsed as AccountState
-    // Fast path: never block UI load on network auth refresh
+    // Decrypt tokens for runtime in-memory use
+    for (const acc of state.accounts) {
+      if (acc.type === 'microsoft') {
+        acc.accessToken = decryptSecret(acc.accessToken)
+        acc.refreshToken = decryptSecret(acc.refreshToken)
+      }
+    }
     return state
   } catch {
     const defaultLocalUuid = generateOfflineUuid('Player')
@@ -139,7 +172,21 @@ export async function getAccountState(): Promise<AccountState> {
 async function saveAccountState(state: AccountState): Promise<void> {
   const filePath = getAccountConfigPath()
   await ensureLauncherDataDirectory()
-  await fsPromises.writeFile(filePath, JSON.stringify(state, null, 2), 'utf-8')
+  // Clone to avoid mutating in-memory runtime state while saving encrypted version
+  const copy: AccountState = {
+    activeAccountId: state.activeAccountId,
+    accounts: state.accounts.map(acc => {
+      if (acc.type === 'microsoft') {
+        return {
+          ...acc,
+          accessToken: encryptSecret(acc.accessToken),
+          refreshToken: encryptSecret(acc.refreshToken),
+        }
+      }
+      return { ...acc }
+    })
+  }
+  await fsPromises.writeFile(filePath, JSON.stringify(copy, null, 2), 'utf-8')
 }
 
 export async function addLocalAccount(

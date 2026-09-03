@@ -13,8 +13,8 @@ import { getDefaultMinecraftDirectory } from '../services/system/storageService'
 import { serverListService } from '../services/media/serverListService'
 
 export function registerModrinthIpc(): void {
-  handleIpc('modrinth:search', async ({ query, projectType, offset }: { query: string; projectType: string; offset: number }) => {
-    return searchModrinth(query, projectType, offset)
+  handleIpc('modrinth:search', async ({ query, projectType, offset, gameVersion, loader }: { query: string; projectType: string; offset: number; gameVersion?: string; loader?: string }) => {
+    return searchModrinth(query, projectType, offset, gameVersion, loader)
   })
 
   handleIpc('modrinth:get-versions', async ({ projectId }: { projectId: string }) => {

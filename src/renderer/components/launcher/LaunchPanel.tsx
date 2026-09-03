@@ -22,6 +22,7 @@ import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { useState, useEffect } from 'react'
 import { formatVersionDisplay } from '@/lib/utils'
+import { buildLaunchAuthSession } from '../../../shared/auth'
 
 interface LaunchPanelProps {
   activeProfile: LauncherProfile | null
@@ -96,21 +97,7 @@ export function LaunchPanel({
     if (!activeProfile) return
 
     const username = activeAccount?.username || 'Player'
-
-    const auth: LaunchInput['auth'] = isVirtual
-      ? {
-        type: 'virtual',
-        username,
-        uuid: activeAccount?.uuid || '00000000-0000-0000-0000-000000000000',
-        accessToken: 'offline-token-placeholder',
-      }
-      : {
-        type: 'microsoft',
-        username: activeAccount.username,
-        uuid: activeAccount.uuid,
-        accessToken: activeAccount.accessToken || '',
-        expiresAt: activeAccount.expiresAt,
-      }
+    const auth = buildLaunchAuthSession(activeAccount, isVirtual, username)
 
     await startLaunch({
       profileId: activeProfile.id,

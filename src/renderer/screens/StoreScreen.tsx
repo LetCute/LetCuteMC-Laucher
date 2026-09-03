@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Search, Download, Loader2, PackageOpen, Layers, Trash2, CheckCircle } from 'lucide-react'
+import { Search, Download, Loader2, PackageOpen, Layers, Trash2, CheckCircle, AlertCircle } from 'lucide-react'
 import { Input } from '../components/ui/Input'
 import { Button } from '../components/ui/button'
 import { Modal } from '../components/ui/Modal'
@@ -15,6 +15,25 @@ interface StoreScreenProps {
   profiles?: LauncherProfile[]
   activeProfileId?: string | null
   onInstallSuccess?: (profileId: string) => void
+}
+
+function detectLoader(versionStr: string): string {
+  const lower = (versionStr || '').toLowerCase()
+  if (lower.includes('fabric')) return 'fabric'
+  if (lower.includes('quilt')) return 'quilt'
+  if (lower.includes('neoforge')) return 'neoforge'
+  if (lower.includes('forge')) return 'forge'
+  return 'unknown'
+}
+
+function extractMcVersion(versionStr: string): string {
+  if (!versionStr) return ''
+  const clean = versionStr.replace(/^(?:fabric|quilt|neoforge|forge)-loader-[^-]+-/i, '')
+  const matchSuffix = clean.match(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge)/i)
+  if (matchSuffix) return matchSuffix[1]
+  const match = clean.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
+  if (match) return match[1]
+  return clean
 }
 
 export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreScreenProps) => {
@@ -33,8 +52,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
 
   const [projectType, setProjectType] = useState<'modpack' | 'mod' | 'shader' | 'resourcepack'>('modpack')
   const [installations, setInstallations] = useState<StoreInstallation[]>([])
-
-  const [targetProfileId, setTargetProfileId] = useState<string>('')
+  const [filterByActiveProfile, setFilterByActiveProfile] = useState<boolean>(true)
 
   // Custom import modal state
   const [importModalState, setImportModalState] = useState<{
@@ -45,16 +63,15 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
   const [importInputValue, setImportInputValue] = useState('')
   const [importProfileName, setImportProfileName] = useState('')
 
-  useEffect(() => {
-    if (activeProfileId && !targetProfileId) {
-      setTargetProfileId(activeProfileId)
-    }
-  }, [activeProfileId, targetProfileId])
+  const currentActiveProfile = profiles.find((p) => p.id === activeProfileId)
+  const profileMcVersion = currentActiveProfile ? extractMcVersion(currentActiveProfile.minecraftVersion) : ''
+  const profileLoader = currentActiveProfile ? detectLoader(currentActiveProfile.minecraftVersion) : ''
 
   const loadInstallations = async () => {
-    if (!gameDir) return
+    const activeDir = currentActiveProfile?.gameDir || gameDir
+    if (!activeDir) return
     try {
-      const data = await window.launcherApi.getStoreInstallations(gameDir)
+      const data = await window.launcherApi.getStoreInstallations(activeDir)
       setInstallations(data)
     } catch (e) {
       console.error(e)
@@ -64,7 +81,11 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
   const searchProjects = async (q: string, type: string) => {
     setLoading(true)
     try {
-      const res = await window.launcherApi.searchModrinth(q || '', type, 0)
+      // Modpacks do not need profile filtering as they create their own profile
+      const isContentPack = type !== 'modpack'
+      const gv = isContentPack && filterByActiveProfile && profileMcVersion ? profileMcVersion : undefined
+      const ld = isContentPack && filterByActiveProfile && profileLoader && profileLoader !== 'unknown' && type === 'mod' ? profileLoader : undefined
+      const res = await window.launcherApi.searchModrinth(q || '', type, 0, gv, ld)
       setProjects(res.hits)
     } catch (err) {
       console.error(err)
@@ -88,15 +109,18 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
     })
     
     return () => unsubscribe()
-  }, [projectType, gameDir])
+  }, [projectType, gameDir, filterByActiveProfile, activeProfileId])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
     searchProjects(query, projectType)
   }
 
+  const [showAllVersions, setShowAllVersions] = useState<boolean>(false)
+
   const openProject = async (project: ModrinthSearchResult['hits'][0]) => {
     setSelectedProject(project)
+    setShowAllVersions(false)
     setLoadingVersions(true)
     setVersions([])
     try {
@@ -119,11 +143,11 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
         showToast('success', `Đã thêm vào Tiến trình tải xuống`)
         setSelectedProject(null)
       } else {
-        const targetProfile = profiles.find(p => p.id === targetProfileId)
-        if (!targetProfile || !targetProfile.gameDir) throw new Error('Vui lòng chọn một cấu hình để cài đặt.')
+        const targetProfile = currentActiveProfile
+        if (!targetProfile || !targetProfile.gameDir) throw new Error('Không tìm thấy thư mục của cấu hình đang chọn.')
 
         // Compatibility check
-        const compatible = version.game_versions.includes(targetProfile.minecraftVersion)
+        const compatible = !profileMcVersion || version.game_versions.includes(profileMcVersion)
         if (!compatible) {
           const proceed = await confirm({
             title: 'Cảnh báo tương thích',
@@ -139,10 +163,8 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
         await window.launcherApi.installStoreMod(version.id, targetProfile.gameDir)
         showToast('success', `Đã cài đặt: ${selectedProject.title}`)
 
-        // Refresh installations if we installed to the currently viewed gameDir
-        if (targetProfile.gameDir === gameDir) {
-          await loadInstallations()
-        }
+        // Refresh installations
+        await loadInstallations()
       }
     } catch (err) {
       console.error(err)
@@ -199,35 +221,55 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mt-3">
-          <Button
-            variant={projectType === 'modpack' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setProjectType('modpack')}
-          >
-            Modpacks
-          </Button>
-          <Button
-            variant={projectType === 'mod' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setProjectType('mod')}
-          >
-            Mods
-          </Button>
-          <Button
-            variant={projectType === 'shader' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setProjectType('shader')}
-          >
-            Shaders
-          </Button>
-          <Button
-            variant={projectType === 'resourcepack' ? 'primary' : 'secondary'}
-            size="sm"
-            onClick={() => setProjectType('resourcepack')}
-          >
-            Resource Packs
-          </Button>
+        <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={projectType === 'modpack' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setProjectType('modpack')}
+            >
+              Modpacks
+            </Button>
+            <Button
+              variant={projectType === 'mod' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setProjectType('mod')}
+            >
+              Mods
+            </Button>
+            <Button
+              variant={projectType === 'shader' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setProjectType('shader')}
+            >
+              Shaders
+            </Button>
+            <Button
+              variant={projectType === 'resourcepack' ? 'primary' : 'secondary'}
+              size="sm"
+              onClick={() => setProjectType('resourcepack')}
+            >
+              Resource Packs
+            </Button>
+          </div>
+
+          {/* Filter toggle only for content packs (mods, shaders, resourcepacks) */}
+          {projectType !== 'modpack' && currentActiveProfile && (
+            <button
+              type="button"
+              onClick={() => setFilterByActiveProfile(!filterByActiveProfile)}
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium transition-all ${
+                filterByActiveProfile
+                  ? 'bg-primary/15 border-primary/40 text-primary shadow-sm'
+                  : 'bg-zinc-900/90 border-zinc-800 text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <span className={`h-2 w-2 rounded-full ${filterByActiveProfile ? 'bg-primary' : 'bg-zinc-600'}`} />
+              <span>
+                Lọc theo cấu hình: <strong className="text-foreground">{currentActiveProfile.name}</strong> ({profileMcVersion || 'All'}{profileLoader !== 'unknown' ? ` · ${profileLoader}` : ''})
+              </span>
+            </button>
+          )}
         </div>
 
         <form onSubmit={handleSearch} className="mt-4 flex gap-3 max-w-2xl">
@@ -315,101 +357,172 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
         maxWidth="max-w-4xl"
       >
         <div className="flex flex-col gap-4">
-          {projectType !== 'modpack' && profiles.length > 0 && (
-            <div className="flex flex-col gap-2 p-4 bg-accent/5 border border-border/60 rounded-xl mb-2">
-              <label className="text-sm font-semibold text-foreground">Chọn Cấu hình để cài đặt:</label>
-              <Select
-                value={targetProfileId}
-                onChange={(val) => setTargetProfileId(val)}
-                options={profiles.map(p => ({ value: p.id, label: p.name }))}
-              />
-              <span className="text-[11px] text-muted-foreground mt-1">
-                Tệp sẽ được cài đặt tự động vào đúng thư mục của cấu hình này (dù là dùng chung hay cấu hình độc lập).
+          {projectType !== 'modpack' && currentActiveProfile && (
+            <div className="flex items-center justify-between p-3 bg-zinc-900/90 border border-zinc-800 rounded-xl mb-1 text-xs">
+              <span className="text-muted-foreground">
+                Cài đặt vào cấu hình: <strong className="text-foreground">{currentActiveProfile.name}</strong>
+              </span>
+              <span className="text-[11px] font-medium px-2 py-0.5 rounded bg-primary/15 text-primary border border-primary/30">
+                {profileMcVersion || currentActiveProfile.minecraftVersion} {profileLoader !== 'unknown' && `· ${profileLoader}`}
               </span>
             </div>
           )}
 
-          <h4 className="font-bold text-foreground text-sm flex items-center gap-2 border-b border-border/60 pb-2">
-            <Layers className="h-4 w-4 text-primary" /> Các phiên bản (Versions)
-          </h4>
+          <div className="flex items-center justify-between border-b border-border/60 pb-2">
+            <h4 className="font-bold text-foreground text-sm flex items-center gap-2">
+              <Layers className="h-4 w-4 text-primary" /> Các phiên bản (Versions)
+            </h4>
+            {projectType !== 'modpack' && profileMcVersion && (
+              <button
+                type="button"
+                onClick={() => setShowAllVersions(!showAllVersions)}
+                className="text-xs text-primary hover:underline font-medium"
+              >
+                {showAllVersions ? 'Chỉ hiện bản tương thích' : 'Hiện tất cả phiên bản'}
+              </button>
+            )}
+          </div>
 
-          <div className="bg-accent/10 border border-border/60 rounded-sm overflow-hidden max-h-[50vh] overflow-y-auto">
+          <div className="bg-accent/10 border border-border/60 rounded-xl overflow-hidden max-h-[50vh] overflow-y-auto">
             {loadingVersions ? (
               <div className="flex h-32 items-center justify-center">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
             ) : versions.length === 0 ? (
               <div className="p-6 text-center text-sm text-muted-foreground">Không có phiên bản nào khả dụng.</div>
-            ) : (
-              <table className="w-full text-left text-sm">
-                <thead className="bg-background z-10 text-xs uppercase text-muted-foreground sticky top-0 border-b border-border/60">
-                  <tr>
-                    <th className="px-4 py-3 font-semibold">Tên / Số phiên bản</th>
-                    <th className="px-4 py-3 font-semibold">Minecraft</th>
-                    <th className="px-4 py-3 font-semibold">Cập nhật</th>
-                    <th className="px-4 py-3 font-semibold text-right">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border/60">
-                  {versions.map(v => (
-                    <tr key={v.id} className="hover:bg-accent/20 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="font-medium text-foreground">{v.name}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">{v.version_number}</div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {v.game_versions.slice(0, 3).map(mc => (
-                            <Badge key={mc} variant="secondary" className="text-[10px] bg-zinc-800/50">{mc}</Badge>
-                          ))}
-                          {v.game_versions.length > 3 && (
-                            <Badge variant="secondary" className="text-[10px] bg-zinc-800/50">+{v.game_versions.length - 3}</Badge>
-                          )}
-                        </div>
-                        <div className="text-[10px] text-muted-foreground mt-1 capitalize">{v.loaders?.join(', ')}</div>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-muted-foreground">
-                        {new Date(v.date_published).toLocaleDateString()}
-                      </td>
-                      <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
-                        {installations.some(i => i.projectId === selectedProject?.project_id && i.versionId === v.id) ? (
-                          <>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              disabled={true}
-                              className="h-8 text-xs font-bold text-emerald-500 bg-emerald-500/10 opacity-100 px-4"
-                            >
-                              <CheckCircle className="h-3 w-3 mr-1.5" /> Đã cài
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              size="icon-sm"
-                              className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                              onClick={() => selectedProject && handleUninstall(selectedProject.project_id)}
-                              title="Gỡ cài đặt"
-                            >
-                              <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            onClick={() => handleInstall(v)}
-                            disabled={!!installing}
-                            size="sm"
-                            className="h-8 text-xs font-bold px-4 shadow-none"
-                          >
-                            {installing === v.id ? (
-                              <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Đang cài</>
-                            ) : 'Cài đặt'}
-                          </Button>
-                        )}
-                      </td>
+            ) : (() => {
+              const shouldFilter = projectType !== 'modpack' && !showAllVersions && Boolean(profileMcVersion)
+              const compatibleVersions = versions.filter(v => {
+                const isGameVerMatch = !profileMcVersion || v.game_versions.includes(profileMcVersion)
+                const isLoaderMatch = !profileLoader || profileLoader === 'unknown' || v.loaders.includes(profileLoader)
+                return isGameVerMatch && (projectType !== 'mod' || isLoaderMatch)
+              })
+              const displayList = shouldFilter ? compatibleVersions : versions
+
+              if (shouldFilter && displayList.length === 0) {
+                const typeLabel = projectType === 'mod' ? 'Mod' : projectType === 'shader' ? 'Shader' : 'Resource Pack'
+                return (
+                  <div className="p-8 text-center flex flex-col items-center justify-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+                      <AlertCircle className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-zinc-200">
+                        Phiên bản Minecraft ({profileMcVersion}{profileLoader !== 'unknown' && projectType === 'mod' ? ` · ${profileLoader}` : ''}) của bạn không được {typeLabel} này hỗ trợ.
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Hãy chuyển sang cấu hình phiên bản khác hoặc xem tất cả phiên bản cũ hơn / mới hơn bên dưới.
+                      </p>
+                    </div>
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      className="mt-2 text-xs"
+                      onClick={() => setShowAllVersions(true)}
+                    >
+                      Xem tất cả phiên bản ({versions.length})
+                    </Button>
+                  </div>
+                )
+              }
+
+              return (
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-background z-10 text-xs uppercase text-muted-foreground sticky top-0 border-b border-border/60">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Tên / Số phiên bản</th>
+                      <th className="px-4 py-3 font-semibold">Minecraft</th>
+                      <th className="px-4 py-3 font-semibold">Cập nhật</th>
+                      <th className="px-4 py-3 font-semibold text-right">Thao tác</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
+                  </thead>
+                  <tbody className="divide-y divide-border/60">
+                    {displayList.map(v => {
+                      const isGameVerMatch = !profileMcVersion || v.game_versions.includes(profileMcVersion)
+                      const isLoaderMatch = !profileLoader || profileLoader === 'unknown' || v.loaders.includes(profileLoader)
+                      const isRecommended = isGameVerMatch && (projectType !== 'mod' || isLoaderMatch)
+
+                      return (
+                        <tr key={v.id} className={`hover:bg-accent/20 transition-colors ${isRecommended ? 'bg-primary/5' : ''}`}>
+                          <td className="px-4 py-3">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-foreground">{v.name}</span>
+                              {isRecommended && (
+                                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                                  Tương thích
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-0.5">{v.version_number}</div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-1">
+                              {v.game_versions.slice(0, 3).map(mc => (
+                                <Badge key={mc} variant={mc === profileMcVersion ? 'primary' : 'secondary'} className={`text-[10px] ${mc === profileMcVersion ? 'bg-primary text-primary-foreground font-bold' : 'bg-zinc-800/50'}`}>
+                                  {mc}
+                                </Badge>
+                              ))}
+                              {v.game_versions.length > 3 && (
+                                <Badge variant="secondary" className="text-[10px] bg-zinc-800/50">+{v.game_versions.length - 3}</Badge>
+                              )}
+                            </div>
+                            <div className="text-[10px] text-muted-foreground mt-1 capitalize font-medium">
+                              {v.loaders?.map(ld => (
+                                <span key={ld} className={ld === profileLoader ? 'text-primary font-bold' : ''}>
+                                  {ld}{' '}
+                                </span>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-muted-foreground">
+                            {new Date(v.date_published).toLocaleDateString()}
+                          </td>
+                          <td className="px-4 py-3 text-right flex items-center justify-end gap-2">
+                            {installations.some(i => i.projectId === selectedProject?.project_id && i.versionId === v.id) ? (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={true}
+                                  className="h-8 text-xs font-bold text-emerald-500 bg-emerald-500/10 opacity-100 px-4"
+                                >
+                                  <CheckCircle className="h-3 w-3 mr-1.5" /> Đã cài
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  size="icon-sm"
+                                  className="h-8 w-8 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                  onClick={() => selectedProject && handleUninstall(selectedProject.project_id)}
+                                  title="Gỡ cài đặt"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
+                            ) : (
+                              <Button
+                                onClick={() => handleInstall(v)}
+                                disabled={!!installing}
+                                variant={isRecommended ? 'primary' : 'outline'}
+                                size="sm"
+                                className="h-8 text-xs font-bold px-4 shadow-none"
+                              >
+                                {installing === v.id ? (
+                                  <><Loader2 className="h-3 w-3 animate-spin mr-2" /> Đang cài</>
+                                ) : isRecommended ? (
+                                  'Cài đặt'
+                                ) : (
+                                  'Cài đặt (Khác bản)'
+                                )}
+                              </Button>
+                            )}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              )
+            })()}
           </div>
         </div>
       </Modal>

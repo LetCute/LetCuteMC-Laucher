@@ -99,7 +99,11 @@ export function registerSystemIpc(): void {
 
   // Window Controls
   handleIpc('window:open-external', async (url: string) => {
-    await shell.openExternal(url)
+    if (!url || typeof url !== 'string') return
+    const normalized = url.trim()
+    if (normalized.startsWith('https://') || normalized.startsWith('http://')) {
+      await shell.openExternal(normalized)
+    }
   })
   handleIpc('window:minimize', () => {
     BrowserWindow.getAllWindows()[0]?.minimize()
@@ -154,11 +158,16 @@ export function registerSystemIpc(): void {
 
   // Utilities
   handleIpc('utils:read-local-image-base64', async (filePath: string) => {
+    if (!filePath || typeof filePath !== 'string') return null
     try {
       const fs = await import('node:fs/promises')
       const path = await import('node:path')
-      const buffer = await fs.readFile(filePath)
-      const ext = path.extname(filePath).toLowerCase().substring(1) || 'png'
+      const normalized = path.normalize(filePath)
+      const ext = path.extname(normalized).toLowerCase().substring(1)
+      const allowedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp']
+      if (!allowedExts.includes(ext)) return null
+
+      const buffer = await fs.readFile(normalized)
       return `data:image/${ext};base64,${buffer.toString('base64')}`
     } catch {
       return null

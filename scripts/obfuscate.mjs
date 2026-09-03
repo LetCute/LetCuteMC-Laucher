@@ -6,39 +6,27 @@ import JavaScriptObfuscator from 'javascript-obfuscator'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(__dirname, '..')
 const targetDirs = [
-  path.join(rootDir, 'dist-electron'),
-  path.join(rootDir, 'dist/renderer')
+  path.join(rootDir, 'dist-electron')
 ]
 
 const obfuscatorOptions = {
   compact: true,
-  controlFlowFlattening: true,
-  controlFlowFlatteningThreshold: 0.75,
-  deadCodeInjection: false, // Giữ performance cao
+  controlFlowFlattening: false,
+  deadCodeInjection: false,
   debugProtection: false,
   disableConsoleOutput: false,
   identifierNamesGenerator: 'hexadecimal',
   log: false,
-  numbersToExpressions: true,
+  numbersToExpressions: false,
   renameGlobals: false,
   rotateStringArray: true,
-  selfDefending: true,
+  selfDefending: false,
   simplify: true,
-  splitStrings: true,
-  splitStringsChunkLength: 10,
+  splitStrings: false,
   stringArray: true,
-  stringArrayCallsTransform: true,
-  stringArrayCallsTransformThreshold: 0.75,
   stringArrayEncoding: ['base64'],
-  stringArrayIndexShift: true,
-  stringArrayRotate: true,
-  stringArrayShuffle: true,
-  stringArrayWrappersCount: 2,
-  stringArrayWrappersChainedCalls: true,
-  stringArrayWrappersParametersMaxCount: 4,
-  stringArrayWrappersType: 'function',
-  stringArrayThreshold: 0.75,
-  transformObjectKeys: true,
+  stringArrayThreshold: 0.5,
+  transformObjectKeys: false,
   unicodeEscapeSequence: false,
   target: 'node'
 }

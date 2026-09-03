@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.1.115",
+  "version": "1.1.116",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -13,7 +13,7 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json && node -e \"require('fs').copyFileSync('public/logo.png','dist-electron/main/logo.png')\"",
     "verify:main": "node scripts/verify-electron-build.mjs",
-    "obfuscate": "node scripts/obfuscate.mjs",
+    "obfuscate": "node --max-old-space-size=4096 scripts/obfuscate.mjs",
     "test:java": "npm run build:main && node scripts/test-java-scanner.mjs",
     "build": "npm run build:renderer && npm run build:main && npm run obfuscate && npm run verify:main",
     "start": "cross-env NODE_ENV=production electron .",
