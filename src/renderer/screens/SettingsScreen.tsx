@@ -162,8 +162,20 @@ export const SettingsScreen = ({
           }
         )
         setJavaSelection(res)
+        if (forceRefresh) {
+          if (!res.found && res.message) {
+            showToast('error', res.message)
+          } else if (res.warning) {
+            showToast('info', res.warning)
+          } else if (res.found) {
+            showToast('success', `Đã tìm thấy Java ${res.selectedRuntime?.majorVersion || ''} tương thích!`)
+          }
+        }
       } catch (e) {
         console.error(e)
+        if (forceRefresh) {
+          showToast('error', 'Lỗi khi quét Java trên máy')
+        }
       } finally {
         setJavaScanning(false)
       }
@@ -174,6 +186,7 @@ export const SettingsScreen = ({
       activeProfile?.javaPath,
       formData.customJavaScanDirs,
       gameDir,
+      showToast,
     ]
   )
 
