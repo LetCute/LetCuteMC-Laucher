@@ -14,7 +14,6 @@ import type {
   JavaRuntimeSelectionResult,
   LauncherSettings,
   AccountState,
-  LaunchInput,
 } from '@/shared/types'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/button'
@@ -65,7 +64,6 @@ export function LaunchPanel({
   const accounts = accountState?.accounts || []
   const activeAccount = accounts.find(a => a.id === accountState?.activeAccountId)
   const isVirtual = !activeAccount || activeAccount.type === 'local'
-  const isMicrosoft = activeAccount?.type === 'microsoft'
   const hasMicrosoftAccount = activeAccount?.type === 'microsoft'
 
   // Java installer state (local UI only)
@@ -242,8 +240,8 @@ export function LaunchPanel({
 
             {/* Error or result banners */}
             <div className="space-y-2.5 pt-2">
-              {/* Java missing (Microsoft only) */}
-              {isMicrosoft && javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
+              {/* Java missing */}
+              {javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/8 p-3.5 text-sm text-red-300">
                   <AlertTriangle size={15} className="mt-0.5 shrink-0 text-red-400" />
                   <div>
@@ -254,7 +252,7 @@ export function LaunchPanel({
               )}
 
               {/* Java warning */}
-              {isMicrosoft && javaSelection?.warning && (
+              {javaSelection?.warning && (
                 <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/8 p-3.5 text-sm text-amber-300">
                   <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                   <div>
@@ -277,7 +275,7 @@ export function LaunchPanel({
             </div>
 
             {/* Java install result */}
-            {isMicrosoft && javaInstallState !== 'idle' && (
+            {javaInstallState !== 'idle' && (
               <div
                 className={[
                   'flex items-start gap-2.5 rounded-xl border p-3.5 text-sm animate-in fade-in',
@@ -321,14 +319,14 @@ export function LaunchPanel({
         {activeProfile ? (
           <>
             {/* Java auto-install prompt */}
-            {isMicrosoft && javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
+            {javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
               <Button
                 onClick={handleInstallJava}
                 variant="outline"
                 className="w-full h-10"
               >
                 <Download size={15} />
-                <span>Thử lại cài Java</span>
+                <span>Cài đặt Java {javaSelection.requiredMajor || javaSelection.requiredVersion} tự động</span>
               </Button>
             )}
 

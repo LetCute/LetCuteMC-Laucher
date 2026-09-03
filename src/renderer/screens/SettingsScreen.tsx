@@ -28,6 +28,8 @@ import {
   Check,
   Layers,
   Palette,
+  Download,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
@@ -96,6 +98,7 @@ export const SettingsScreen = ({
 
   // Manual Java selection
   const [selectedJavaPath, setSelectedJavaPath] = useState<string>('')
+  const [isInstallingJava, setIsInstallingJava] = useState(false)
 
   // Cache Cleaner State
   const [cacheScan, setCacheScan] = useState<CacheScanResult | null>(null)
@@ -206,6 +209,25 @@ export const SettingsScreen = ({
   useEffect(() => {
     void refreshJava(false)
   }, [refreshJava])
+
+  const handleAutoInstallJava = async () => {
+    if (!requiredMajor || !window.launcherApi) return
+    setIsInstallingJava(true)
+    try {
+      showToast('info', `Đang tải và cài đặt Java ${requiredMajor}...`)
+      const res = await window.launcherApi.autoInstallJava(requiredMajor)
+      if (res.success) {
+        showToast('success', res.message || `Cài đặt Java ${requiredMajor} thành công!`)
+        await refreshJava(true)
+      } else {
+        showToast('error', res.message || `Cài đặt Java ${requiredMajor} thất bại.`)
+      }
+    } catch (err: any) {
+      showToast('error', err?.message || 'Có lỗi khi tự động cài đặt Java.')
+    } finally {
+      setIsInstallingJava(false)
+    }
+  }
 
   const handleChange = (key: keyof LauncherSettings, value: any) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
@@ -693,9 +715,32 @@ export const SettingsScreen = ({
             )}
 
             {!javaSelection?.found && javaSelection?.message && (
-              <div className="flex items-start gap-2 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
-                <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
-                <span>{javaSelection.message}</span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
+                <div className="flex items-start gap-2 min-w-0">
+                  <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-rose-400" />
+                  <span>{javaSelection.message}</span>
+                </div>
+                {requiredMajor && (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={isInstallingJava}
+                    onClick={handleAutoInstallJava}
+                    className="h-8 px-3 text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 self-start sm:self-auto"
+                  >
+                    {isInstallingJava ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Đang cài đặt...
+                      </>
+                    ) : (
+                      <>
+                        <Download className="h-3.5 w-3.5" />
+                        Tự động tải & Cài Java {requiredMajor}
+                      </>
+                    )}
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>

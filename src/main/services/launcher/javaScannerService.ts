@@ -10,8 +10,8 @@ import type {
   JavaScanResult,
   JavaCompatibility,
 } from '../../../shared/types'
-import { getDefaultJavaInstallDir } from './javaInstallerService'
-import { getDefaultMinecraftDirectory, getJavaCacheFilePath } from '../system/storageService'
+import { autoInstallJava, getDefaultJavaInstallDir } from './javaInstallerService'
+import { getJavaCacheFilePath } from '../system/storageService'
 
 const execFileAsync = promisify(execFile)
 
@@ -288,26 +288,6 @@ export async function scanJavaRoot(rootDir: string): Promise<string[]> {
     logScanner(`Found executable: ${exe}`)
   }
   return executables
-}
-
-function looksLikeJavaRoot(dirPath: string): boolean {
-  const lower = dirPath.toLowerCase().replace(/\//g, '\\')
-  return (
-    lower.includes('\\java') ||
-    lower.includes('\\jdk') ||
-    lower.includes('\\jre') ||
-    lower.includes('adoptium') ||
-    lower.includes('temurin') ||
-    lower.includes('zulu') ||
-    lower.includes('corretto') ||
-    lower.includes('bellsoft') ||
-    lower.includes('semeru') ||
-    lower.includes('microsoft\\jdk') ||
-    lower.includes('.jdks') ||
-    lower.includes('.minecraft\\runtime') ||
-    lower.includes('letcutemc\\java') ||
-    lower.includes('javapath')
-  )
 }
 
 /** Deep-scan roots only (known vendor dirs). PATH is handled separately. */
@@ -809,28 +789,34 @@ export async function selectBestJavaRuntime(
   }
 
   const scanResult = await scanJavaRuntimes(scanDirsToUse, options?.forceRefresh === true)
-  const candidates = scanResult.runtimes.filter((r) => r.valid || r.isValid)
-
-  if (candidates.length === 0) {
-    return {
-      found: false,
-      requiredVersion: requiredMajor,
-      requiredMajor,
-      selectedRuntime: null,
-      candidates: [],
-      isExactMatch: false,
-      isFallback: false,
-      warning: null,
-      message: `❌ Không tìm thấy Java Runtime. Minecraft ${minecraftVersion} cần Java ${requiredMajor}. Vui lòng cài đặt Java ${requiredMajor} (Adoptium/Oracle/Microsoft).`,
-    }
-  }
+  let candidates = scanResult.runtimes.filter((r) => r.valid || r.isValid)
 
   let selected = selectCompatibleJava(candidates, requiredMajor, {
     allowNewer: options?.allowNewer === true,
     preferredJavaPath: options?.preferredJavaPath,
   })
 
-  // If not found, try forcing a refresh of the cache once
+  // If missing exact match and not a manual preferred path, auto-install required Java
+  if (!selected && !options?.preferredJavaPath) {
+    logSelector(`Java ${requiredMajor} not found. Triggering automatic background install...`)
+    try {
+      const installRes = await autoInstallJava(requiredMajor, getDefaultJavaInstallDir())
+      if (installRes.success) {
+        logSelector(`Auto-install Java ${requiredMajor} succeeded. Rescanning...`)
+        const refreshedScan = await scanJavaRuntimes(scanDirsToUse, true)
+        candidates = refreshedScan.runtimes.filter((r) => r.valid || r.isValid)
+        selected = selectCompatibleJava(candidates, requiredMajor, {
+          allowNewer: options?.allowNewer === true,
+        })
+      } else {
+        logSelector(`Auto-install Java ${requiredMajor} failed: ${installRes.message}`)
+      }
+    } catch (installErr) {
+      logSelector(`Auto-install Java error: ${installErr}`)
+    }
+  }
+
+  // If still not found and haven't force-refreshed yet, try once more
   if (!selected && !options?.forceRefresh) {
     return selectBestJavaRuntime(minecraftVersion, customScanDirs, {
       ...options,
@@ -840,7 +826,7 @@ export async function selectBestJavaRuntime(
 
   if (!selected) {
     const available = candidates.map((c) => c.majorVersion).join(', ')
-    logSelector(`Required major=${requiredMajor}, no exact match (available: ${available})`)
+    logSelector(`Required major=${requiredMajor}, no match (available: ${available})`)
     return {
       found: false,
       requiredVersion: requiredMajor,
@@ -850,7 +836,7 @@ export async function selectBestJavaRuntime(
       isExactMatch: false,
       isFallback: false,
       warning: null,
-      message: `❌ Không tìm thấy Java ${requiredMajor}. Minecraft ${minecraftVersion} yêu cầu đúng Java ${requiredMajor}. Các runtime hiện có: ${available || 'Không có'}.`,
+      message: `❌ Không tìm thấy hoặc không thể tự động cài Java ${requiredMajor} cho Minecraft ${minecraftVersion}. Các runtime hiện có: ${available || 'Không có'}.`,
     }
   }
 

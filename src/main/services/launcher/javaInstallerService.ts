@@ -1,9 +1,11 @@
-import path from 'node:path';
-import fs from 'node:fs';
-import fsPromises from 'node:fs/promises';
-import { execFile } from 'node:child_process';
-import { promisify } from 'node:util';
-import https from 'node:https';
+import path from 'path';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
+import { execFile } from 'child_process';
+import { promisify } from 'util';
+import http from 'http';
+import https from 'https';
+import { URL } from 'url';
 import { getLauncherDataDirectory } from '../system/storageService';
 
 const execFileAsync = promisify(execFile);
@@ -15,6 +17,7 @@ interface JavaInstallProgress {
 }
 
 const JAVA_EXE = process.platform === 'win32' ? 'java.exe' : 'java';
+const activeInstalls = new Map<number, Promise<{ success: boolean; javaPath: string; message: string }>>();
 
 function getJavaDownloadInfo(version: number) {
   const p = process.platform;
@@ -37,6 +40,16 @@ function getJavaDownloadInfo(version: number) {
       mac: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_mac_hotspot_17.0.8_7.tar.gz',
       linux: 'https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.8%2B7/OpenJDK17U-jdk_x64_linux_hotspot_17.0.8_7.tar.gz'
     },
+    16: {
+      windows: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_windows_hotspot_16.0.2_7.zip',
+      mac: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_mac_hotspot_16.0.2_7.tar.gz',
+      linux: 'https://github.com/adoptium/temurin16-binaries/releases/download/jdk-16.0.2%2B7/OpenJDK16U-jdk_x64_linux_hotspot_16.0.2_7.tar.gz'
+    },
+    11: {
+      windows: 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_windows_hotspot_11.0.21_9.zip',
+      mac: 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_mac_hotspot_11.0.21_9.tar.gz',
+      linux: 'https://github.com/adoptium/temurin11-binaries/releases/download/jdk-11.0.21%2B9/OpenJDK11U-jdk_x64_linux_hotspot_11.0.21_9.tar.gz'
+    },
     8: {
       windows: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_windows_hotspot_8u382b05.zip',
       mac: 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u382-b05/OpenJDK8U-jdk_x64_mac_hotspot_8u382b05.tar.gz',
@@ -44,46 +57,68 @@ function getJavaDownloadInfo(version: number) {
     }
   };
   
-  if (!urls[version]) return null;
-  return { url: urls[version][osPart], filename: `java-${version}.${ext}` };
+  const url = urls[version]?.[osPart] || `https://api.adoptium.net/v3/binary/latest/${version}/ga/${osPart}/x64/jdk/hotspot/normal/eclipse`;
+  return { url, filename: `java-${version}.${ext}` };
 }
 
-async function pathExists(p: string): Promise<boolean> {
-  try {
-    await fsPromises.access(p);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-function downloadFile(url: string, destination: string): Promise<void> {
+function downloadFile(url: string, destination: string, maxRedirects = 10): Promise<void> {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(destination);
-    https.get(url, { timeout: 30000 }, (response) => {
-      // Handle redirects
-      if (response.statusCode === 302 || response.statusCode === 301) {
-        const redirectUrl = response.headers.location;
-        if (redirectUrl) {
-          file.close();
-          downloadFile(redirectUrl, destination).then(resolve).catch(reject);
+    if (maxRedirects <= 0) {
+      reject(new Error('Quá nhiều chuyển hướng khi tải file'));
+      return;
+    }
+
+    const parsedUrl = new URL(url);
+    const client = parsedUrl.protocol === 'http:' ? http : https;
+
+    const request = client.get(url, {
+      timeout: 45000,
+      headers: {
+        'User-Agent': 'LetCuteMC-Launcher',
+        'Accept': '*/*'
+      }
+    }, (response) => {
+      const statusCode = response.statusCode || 0;
+
+      // Handle 301, 302, 303, 307, 308 redirects
+      if ([301, 302, 303, 307, 308].includes(statusCode)) {
+        const redirectLocation = response.headers.location;
+        if (redirectLocation) {
+          const resolvedUrl = new URL(redirectLocation, url).toString();
+          response.resume(); // drain response stream
+          downloadFile(resolvedUrl, destination, maxRedirects - 1).then(resolve).catch(reject);
           return;
         }
       }
 
-      if (response.statusCode !== 200) {
-        file.close();
-        reject(new Error(`HTTP ${response.statusCode}`));
+      if (statusCode < 200 || statusCode >= 300) {
+        response.resume();
+        reject(new Error(`HTTP ${statusCode} khi tải file từ ${url}`));
         return;
       }
 
+      const file = fs.createWriteStream(destination);
       response.pipe(file);
+
       file.on('finish', () => {
-        file.close();
-        resolve();
+        file.close((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
       });
-    }).on('error', (err) => {
-      file.close();
+
+      file.on('error', (err) => {
+        fs.unlink(destination, () => {});
+        reject(err);
+      });
+    });
+
+    request.on('timeout', () => {
+      request.destroy(new Error('Hết thời gian tải (Timeout)'));
+    });
+
+    request.on('error', (err) => {
+      fs.unlink(destination, () => {});
       reject(err);
     });
   });
@@ -124,124 +159,137 @@ export async function autoInstallJava(
   installDir: string,
   onProgress?: (progress: JavaInstallProgress) => void
 ): Promise<{ success: boolean; javaPath: string; message: string }> {
-  const versionInfo = getJavaDownloadInfo(javaVersion);
-  
-  if (!versionInfo) {
-    return {
-      success: false,
-      javaPath: '',
-      message: `Java ${javaVersion} không được hỗ trợ tự động cài đặt. Hỗ trợ: 8, 17, 21, 25`
-    };
+  if (activeInstalls.has(javaVersion)) {
+    return activeInstalls.get(javaVersion)!;
   }
 
-  try {
-    // Create install directory
-    await fsPromises.mkdir(installDir, { recursive: true });
-
-    const tempArchivePath = path.join(installDir, versionInfo.filename);
-    const extractDir = path.join(installDir, `java-${javaVersion}`);
-
-    // Download
-    onProgress?.({
-      stage: 'downloading',
-      percent: 10,
-      message: `Đang tải Java ${javaVersion} (~ 150MB)...`
-    });
-
-    await downloadFile(versionInfo.url, tempArchivePath);
-
-    onProgress?.({
-      stage: 'downloading',
-      percent: 50,
-      message: `Tải xong. Đang giải nén...`
-    });
-
-    // Extract
-    onProgress?.({
-      stage: 'extracting',
-      percent: 60,
-      message: `Đang giải nén Java...`
-    });
-
-    await fsPromises.mkdir(extractDir, { recursive: true });
-    await extractArchive(tempArchivePath, extractDir);
-
-    onProgress?.({
-      stage: 'extracting',
-      percent: 80,
-      message: `Hoàn tất giải nén. Tìm kiếm ${JAVA_EXE}...`
-    });
-
-    // Find java executable in extracted folder
-    const searchJava = async (dir: string, depth = 0): Promise<string> => {
-      if (depth > 5) return '';
-      try {
-        const entries = await fsPromises.readdir(dir, { withFileTypes: true });
-        for (const entry of entries) {
-          if (entry.name === JAVA_EXE) {
-            return path.join(dir, entry.name);
-          }
-          if (entry.isDirectory()) {
-            const found = await searchJava(path.join(dir, entry.name), depth + 1);
-            if (found) return found;
-          }
-        }
-      } catch {
-        // ignore
-      }
-      return '';
-    };
-
-    const javaPath = await searchJava(extractDir);
-
-    // Cleanup temp archive
-    try {
-      await fsPromises.unlink(tempArchivePath);
-    } catch {
-      // ignore cleanup errors
-    }
-
-    if (!javaPath) {
+  const installPromise = (async () => {
+    const versionInfo = getJavaDownloadInfo(javaVersion);
+    
+    if (!versionInfo) {
       return {
         success: false,
         javaPath: '',
-        message: `Cài đặt Java thành công nhưng không tìm thấy ${JAVA_EXE}`
+        message: `Java ${javaVersion} không được hỗ trợ tự động cài đặt. Hỗ trợ: 8, 11, 16, 17, 21, 25`
       };
     }
 
-    // Set execute permission on Mac/Linux
-    if (process.platform !== 'win32') {
+    try {
+      // Create install directory
+      await fsPromises.mkdir(installDir, { recursive: true });
+
+      const tempArchivePath = path.join(installDir, versionInfo.filename);
+      const extractDir = path.join(installDir, `java-${javaVersion}`);
+
+      // Download
+      onProgress?.({
+        stage: 'downloading',
+        percent: 10,
+        message: `Đang tải Java ${javaVersion} (~ 150MB)...`
+      });
+
+      await downloadFile(versionInfo.url, tempArchivePath);
+
+      onProgress?.({
+        stage: 'downloading',
+        percent: 50,
+        message: `Tải xong. Đang giải nén...`
+      });
+
+      // Extract
+      onProgress?.({
+        stage: 'extracting',
+        percent: 60,
+        message: `Đang giải nén Java...`
+      });
+
+      await fsPromises.mkdir(extractDir, { recursive: true });
+      await extractArchive(tempArchivePath, extractDir);
+
+      onProgress?.({
+        stage: 'extracting',
+        percent: 80,
+        message: `Hoàn tất giải nén. Tìm kiếm ${JAVA_EXE}...`
+      });
+
+      // Find java executable in extracted folder
+      const searchJava = async (dir: string, depth = 0): Promise<string> => {
+        if (depth > 5) return '';
+        try {
+          const entries = await fsPromises.readdir(dir, { withFileTypes: true });
+          for (const entry of entries) {
+            if (entry.name === JAVA_EXE) {
+              return path.join(dir, entry.name);
+            }
+            if (entry.isDirectory()) {
+              const found = await searchJava(path.join(dir, entry.name), depth + 1);
+              if (found) return found;
+            }
+          }
+        } catch {
+          // ignore
+        }
+        return '';
+      };
+
+      const javaPath = await searchJava(extractDir);
+
+      // Cleanup temp archive
       try {
-        await fsPromises.chmod(javaPath, 0o755);
-      } catch (e) {
-        console.warn('Could not chmod java executable', e);
+        await fsPromises.unlink(tempArchivePath);
+      } catch {
+        // ignore cleanup errors
       }
+
+      if (!javaPath) {
+        return {
+          success: false,
+          javaPath: '',
+          message: `Cài đặt Java thành công nhưng không tìm thấy ${JAVA_EXE}`
+        };
+      }
+
+      // Set execute permission on Mac/Linux
+      if (process.platform !== 'win32') {
+        try {
+          await fsPromises.chmod(javaPath, 0o755);
+        } catch (e) {
+          console.warn('Could not chmod java executable', e);
+        }
+      }
+
+      onProgress?.({
+        stage: 'configuring',
+        percent: 95,
+        message: `Java ${javaVersion} được cài đặt tại: ${javaPath}`
+      });
+
+      onProgress?.({
+        stage: 'completed',
+        percent: 100,
+        message: `Cài đặt Java ${javaVersion} thành công!`
+      });
+
+      return {
+        success: true,
+        javaPath,
+        message: `Java ${javaVersion} đã được cài đặt tại: ${javaPath}`
+      };
+    } catch (error) {
+      const errMsg = error instanceof Error ? error.message : 'Lỗi không xác định';
+      return {
+        success: false,
+        javaPath: '',
+        message: `Lỗi cài đặt Java: ${errMsg}`
+      };
     }
+  })();
 
-    onProgress?.({
-      stage: 'configuring',
-      percent: 95,
-      message: `Java ${javaVersion} được cài đặt tại: ${javaPath}`
-    });
-
-    onProgress?.({
-      stage: 'completed',
-      percent: 100,
-      message: `Cài đặt Java ${javaVersion} thành công!`
-    });
-
-    return {
-      success: true,
-      javaPath,
-      message: `Java ${javaVersion} đã được cài đặt tại: ${javaPath}`
-    };
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : 'Lỗi không xác định';
-    return {
-      success: false,
-      javaPath: '',
-      message: `Lỗi cài đặt Java: ${errMsg}`
-    };
+  activeInstalls.set(javaVersion, installPromise);
+  try {
+    return await installPromise;
+  } finally {
+    activeInstalls.delete(javaVersion);
   }
 }
 

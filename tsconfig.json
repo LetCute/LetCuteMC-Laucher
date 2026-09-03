@@ -19,10 +19,11 @@
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true,
+    "types": ["node"],
     /* Path Aliases */
     "paths": {
       "@/*": ["./src/renderer/*", "./src/*"]
     }
   },
-  "include": ["src/renderer", "src/shared"]
+  "include": ["src/renderer", "src/shared", "src/main"]
 }
