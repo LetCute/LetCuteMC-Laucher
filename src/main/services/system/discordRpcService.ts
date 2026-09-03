@@ -2,6 +2,7 @@
 type DiscordRpcClient = import('discord-rpc').Client
 import { getSettings } from './settingsService'
 import { eventBus } from '../eventBus'
+import { formatVersionDisplay } from '../../../shared/types'
 
 // Thay mã Client ID của bạn vào đây (Tạo từ https://discord.com/developers/applications)
 // Hiện tại tôi đang để một mã giả để tránh lỗi, hãy thay thế nó sau!
@@ -80,9 +81,10 @@ export function setCustomActivity(details: string, state: string): void {
 export function setPlaying(version: string, profileName: string): void {
   if (!rpcClient || !isConnected) return
 
+  const displayVer = formatVersionDisplay(version) || version
   rpcClient.setActivity({
     details: `Đang chơi: ${profileName}`,
-    state: `Phiên bản: ${version}`,
+    state: `Phiên bản: ${displayVer}`,
     startTimestamp: new Date(),
     largeImageKey: 'logo',
     largeImageText: 'LetCuteMC Launcher',

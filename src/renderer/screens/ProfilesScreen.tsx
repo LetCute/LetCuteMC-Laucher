@@ -4,7 +4,7 @@ import { EmptyState } from '../components/ui/EmptyState'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '@/components/ui/button'
 import { useEffect, useState } from 'react'
-import { cn } from '@/lib/utils'
+import { cn, formatVersionDisplay } from '@/lib/utils'
 import { ExportProfileModal } from '../components/profiles/ExportProfileModal'
 import { ImportProfileModal } from '../components/profiles/ImportProfileModal'
 // Images now loaded directly from public/assets
@@ -238,7 +238,7 @@ export const ProfilesScreen = ({
                           )}>
                             {profile.name}
                           </span>
-                          <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border-zinc-700">{profile.minecraftVersion}</Badge>
+                          <Badge variant="secondary" className="bg-zinc-800 text-zinc-300 border-zinc-700">{formatVersionDisplay(profile.minecraftVersion)}</Badge>
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">

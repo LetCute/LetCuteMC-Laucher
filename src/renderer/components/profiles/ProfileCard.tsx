@@ -2,6 +2,7 @@ import { Check, Edit2, Trash2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { LauncherProfile } from '@/shared/types'
 import { Button } from '../ui/button'
+import { formatVersionDisplay } from '@/lib/utils'
 
 interface ProfileCardProps {
   profile: LauncherProfile
@@ -35,7 +36,7 @@ export const ProfileCard = ({ profile, onSetActive, onEdit, onDelete }: ProfileC
           {profile.name}
         </h3>
         <div className="flex flex-wrap items-center gap-1.5 mb-4">
-          <Badge variant="secondary">{profile.minecraftVersion}</Badge>
+          <Badge variant="secondary">{formatVersionDisplay(profile.minecraftVersion)}</Badge>
         </div>
 
         <div className="space-y-1.5 text-xs">

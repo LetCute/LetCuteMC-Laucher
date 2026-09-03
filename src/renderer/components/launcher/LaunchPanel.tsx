@@ -21,6 +21,7 @@ import { Button } from '../ui/button'
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { useState, useEffect } from 'react'
+import { formatVersionDisplay } from '@/lib/utils'
 
 interface LaunchPanelProps {
   activeProfile: LauncherProfile | null
@@ -169,7 +170,7 @@ export function LaunchPanel({
               <Badge variant={isVirtual ? 'warn' : 'success'}>
                 {isVirtual ? 'Local Offline' : 'Microsoft'}
               </Badge>
-              <Badge variant="secondary">{activeProfile.minecraftVersion}</Badge>
+              <Badge variant="secondary">{formatVersionDisplay(activeProfile.minecraftVersion)}</Badge>
             </div>
             <h3 className="truncate text-2xl font-black tracking-tight text-foreground" title={activeProfile.name}>
               {activeProfile.name}
@@ -193,7 +194,7 @@ export function LaunchPanel({
         {activeProfile ? (
           <>
             <div className="grid grid-cols-2 gap-3">
-              <InfoRow label="Phiên bản" value={activeProfile.minecraftVersion} />
+              <InfoRow label="Phiên bản" value={formatVersionDisplay(activeProfile.minecraftVersion)} />
               <InfoRow
                 label="RAM"
                 value={`${activeProfile.minMemoryMb}M – ${activeProfile.maxMemoryMb}M`}
