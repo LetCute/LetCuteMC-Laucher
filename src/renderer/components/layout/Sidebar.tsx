@@ -34,7 +34,7 @@ import type {
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { useAccounts } from '../../hooks/useAccounts'
-import { cn } from '@/lib/utils'
+import { cn, formatVersionDisplay } from '@/lib/utils'
 import { SkinHead } from '../ui/SkinHead'
 import { Button } from '../ui/button'
 import {
@@ -432,8 +432,8 @@ export function Sidebar({
                     <ChevronDown className="h-3 w-3 text-muted-foreground shrink-0" />
                   </div>
                   {activeProfile ? (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={`${activeProfile.name} (${activeProfile.minecraftVersion})`}>
-                      {activeProfile.name} ({activeProfile.minecraftVersion})
+                    <p className="text-[10px] text-muted-foreground mt-0.5 truncate" title={`${activeProfile.name} (${formatVersionDisplay(activeProfile.minecraftVersion)})`}>
+                      {activeProfile.name} ({formatVersionDisplay(activeProfile.minecraftVersion)})
                     </p>
                   ) : (
                     <p className="text-[10px] text-muted-foreground mt-0.5">Chưa chọn cấu hình</p>
