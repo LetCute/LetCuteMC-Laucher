@@ -539,8 +539,16 @@ export const AccountsScreen = ({
 
         if (profileChanged) {
           showToast('success', 'Đã cập nhật Skin/Cape trên Mojang!')
-          // Re-fetch profile to refresh
-          await window.launcherApi.getMojangProfile(acc.accessToken)
+          // Cập nhật lại state account trong launcher để card nhân vật đổi ngay lập tức
+          const updatedProfile = await window.launcherApi.getMojangProfile(acc.accessToken)
+          const activeSkin = updatedProfile?.skins?.find((s: any) => s.state === 'ACTIVE')
+          const activeCape = updatedProfile?.capes?.find((c: any) => c.state === 'ACTIVE')
+          const newSkinUrl = activeSkin ? (await window.launcherApi.fetchMojangTexture(activeSkin.url)) || activeSkin.url : null
+          const newSkinModel = activeSkin?.variant === 'SLIM' ? 'slim' : 'default'
+          const newCapeUrl = activeCape ? (await window.launcherApi.fetchMojangTexture(activeCape.url)) || activeCape.url : null
+
+          const updatedState = await window.launcherApi.saveLocalSkin(acc.id, newSkinUrl, newSkinModel, newCapeUrl)
+          onAccountStateChange(updatedState)
         }
         closeSkinModal()
       } catch (err) {
