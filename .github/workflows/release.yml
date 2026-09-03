@@ -41,7 +41,6 @@ jobs:
         with:
           files: |
             release/*.exe
-            release/*.blockmap
             release/*.deb
             release/latest.yml
             release/latest-linux.yml
@@ -59,14 +58,12 @@ jobs:
             --recursive \
             --exclude "*" \
             --include "*.exe" \
-            --include "*.blockmap" \
             --include "latest.yml"
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
             --exclude "*" \
             --include "*.exe" \
-            --include "*.blockmap" \
             --include "latest.yml"
 
       - name: Upload to Cloudflare R2 (Linux)
