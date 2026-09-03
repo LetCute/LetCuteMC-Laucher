@@ -132,7 +132,17 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       log: (level, msg) => postLog(jobId, level, msg),
     })
 
-    // 2. Mod dependency check
+    // 2. Pre-launch Integrity & Structure Verification
+    assertNotCancelled()
+    try {
+      const loader = detectLoaderFromVersion(input.version)
+      const { runPreLaunchIntegrityCheck } = await import('../services/content/preLaunchIntegrityService')
+      await runPreLaunchIntegrityCheck(input.gameDir, input.version, loader, (level, msg) => postLog(jobId, level, msg))
+    } catch (integrityErr) {
+      postLog(jobId, 'warn', `[Integrity] Bỏ qua kiểm tra cấu trúc: ${integrityErr instanceof Error ? integrityErr.message : String(integrityErr)}`)
+    }
+
+    // 2a. Mod dependency check
     assertNotCancelled()
     const modsDir = path.join(input.gameDir, 'mods')
     if (await pathExists(modsDir)) {
@@ -148,14 +158,54 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       }
     }
 
-    // 3. Resolve Version & JVM flags
+    // 2b. Setup CustomSkinLoader & Local Skins for offline / cracked servers
+    assertNotCancelled()
+    try {
+      const { setupCustomSkinLoaderForLaunch } = await import('../services/content/skinIntegrationService')
+      await setupCustomSkinLoaderForLaunch(input.gameDir, input.version, auth, (level, msg) => postLog(jobId, level, msg))
+    } catch (skinErr) {
+      postLog(jobId, 'warn', `Bỏ qua nạp skin offline: ${skinErr instanceof Error ? skinErr.message : String(skinErr)}`)
+    }
+
+    // 3. Resolve Version & JVM flags (Auto-repair if files are missing or deleted)
     assertNotCancelled()
     const versionInGameDir = path.join(input.gameDir, 'versions', input.version, `${input.version}.json`)
-    const parseRoot = (await pathExists(versionInGameDir)) ? input.gameDir : resourcePath
+    const versionInResourceDir = path.join(resourcePath, 'versions', input.version, `${input.version}.json`)
 
     const { Version, launch: xmclLaunch } = await import('@xmcl/core')
+    const { ensureVersionMetadata, syncModpackVersionFolder, ensureLibrariesAndAssets } = await import('../services/launcher/versionResolver')
     const { optimizerService } = await import('../services/system/optimizerService')
-    const resolved: ResolvedVersion = await Version.parse(parseRoot, input.version)
+
+    // Tự động khôi phục metadata nếu người dùng xóa file .json
+    const hasGameDirVer = await pathExists(versionInGameDir)
+    const hasResourceVer = await pathExists(versionInResourceDir)
+
+    if (!hasGameDirVer && !hasResourceVer) {
+      postLog(jobId, 'warn', `[AutoRepair] Không tìm thấy metadata cho ${input.version}. Đang tự động tải lại...`)
+      await ensureVersionMetadata(input.version, resourcePath, (level, msg) => postLog(jobId, level, msg))
+    }
+
+    if (hasResourceVer && !hasGameDirVer && input.gameDir.toLowerCase() !== resourcePath.toLowerCase()) {
+      await syncModpackVersionFolder(input.version, resourcePath, input.gameDir, (level, msg) => postLog(jobId, level, msg))
+    }
+
+    const parseRoot = (await pathExists(versionInGameDir)) ? input.gameDir : resourcePath
+    let resolved: ResolvedVersion
+    try {
+      resolved = await Version.parse(parseRoot, input.version)
+    } catch {
+      postLog(jobId, 'warn', `[AutoRepair] Version ${input.version} bị hỏng. Đang tải và khôi phục...`)
+      await ensureVersionMetadata(input.version, resourcePath, (level, msg) => postLog(jobId, level, msg))
+      await syncModpackVersionFolder(input.version, resourcePath, input.gameDir, (level, msg) => postLog(jobId, level, msg))
+      resolved = await Version.parse(parseRoot, input.version)
+    }
+
+    // Tự động tải lại libraries/jar bị thiếu nếu người dùng xóa
+    try {
+      await ensureLibrariesAndAssets(resolved, resourcePath, undefined, () => isCancelled)
+    } catch (assetErr) {
+      postLog(jobId, 'warn', `[AutoRepair] Kiểm tra thư viện: ${assetErr instanceof Error ? assetErr.message : String(assetErr)}`)
+    }
 
     // Filter incompatible JVM flags
     if (javaResult.majorVersion < 24 && (resolved as any).arguments?.jvm) {

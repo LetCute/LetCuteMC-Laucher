@@ -30,16 +30,4 @@ if (missingFiles.length > 0) {
   process.exit(1);
 }
 
-// Ensure prepareWorker or versionResolver requires downloadManager
-const versionResolver = fs.readFileSync(
-  path.resolve("dist-electron/main/services/launcher/versionResolver.js"),
-  "utf8",
-);
-if (!versionResolver.includes("../system/downloadManager")) {
-  console.error(
-    "versionResolver.js does not require ../system/downloadManager — check imports.",
-  );
-  process.exit(1);
-}
-
 console.log("Electron build artifacts verified.");

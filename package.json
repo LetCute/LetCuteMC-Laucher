@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.1.109",
+  "version": "1.1.110",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -13,8 +13,9 @@
     "build:renderer": "vite build",
     "build:main": "tsc -p tsconfig.main.json && node -e \"require('fs').copyFileSync('public/logo.png','dist-electron/main/logo.png')\"",
     "verify:main": "node scripts/verify-electron-build.mjs",
+    "obfuscate": "node scripts/obfuscate.mjs",
     "test:java": "npm run build:main && node scripts/test-java-scanner.mjs",
-    "build": "npm run build:renderer && npm run build:main && npm run verify:main",
+    "build": "npm run build:renderer && npm run build:main && npm run obfuscate && npm run verify:main",
     "start": "cross-env NODE_ENV=production electron .",
     "dist": "npm run build && electron-builder -p never",
     "dist:portable": "npm run build && electron-builder --win portable --x64 -p never",
@@ -62,6 +63,7 @@
     "cross-env": "^10.1.0",
     "electron": "^43.1.0",
     "electron-builder": "^24.13.3",
+    "javascript-obfuscator": "^5.6.0",
     "postcss": "^8.4.41",
     "tailwindcss": "^4.0.0",
     "tsx": "^4.23.0",
@@ -76,6 +78,12 @@
     "directories": {
       "output": "release"
     },
+    "afterPack": "./scripts/afterPack.cjs",
+    "electronLanguages": [
+      "en-US",
+      "en-GB",
+      "vi"
+    ],
     "publish": [
       {
         "provider": "generic",
@@ -112,13 +120,14 @@
       "deleteAppDataOnUninstall": false
     },
     "linux": {
-      "icon": "public/logo.png",
+      "icon": "build/icons",
       "category": "Game",
       "target": [
         "deb"
       ],
       "desktop": {
-        "StartupWMClass": "letcutemc"
+        "StartupWMClass": "letcutemc",
+        "Icon": "letcutemc"
       },
       "artifactName": "${productName}-${version}-linux-${arch}.${ext}"
     }

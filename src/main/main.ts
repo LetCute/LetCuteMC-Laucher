@@ -49,6 +49,21 @@ function createWindow(): void {
     }
   })
 
+  // Chặn điều hướng hoặc mở popup trái phép, chỉ mở link ngoài bằng trình duyệt hệ thống nếu là https/http
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    if (url.startsWith('https:') || url.startsWith('http:')) {
+      void import('electron').then(({ shell }) => shell.openExternal(url))
+    }
+    return { action: 'deny' }
+  })
+
+  mainWindow.webContents.on('will-navigate', (e, url) => {
+    if (isDev && (url.startsWith('http://127.0.0.1:5173') || url.startsWith('http://localhost:5173'))) {
+      return
+    }
+    e.preventDefault()
+  })
+
   // While MC runs: X / close → hide to background (keep process alive to detect MC exit)
   mainWindow.on('close', (e) => {
     if (!shouldKeepAliveForGame()) return

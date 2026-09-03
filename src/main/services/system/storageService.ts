@@ -184,4 +184,56 @@ export async function ensureGameDirectoryStructure(gameDir: string): Promise<voi
   } catch {
     // Non-blocking
   }
+
+  // 5. Khởi tạo options.txt mặc định (tắt phụ đề, tắt narrator/người tường thuật, tắt tutorial)
+  await applyDefaultGameOptions(gameDir)
+}
+
+/** Tự động thiết lập options.txt tối ưu mặc định khi tạo profile hoặc khởi tạo thư mục */
+export async function applyDefaultGameOptions(gameDir: string): Promise<void> {
+  try {
+    const optionsPath = path.join(gameDir, 'options.txt')
+    const exists = await pathExists(optionsPath)
+
+    const defaultOverrides: Record<string, string> = {
+      narrator: '0', // 0: OFF (Tắt người tường thuật)
+      showSubtitles: 'false', // Tắt phụ đề âm thanh
+      tutorialStep: 'none', // Bỏ qua hướng dẫn Mojang (Movement, Looking around, etc.)
+      skipRealms32BitWarning: 'true',
+      onboardingAccessibilityFinished: 'true', // Bỏ qua màn hình trợ năng/tường thuật lần đầu mở game
+      telemetryOptIn: 'false',
+    }
+
+    if (!exists) {
+      // Tạo mới hoàn toàn
+      const lines = Object.entries(defaultOverrides).map(([k, v]) => `${k}:${v}`)
+      await fs.writeFile(optionsPath, lines.join('\n') + '\n', 'utf8')
+    } else {
+      // Đã có options.txt -> cập nhật các key chưa có hoặc đảm bảo narrator/tutorial/subtitles được tắt đúng chuẩn
+      const content = await fs.readFile(optionsPath, 'utf8')
+      const lines = content.split(/\r?\n/)
+      const map = new Map<string, string>()
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed || !trimmed.includes(':')) continue
+        const idx = trimmed.indexOf(':')
+        map.set(trimmed.substring(0, idx), trimmed.substring(idx + 1))
+      }
+
+      let modified = false
+      for (const [key, val] of Object.entries(defaultOverrides)) {
+        if (!map.has(key)) {
+          map.set(key, val)
+          modified = true
+        }
+      }
+
+      if (modified) {
+        const out = Array.from(map.entries()).map(([k, v]) => `${k}:${v}`).join('\n') + '\n'
+        await fs.writeFile(optionsPath, out, 'utf8')
+      }
+    }
+  } catch {
+    // Non-critical
+  }
 }
