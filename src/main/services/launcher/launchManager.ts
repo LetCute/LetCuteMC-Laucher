@@ -70,6 +70,8 @@ function hideLauncherForGame(): void {
       global.gc()
     } catch { }
   }
+  // Trim toàn bộ working set của launcher về RAM trống
+  import('../../main').then(m => m.trimLauncherMemory()).catch(() => {})
 }
 
 /** Restore launcher after MC exits */
