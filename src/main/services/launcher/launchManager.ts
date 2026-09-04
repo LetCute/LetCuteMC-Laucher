@@ -63,6 +63,13 @@ function hideLauncherForGame(): void {
   win.hide()
   win.setSkipTaskbar(true)
   hiddenForGame = true
+  // Thu hồi memory & HTTP cache khi launcher ẩn và game đang chạy
+  win.webContents.session.clearCache().catch(() => {})
+  if (global.gc) {
+    try {
+      global.gc()
+    } catch { }
+  }
 }
 
 /** Restore launcher after MC exits */

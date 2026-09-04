@@ -8,6 +8,10 @@ if (process.platform === 'linux') {
   app.commandLine.appendSwitch('ignore-gpu-blocklist')
 }
 
+// Giới hạn RAM V8 và tối ưu Chromium Process
+app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256')
+app.commandLine.appendSwitch('disable-gpu-process-crash-limit')
+
 let mainWindow: BrowserWindow | null = null
 let isGameRunningFn: (() => boolean) | null = null
 let isLauncherHiddenForGameFn: (() => boolean) | null = null

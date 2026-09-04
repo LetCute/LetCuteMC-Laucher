@@ -113,6 +113,17 @@ export function SkinViewer3D({
     }
   }, [resolvedCape])
 
+  // Pause render loop when hidden to drop GPU/CPU usage
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (viewerRef.current) {
+        viewerRef.current.renderPaused = document.hidden
+      }
+    }
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => document.removeEventListener('visibilitychange', handleVisibility)
+  }, [])
+
   return (
     <canvas
       ref={canvasRef}
