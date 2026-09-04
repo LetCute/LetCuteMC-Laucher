@@ -153,6 +153,7 @@ export const SettingsScreen = ({
       setJavaScanning(true)
       try {
         if (forceRefresh) {
+          showToast('info', 'Đang quét Java và tự động chuẩn bị phiên bản tương thích...')
           await window.launcherApi.scanJavaRuntimes(formData.customJavaScanDirs, true)
         }
         const res = await window.launcherApi.selectBestJavaRuntime(
@@ -682,12 +683,12 @@ export const SettingsScreen = ({
               type="button"
               variant="outline"
               size="sm"
-              disabled={javaScanning || !activeProfile}
+              disabled={javaScanning || isInstallingJava || !activeProfile}
               onClick={() => void refreshJava(true)}
               className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', javaScanning && 'animate-spin')} />
-              Tìm Java trên máy
+              {javaScanning ? 'Đang kiểm tra & tải Java...' : 'Tìm Java trên máy'}
             </Button>
           </CardHeader>
           <CardContent className="space-y-4">

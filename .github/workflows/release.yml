@@ -56,6 +56,9 @@ jobs:
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
           AWS_DEFAULT_REGION: auto
         run: |
+          aws s3 rm s3://storage-letcute/letcutemc-launcher/win-unpacked/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive || true
           aws s3 rm s3://storage-letcute/letcutemc-launcher/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
@@ -66,6 +69,7 @@ jobs:
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
             --exclude "*" \
+            --exclude "win-unpacked/*" \
             --include "*.exe" \
             --include "latest.yml"
 
