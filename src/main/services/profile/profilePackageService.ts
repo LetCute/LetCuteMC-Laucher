@@ -282,6 +282,12 @@ export class ProfilePackageService {
         description: manifest.description,
       })
 
+      // Đảm bảo options.txt chuẩn tiếng Việt cho profile vừa nhập
+      try {
+        const { applyDefaultGameOptions } = await import('../system/storageService.js')
+        await applyDefaultGameOptions(targetGameDir, manifest.minecraftVersion)
+      } catch {}
+
       return {
         success: true,
         profile: newProfile,

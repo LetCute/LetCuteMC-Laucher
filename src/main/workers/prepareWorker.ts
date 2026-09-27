@@ -5,9 +5,8 @@ import type {
   PreparedProfileState,
   LauncherLogLevel,
 } from '../../shared/types'
-import path from 'node:path'
 import fs from 'node:fs/promises'
-import { getVersionManifestCacheDir } from '../services/system/storageService'
+import { getVersionManifestCacheDir, applyDefaultGameOptions } from '../services/system/storageService'
 import { ensureJavaRuntime } from '../services/launcher/javaResolver'
 import {
   ensureVersionMetadata,
@@ -49,7 +48,7 @@ function postProgress(
 }
 
 function postFinished(
-  profileId: string,
+  _profileId: string,
   state: PreparedProfileState | null,
   ok: boolean,
   message?: string
@@ -84,7 +83,7 @@ async function startPrepare(
     await fs.mkdir(getVersionManifestCacheDir(), { recursive: true })
 
     // 1. Tải version metadata & giải quyết inheritsFrom
-    const rawVersionJson = await ensureVersionMetadata(version, mcRootDir, postLog)
+    await ensureVersionMetadata(version, mcRootDir, postLog)
     postProgress(profileId, version, {
       status: 'checking',
       title: 'Tải thông tin phiên bản',
@@ -92,10 +91,7 @@ async function startPrepare(
       percent: 25,
     })
 
-    // 2. Modpack version folder sync
-    await syncModpackVersionFolder(version, mcRootDir, gameDir, postLog)
-
-    // 3. Resolve XMCL Version & Tải Libraries / Assets
+    // 2. Resolve XMCL Version & Tải Libraries / Assets (Client jar được lưu vào đúng version gốc)
     postProgress(profileId, version, {
       status: 'downloading',
       title: 'Kiểm tra thư viện & tài nguyên',
@@ -112,6 +108,9 @@ async function startPrepare(
         percent: 35 + Math.round(percent * 0.35),
       })
     })
+
+    // 3. Modpack version folder sync (Đồng bộ cả metadata và client jar vào gameDir)
+    await syncModpackVersionFolder(version, mcRootDir, gameDir, postLog)
 
     // 4. Java Runtime resolution & Auto-install
     postProgress(profileId, version, {
@@ -152,6 +151,13 @@ async function startPrepare(
       postLog('warn', `Bỏ qua kiểm tra mod dependencies: ${modErr instanceof Error ? modErr.message : String(modErr)}`)
     }
 
+    // 5b. Thiết lập ngôn ngữ Tiếng Việt và tùy chọn mặc định cho profile
+    try {
+      await applyDefaultGameOptions(gameDir, version)
+    } catch {
+      // Non-blocking
+    }
+
     // 6. Hoàn tất
     const finalState: PreparedProfileState = {
       profileId,
@@ -173,6 +179,11 @@ async function startPrepare(
       message: 'Trò chơi đã sẵn sàng.',
       percent: 100,
     })
+
+    // Đảm bảo options.txt và yosbr chuẩn tiếng Việt khi hoàn tất chuẩn bị
+    if (gameDir) {
+      await applyDefaultGameOptions(gameDir, version).catch(() => {})
+    }
 
     postFinished(profileId, finalState, true, 'Prepared successfully.')
   } catch (error) {

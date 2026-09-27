@@ -1,4 +1,4 @@
-import { app, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 import path from 'node:path'
 import fs from 'node:fs/promises'
 import { utilityProcess, type UtilityProcess } from 'electron'
@@ -6,7 +6,6 @@ import type {
   LauncherProfile,
   LauncherSettings,
   PreparedProfileState,
-  PrepareGameProgress,
   PrepareGameResult,
 } from '../../../shared/types'
 import { writeErrorLog } from '../media/errorLogService'
@@ -107,27 +106,35 @@ export async function checkPreparedProfile(
   if (cached[profile.id]) {
     // Quick validation: kiểm tra version JSON và JAR tại đường dẫn đúng
     const record = cached[profile.id]
-    const versionDir = path.join(versionCheckDir, 'versions', profile.minecraftVersion)
-    const versionJsonPath = path.join(versionDir, `${profile.minecraftVersion}.json`)
     
-    let clientJarPath = path.join(versionDir, `${profile.minecraftVersion}.jar`)
-    let jsonExists = await pathExists(versionJsonPath)
-    
+    // Tìm file JSON ở gameDir hoặc mcRootDir
+    let jsonPath = path.join(versionCheckDir, 'versions', profile.minecraftVersion, `${profile.minecraftVersion}.json`)
+    if (!await pathExists(jsonPath)) {
+      jsonPath = path.join(mcRootDir, 'versions', profile.minecraftVersion, `${profile.minecraftVersion}.json`)
+    }
+
+    let jsonExists = await pathExists(jsonPath)
+    let parentVersion = profile.minecraftVersion
+
     if (jsonExists) {
       try {
-        const content = await fs.readFile(versionJsonPath, 'utf8')
+        const content = await fs.readFile(jsonPath, 'utf8')
         const json = JSON.parse(content)
-        if (json.inheritsFrom) {
-          const parentVersion = json.inheritsFrom
-          // Parent version jar \u0111\u01b0\u1ee3c copy v\u00e0o gameDir c\u00f9ng n\u01a1i
-          clientJarPath = path.join(versionCheckDir, 'versions', parentVersion, `${parentVersion}.jar`)
+        if (json.inheritsFrom && typeof json.inheritsFrom === 'string') {
+          parentVersion = json.inheritsFrom
         }
       } catch (_) {
         jsonExists = false
       }
     }
 
-    const exists = jsonExists && (await pathExists(clientJarPath))
+    // Client JAR của phiên bản gốc: kiểm tra ở mcRootDir trước, fallback gameDir
+    let jarPath = path.join(mcRootDir, 'versions', parentVersion, `${parentVersion}.jar`)
+    if (!await pathExists(jarPath)) {
+      jarPath = path.join(gameDir, 'versions', parentVersion, `${parentVersion}.jar`)
+    }
+
+    const exists = jsonExists && (await pathExists(jarPath))
     if (exists) {
       return record
     }
@@ -190,6 +197,12 @@ export async function prepareGameFiles(
             void updateProfile(msg.state.profileId, { javaPath: msg.state.autoInstalledJavaPath })
           })
         }
+      }
+      // Khi chuẩn bị/tải game xong -> tự động đồng bộ options.txt sang tiếng Việt
+      if (profile.gameDir) {
+        import('../system/storageService.js').then(({ applyDefaultGameOptions }) => {
+          void applyDefaultGameOptions(profile.gameDir, profile.minecraftVersion)
+        }).catch(() => {})
       }
       // prepareWorker already dumps failures to log_error
       currentWorker = null

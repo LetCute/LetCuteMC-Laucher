@@ -180,31 +180,42 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     const hasGameDirVer = await pathExists(versionInGameDir)
     const hasResourceVer = await pathExists(versionInResourceDir)
 
-    if (!hasGameDirVer && !hasResourceVer) {
-      postLog(jobId, 'warn', `[AutoRepair] Không tìm thấy metadata cho ${input.version}. Đang tự động tải lại...`)
-      await ensureVersionMetadata(input.version, resourcePath, (level, msg) => postLog(jobId, level, msg))
+    if (!hasResourceVer && hasGameDirVer) {
+      await fs.mkdir(path.dirname(versionInResourceDir), { recursive: true })
+      await fs.copyFile(versionInGameDir, versionInResourceDir)
     }
 
-    if (hasResourceVer && !hasGameDirVer && input.gameDir.toLowerCase() !== resourcePath.toLowerCase()) {
+    if (!hasGameDirVer && !hasResourceVer) {
+      postLog(jobId, 'warn', `[AutoRepair] Không tìm thấy metadata cho ${input.version}. Đang tự động tải lại...`)
+    }
+
+    // Đảm bảo resourcePath luôn có đủ metadata và chuỗi kế thừa (inheritsFrom)
+    await ensureVersionMetadata(input.version, resourcePath, (level, msg) => postLog(jobId, level, msg))
+
+    if (path.resolve(input.gameDir).toLowerCase() !== path.resolve(resourcePath).toLowerCase()) {
       await syncModpackVersionFolder(input.version, resourcePath, input.gameDir, (level, msg) => postLog(jobId, level, msg))
     }
 
-    const parseRoot = (await pathExists(versionInGameDir)) ? input.gameDir : resourcePath
     let resolved: ResolvedVersion
     try {
-      resolved = await Version.parse(parseRoot, input.version)
+      resolved = await Version.parse(resourcePath, input.version)
     } catch {
       postLog(jobId, 'warn', `[AutoRepair] Version ${input.version} bị hỏng. Đang tải và khôi phục...`)
       await ensureVersionMetadata(input.version, resourcePath, (level, msg) => postLog(jobId, level, msg))
       await syncModpackVersionFolder(input.version, resourcePath, input.gameDir, (level, msg) => postLog(jobId, level, msg))
-      resolved = await Version.parse(parseRoot, input.version)
+      resolved = await Version.parse(resourcePath, input.version)
     }
 
     // Tự động tải lại libraries/jar bị thiếu nếu người dùng xóa
     try {
       await ensureLibrariesAndAssets(resolved, resourcePath, undefined, () => isCancelled)
+      if (path.resolve(input.gameDir).toLowerCase() !== path.resolve(resourcePath).toLowerCase()) {
+        await syncModpackVersionFolder(input.version, resourcePath, input.gameDir, (level, msg) => postLog(jobId, level, msg))
+      }
     } catch (assetErr) {
-      postLog(jobId, 'warn', `[AutoRepair] Kiểm tra thư viện: ${assetErr instanceof Error ? assetErr.message : String(assetErr)}`)
+      const msg = assetErr instanceof Error ? assetErr.message : String(assetErr)
+      postLog(jobId, 'error', `[AutoRepair] Kiểm tra thư viện thất bại: ${msg}`)
+      throw new Error(`Không thể chuẩn bị đầy đủ thư viện game: ${msg}`)
     }
 
     // Filter incompatible JVM flags
@@ -232,6 +243,12 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       maxRamMb: input.maxMemoryMb,
     })
     const gpuEnv = optimizerService.getGpuEnvironmentVariables(input.enableDedicatedGpu ?? settings.enableDedicatedGpu ?? true)
+
+    // Đảm bảo options.txt chuẩn tiếng Việt ngay trước khi mở Minecraft
+    try {
+      const { applyDefaultGameOptions } = await import('../services/system/storageService')
+      await applyDefaultGameOptions(input.gameDir, input.version)
+    } catch {}
 
     const child = await xmclLaunch({
       gamePath: input.gameDir,

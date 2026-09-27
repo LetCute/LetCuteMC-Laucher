@@ -1,6 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ModConflictService } from './modConflictService'
+import { getMinecraftLangCode, applyDefaultGameOptions } from '../system/storageService'
 
 export interface PreLaunchCheckResult {
   ok: boolean
@@ -59,61 +60,14 @@ export async function runPreLaunchIntegrityCheck(
     const hasOptions = await fs.stat(optionsPath).then(() => true).catch(() => false)
     const hasOptionsBak = await fs.stat(optionsBak).then(() => true).catch(() => false)
 
-    if (hasOptions) {
-      // Đảm bảo các thiết lập làm phiền (narrator, tutorial, onboarding screen, phụ đề nếu chưa bật) được tắt
-      try {
-        const content = await fs.readFile(optionsPath, 'utf8')
-        const lines = content.split(/\r?\n/)
-        const map = new Map<string, string>()
-        for (const line of lines) {
-          const trimmed = line.trim()
-          if (!trimmed || !trimmed.includes(':')) continue
-          const idx = trimmed.indexOf(':')
-          map.set(trimmed.substring(0, idx), trimmed.substring(idx + 1))
-        }
-
-        let modified = false
-        const defaultConfigs: Record<string, string> = {
-          narrator: '0',
-          showSubtitles: 'false',
-          tutorialStep: 'none',
-          skipRealms32BitWarning: 'true',
-          onboardingAccessibilityFinished: 'true',
-          telemetryOptIn: 'false',
-        }
-
-        for (const [k, v] of Object.entries(defaultConfigs)) {
-          if (!map.has(k)) {
-            map.set(k, v)
-            modified = true
-          }
-        }
-
-        if (modified) {
-          const out = Array.from(map.entries()).map(([k, v]) => `${k}:${v}`).join('\n') + '\n'
-          await fs.writeFile(optionsPath, out, 'utf8')
-        }
-      } catch {}
-
-      await fs.copyFile(optionsPath, optionsBak).catch(() => {})
-    } else if (hasOptionsBak) {
+    if (!hasOptions && hasOptionsBak) {
       // Khôi phục options.txt từ bản backup nếu người dùng lỡ tay xóa
       await fs.copyFile(optionsBak, optionsPath).catch(() => {})
       log?.('info', '[Integrity] Đã tự động khôi phục options.txt từ bản sao lưu gần nhất.')
-    } else {
-      // Tạo options.txt mặc định tắt phụ đề, narrator, tutorial
-      const defaultConfigs: Record<string, string> = {
-        narrator: '0',
-        showSubtitles: 'false',
-        tutorialStep: 'none',
-        skipRealms32BitWarning: 'true',
-        onboardingAccessibilityFinished: 'true',
-        telemetryOptIn: 'false',
-      }
-      const lines = Object.entries(defaultConfigs).map(([k, v]) => `${k}:${v}`)
-      await fs.writeFile(optionsPath, lines.join('\n') + '\n', 'utf8').catch(() => {})
-      await fs.copyFile(optionsPath, optionsBak).catch(() => {})
     }
+
+    // Đảm bảo options.txt (và các bản sao lưu / yosbr / defaultoptions) chuẩn tiếng Việt
+    await applyDefaultGameOptions(gameDir, mcVersion)
 
     const hasServers = await fs.stat(serversPath).then(() => true).catch(() => false)
     const hasServersBak = await fs.stat(serversBak).then(() => true).catch(() => false)

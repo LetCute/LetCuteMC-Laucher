@@ -118,6 +118,8 @@ async function discoverDiskProfiles(existingProfiles: LauncherProfile[]): Promis
         updatedAt: now,
       };
 
+      await ensureGameDirectoryStructure(folderPath, detectedVersion).catch(() => {});
+
       discovered.push(newProfile);
     }
   } catch (err) {
@@ -177,7 +179,7 @@ export async function createProfile(
   const now = new Date().toISOString();
   const rec = recommendPerformance();
 
-  const { getDefaultMinecraftDirectory, getLauncherDataDirectory } = await import('../system/storageService.js');
+  const { getLauncherDataDirectory } = await import('../system/storageService.js');
 
   let finalGameDir = input.gameDir || '';
   if (finalGameDir.trim() === '') {
@@ -199,7 +201,7 @@ export async function createProfile(
   };
 
   // Ensure game directory structure is created and launcher_profiles.json is valid/created
-  await ensureGameDirectoryStructure(profile.gameDir);
+  await ensureGameDirectoryStructure(profile.gameDir, profile.minecraftVersion);
 
   store.profiles.push(profile);
   await writeJsonFile(getProfilesFilePath(), store);
@@ -239,7 +241,7 @@ export async function updateProfile(
 
   // Ensure game directory structure is created and launcher_profiles.json is valid/created
   if (updated.gameDir) {
-    await ensureGameDirectoryStructure(updated.gameDir);
+    await ensureGameDirectoryStructure(updated.gameDir, updated.minecraftVersion);
   }
 
   store.profiles[index] = updated;

@@ -7,7 +7,6 @@
  */
 
 import { BrowserWindow } from 'electron'
-import path from 'node:path'
 import crypto from 'node:crypto'
 import { utilityProcess, type UtilityProcess } from 'electron'
 import { createRequire } from 'node:module'
@@ -21,7 +20,7 @@ import {
   StartLaunchResult,
   WorkerOutputMessage,
 } from '../../../shared/types'
-import { getAccountState, generateOfflineUuid } from '../auth/accountService'
+import { generateOfflineUuid } from '../auth/accountService'
 import { writeErrorLog } from '../media/errorLogService'
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -384,7 +383,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
   // Ensure game directory structure exists before starting the job
   try {
     const { ensureGameDirectoryStructure } = await import('../system/storageService.js')
-    await ensureGameDirectoryStructure(input.gameDir)
+    await ensureGameDirectoryStructure(input.gameDir, input.version)
   } catch (err) {
     const errMsg = (err as Error).message
     console.error('[LaunchManager] ensureGameDirectoryStructure failed:', errMsg)

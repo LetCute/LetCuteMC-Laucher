@@ -101,7 +101,7 @@ export async function pathExists(p: string): Promise<boolean> {
   }
 }
 
-export async function ensureGameDirectoryStructure(gameDir: string): Promise<void> {
+export async function ensureGameDirectoryStructure(gameDir: string, mcVersion?: string): Promise<void> {
   if (!gameDir) return
 
   // 1. Create main directory
@@ -185,17 +185,33 @@ export async function ensureGameDirectoryStructure(gameDir: string): Promise<voi
     // Non-blocking
   }
 
-  // 5. Khởi tạo options.txt mặc định (tắt phụ đề, tắt narrator/người tường thuật, tắt tutorial)
-  await applyDefaultGameOptions(gameDir)
+  // 5. Khởi tạo options.txt mặc định (tiếng Việt, tắt phụ đề, tắt narrator/người tường thuật, tắt tutorial)
+  await applyDefaultGameOptions(gameDir, mcVersion)
 }
 
-/** Tự động thiết lập options.txt tối ưu mặc định khi tạo profile hoặc khởi tạo thư mục */
-export async function applyDefaultGameOptions(gameDir: string): Promise<void> {
+/** Lấy mã ngôn ngữ Minecraft chuẩn: 1.13+ là vi_vn, < 1.13 là vi_VN */
+export function getMinecraftLangCode(version?: string): string {
+  if (!version) return 'vi_vn'
+  const match = version.match(/(?:^|[^\d])(1\.\d+|2\d+\.\d+)/)
+  if (match) {
+    const parts = match[1].split('.')
+    const major = parseInt(parts[0], 10)
+    const minor = parseInt(parts[1], 10)
+    if (major === 1 && minor < 13) {
+      return 'vi_VN'
+    }
+  }
+  return 'vi_vn'
+}
+
+/** Tự động thiết lập options.txt tối ưu mặc định (tiếng Việt, tắt phụ đề, tắt narrator) khi tạo profile hoặc khởi tạo thư mục */
+export async function applyDefaultGameOptions(gameDir: string, mcVersion?: string): Promise<void> {
   try {
-    const optionsPath = path.join(gameDir, 'options.txt')
-    const exists = await pathExists(optionsPath)
+    const langCode = getMinecraftLangCode(mcVersion)
 
     const defaultOverrides: Record<string, string> = {
+      lang: langCode,
+      forceUnicodeFont: 'true',
       narrator: '0', // 0: OFF (Tắt người tường thuật)
       showSubtitles: 'false', // Tắt phụ đề âm thanh
       tutorialStep: 'none', // Bỏ qua hướng dẫn Mojang (Movement, Looking around, etc.)
@@ -204,36 +220,69 @@ export async function applyDefaultGameOptions(gameDir: string): Promise<void> {
       telemetryOptIn: 'false',
     }
 
-    if (!exists) {
-      // Tạo mới hoàn toàn
-      const lines = Object.entries(defaultOverrides).map(([k, v]) => `${k}:${v}`)
-      await fs.writeFile(optionsPath, lines.join('\n') + '\n', 'utf8')
-    } else {
-      // Đã có options.txt -> cập nhật các key chưa có hoặc đảm bảo narrator/tutorial/subtitles được tắt đúng chuẩn
-      const content = await fs.readFile(optionsPath, 'utf8')
-      const lines = content.split(/\r?\n/)
-      const map = new Map<string, string>()
-      for (const line of lines) {
-        const trimmed = line.trim()
-        if (!trimmed || !trimmed.includes(':')) continue
-        const idx = trimmed.indexOf(':')
-        map.set(trimmed.substring(0, idx), trimmed.substring(idx + 1))
-      }
+    const patchOptionsFile = async (filePath: string) => {
+      try {
+        const exists = await pathExists(filePath)
+        if (!exists) {
+          await fs.mkdir(path.dirname(filePath), { recursive: true }).catch(() => {})
+          const lines = Object.entries(defaultOverrides).map(([k, v]) => `${k}:${v}`)
+          await fs.writeFile(filePath, lines.join('\n') + '\n', 'utf8')
+          return
+        }
 
-      let modified = false
-      for (const [key, val] of Object.entries(defaultOverrides)) {
-        if (!map.has(key)) {
-          map.set(key, val)
+        const content = await fs.readFile(filePath, 'utf8')
+        const lines = content.split(/\r?\n/)
+        const map = new Map<string, string>()
+        for (const line of lines) {
+          const trimmed = line.trim()
+          if (!trimmed || !trimmed.includes(':')) continue
+          const idx = trimmed.indexOf(':')
+          map.set(trimmed.substring(0, idx).trim(), trimmed.substring(idx + 1).trim())
+        }
+
+        let modified = false
+        const currentLang = map.get('lang')?.replace(/['"]/g, '').trim()
+        if (currentLang !== langCode) {
+          map.set('lang', langCode)
           modified = true
         }
-      }
 
-      if (modified) {
-        const out = Array.from(map.entries()).map(([k, v]) => `${k}:${v}`).join('\n') + '\n'
-        await fs.writeFile(optionsPath, out, 'utf8')
+        for (const [key, val] of Object.entries(defaultOverrides)) {
+          if (!map.has(key)) {
+            map.set(key, val)
+            modified = true
+          }
+        }
+
+        if (modified) {
+          const out = Array.from(map.entries()).map(([k, v]) => `${k}:${v}`).join('\n') + '\n'
+          await fs.writeFile(filePath, out, 'utf8')
+        }
+      } catch (err) {
+        console.warn(`[StorageService] Failed to patch options file "${filePath}":`, err)
       }
     }
-  } catch {
-    // Non-critical
+
+    // 1. Root options.txt
+    const optionsPath = path.join(gameDir, 'options.txt')
+    await patchOptionsFile(optionsPath)
+
+    // 2. Đồng bộ với options.txt.bak để tránh bị khôi phục ngược lại tiếng Anh
+    const optionsBak = path.join(gameDir, 'options.txt.bak')
+    await fs.copyFile(optionsPath, optionsBak).catch(() => {})
+
+    // 3. Patch modpack overrides: config/yosbr/options.txt (Your Options Shall Be Respected mod)
+    const yosbrOptionsPath = path.join(gameDir, 'config', 'yosbr', 'options.txt')
+    if (await pathExists(path.dirname(yosbrOptionsPath))) {
+      await patchOptionsFile(yosbrOptionsPath)
+    }
+
+    // 4. Patch modpack overrides: config/defaultoptions/options.txt (Default Options mod)
+    const defaultOptionsPath = path.join(gameDir, 'config', 'defaultoptions', 'options.txt')
+    if (await pathExists(path.dirname(defaultOptionsPath))) {
+      await patchOptionsFile(defaultOptionsPath)
+    }
+  } catch (err) {
+    console.error('[StorageService] applyDefaultGameOptions error:', err)
   }
 }

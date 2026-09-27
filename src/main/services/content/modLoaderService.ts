@@ -115,6 +115,13 @@ export async function installForge(mcVersion: string, loaderVersion: string, gam
       forgeVersion = loaderVersion.substring(mcVersion.length + 1)
     }
 
+    // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer Forge
+    const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
+    await ensureVersionMetadata(mc, gameDir)
+    const { Version } = await import('@xmcl/core')
+    const baseResolved = await Version.parse(gameDir, mc)
+    await ensureLibrariesAndAssets(baseResolved, gameDir)
+
     const versionName = await (await getXmclInstaller()).installForge(
       { mcversion: mc, version: forgeVersion },
       gameDir
@@ -128,6 +135,13 @@ export async function installForge(mcVersion: string, loaderVersion: string, gam
 
 export async function installNeoForge(_mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
   try {
+    // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer NeoForge
+    const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
+    await ensureVersionMetadata(_mcVersion, gameDir)
+    const { Version } = await import('@xmcl/core')
+    const baseResolved = await Version.parse(gameDir, _mcVersion)
+    await ensureLibrariesAndAssets(baseResolved, gameDir)
+
     const versionName = await (await getXmclInstaller()).installNeoForged('neoforge', loaderVersion, gameDir, {})
     return versionName
   } catch (error) {
@@ -153,6 +167,8 @@ export async function getFabricVersions(): Promise<ModLoaderVersion[]> {
 
 export async function installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
   try {
+    const { ensureVersionMetadata } = await import('../launcher/versionResolver')
+    await ensureVersionMetadata(mcVersion, gameDir)
     const versionName = await (await getXmclInstaller()).installFabric({ minecraftVersion: mcVersion, version: loaderVersion, minecraft: gameDir })
     return versionName
   } catch (error) {
@@ -178,6 +194,8 @@ export async function getQuiltVersions(): Promise<ModLoaderVersion[]> {
 
 export async function installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
   try {
+    const { ensureVersionMetadata } = await import('../launcher/versionResolver')
+    await ensureVersionMetadata(mcVersion, gameDir)
     const versionName = await (await getXmclInstaller()).installQuiltVersion({ minecraftVersion: mcVersion, version: loaderVersion, minecraft: gameDir })
     return versionName
   } catch (error) {

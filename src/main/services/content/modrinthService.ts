@@ -354,6 +354,14 @@ async function _installMrpack(
       }
     }
   }
+
+  // Tự động chuẩn hóa options.txt sang tiếng Việt cho modpack vừa cài
+  try {
+    const { applyDefaultGameOptions } = await import('../system/storageService.js')
+    await applyDefaultGameOptions(profileGameDir, minecraftVersion)
+  } catch (err) {
+    console.warn('[ModrinthService] applyDefaultGameOptions error:', err)
+  }
   
   taskManagerService.completeTask(taskId, `Cài đặt Modpack hoàn tất thành công! Đã tạo cấu hình ${profileName}.`, { profileId: createdProfile.id })
   
