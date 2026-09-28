@@ -216,6 +216,8 @@ export async function applyDefaultGameOptions(gameDir: string, mcVersion?: strin
       showSubtitles: 'false', // Tắt phụ đề âm thanh
       tutorialStep: 'none', // Bỏ qua hướng dẫn Mojang (Movement, Looking around, etc.)
       skipRealms32BitWarning: 'true',
+      skipMultiplayerWarning: 'true', // Tự động bỏ qua cảnh báo chơi trực tuyến bên thứ ba
+      joinedFirstServer: 'true', // Bỏ qua xác nhận lần đầu tham gia máy chủ
       onboardingAccessibilityFinished: 'true', // Bỏ qua màn hình trợ năng/tường thuật lần đầu mở game
       telemetryOptIn: 'false',
     }
@@ -241,9 +243,13 @@ export async function applyDefaultGameOptions(gameDir: string, mcVersion?: strin
         }
 
         let modified = false
-        const currentLang = map.get('lang')?.replace(/['"]/g, '').trim()
-        if (currentLang !== langCode) {
-          map.set('lang', langCode)
+
+        if (map.get('skipMultiplayerWarning') !== 'true') {
+          map.set('skipMultiplayerWarning', 'true')
+          modified = true
+        }
+        if (map.get('joinedFirstServer') !== 'true') {
+          map.set('joinedFirstServer', 'true')
           modified = true
         }
 

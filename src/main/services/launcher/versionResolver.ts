@@ -146,6 +146,41 @@ export async function syncModpackVersionFolder(
   log?.('info', `Đã đồng bộ version metadata vào thư mục profile: ${path.join(gameDir, 'versions')}`)
 }
 
+async function collectMissingAssetTasks(indexPath: string, mcRootDir: string): Promise<DownloadTask[]> {
+  try {
+    const raw = await fs.readFile(indexPath, 'utf8')
+    const indexData = JSON.parse(raw)
+    if (!indexData?.objects) return []
+
+    const entries = Object.entries<any>(indexData.objects)
+    const checked = await Promise.all(
+      entries.map(async ([key, item]) => {
+        if (!item?.hash) return null
+        const prefix = item.hash.substring(0, 2)
+        const destObj = path.join(mcRootDir, 'assets', 'objects', prefix, item.hash)
+        try {
+          const s = await fs.stat(destObj)
+          if (typeof item.size === 'number' ? s.size === item.size : s.size > 0) {
+            return null
+          }
+        } catch {}
+        return {
+          id: `asset-${item.hash}`,
+          label: `Tài nguyên: ${path.basename(key)}`,
+          url: `https://resources.download.minecraft.net/${prefix}/${item.hash}`,
+          destinationPath: destObj,
+          sha1: item.hash,
+          size: item.size,
+        } as DownloadTask
+      })
+    )
+
+    return checked.filter((t): t is DownloadTask => Boolean(t))
+  } catch {
+    return []
+  }
+}
+
 /**
  * Validates and batch-downloads version libraries and client assets.
  */
@@ -222,7 +257,8 @@ export async function ensureLibrariesAndAssets(
     }
   }
 
-  // 3. Asset Index & Ngôn ngữ Tiếng Việt
+  // 3. Asset Index & Toàn bộ tài nguyên game (Fonts, Textures, Panorama, Lang...)
+  let assetTasks: DownloadTask[] = []
   if (version.assetIndex?.url && version.assetIndex?.id) {
     const indexPath = path.join(mcRootDir, 'assets', 'indexes', `${version.assetIndex.id}.json`)
     const indexValid = (await pathExists(indexPath)) && (!version.assetIndex.sha1 || (await checkFileHash(indexPath, version.assetIndex.sha1)))
@@ -236,76 +272,35 @@ export async function ensureLibrariesAndAssets(
         size: version.assetIndex.size,
       })
     } else {
-      try {
-        const raw = await fs.readFile(indexPath, 'utf8')
-        const indexData = JSON.parse(raw)
-        if (indexData?.objects) {
-          const langKeys = Object.keys(indexData.objects).filter(k => k.startsWith('minecraft/lang/vi_'))
-          for (const key of langKeys) {
-            const item = indexData.objects[key]
-            if (item?.hash) {
-              const prefix = item.hash.substring(0, 2)
-              const destObj = path.join(mcRootDir, 'assets', 'objects', prefix, item.hash)
-              const valid = (await pathExists(destObj)) && (await checkFileHash(destObj, item.hash))
-              if (!valid) {
-                tasks.push({
-                  id: `asset-lang-${item.hash}`,
-                  label: `Ngôn ngữ Tiếng Việt (${path.basename(key)})`,
-                  url: `https://resources.download.minecraft.net/${prefix}/${item.hash}`,
-                  destinationPath: destObj,
-                  sha1: item.hash,
-                  size: item.size,
-                })
-              }
-            }
-          }
-        }
-      } catch {}
+      assetTasks = await collectMissingAssetTasks(indexPath, mcRootDir)
+      tasks.push(...assetTasks)
     }
   }
 
   if (tasks.length > 0) {
     if (isCancelled?.()) throw new Error('PREPARE_CANCELLED')
     await downloadTasks(tasks, {
-      concurrency: 12,
+      concurrency: 16,
       onProgress: (p) => {
         onProgress?.(Math.round(p.percent), p.current, p.total)
       },
     })
   }
 
-  // Nếu asset index vừa được tải ở lượt trên, đảm bảo file ngôn ngữ Tiếng Việt cũng được tải
-  if (version.assetIndex?.id) {
+  // Nếu asset index vừa được tải ở lượt trên, đảm bảo toàn bộ asset objects cũng được tải
+  if (version.assetIndex?.id && assetTasks.length === 0) {
     const indexPath = path.join(mcRootDir, 'assets', 'indexes', `${version.assetIndex.id}.json`)
     try {
       if (await pathExists(indexPath)) {
-        const raw = await fs.readFile(indexPath, 'utf8')
-        const indexData = JSON.parse(raw)
-        if (indexData?.objects) {
-          const langTasks: DownloadTask[] = []
-          const langKeys = Object.keys(indexData.objects).filter(k => k.startsWith('minecraft/lang/vi_'))
-          for (const key of langKeys) {
-            const item = indexData.objects[key]
-            if (item?.hash) {
-              const prefix = item.hash.substring(0, 2)
-              const destObj = path.join(mcRootDir, 'assets', 'objects', prefix, item.hash)
-              const valid = (await pathExists(destObj)) && (await checkFileHash(destObj, item.hash))
-              if (!valid) {
-                langTasks.push({
-                  id: `asset-lang-${item.hash}`,
-                  label: `Ngôn ngữ Tiếng Việt (${path.basename(key)})`,
-                  url: `https://resources.download.minecraft.net/${prefix}/${item.hash}`,
-                  destinationPath: destObj,
-                  sha1: item.hash,
-                  size: item.size,
-                })
-              }
-            }
-          }
-          if (langTasks.length > 0) {
-            if (isCancelled?.()) throw new Error('PREPARE_CANCELLED')
-            await downloadTasks(langTasks, { concurrency: 4 })
-          }
+        const remainingTasks = await collectMissingAssetTasks(indexPath, mcRootDir)
+        if (remainingTasks.length > 0) {
+          if (isCancelled?.()) throw new Error('PREPARE_CANCELLED')
+          await downloadTasks(remainingTasks, {
+            concurrency: 16,
+            onProgress: (p) => {
+              onProgress?.(Math.round(p.percent), p.current, p.total)
+            },
+          })
         }
       }
     } catch {}

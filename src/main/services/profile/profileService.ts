@@ -205,6 +205,12 @@ export async function createProfile(
 
   store.profiles.push(profile);
   await writeJsonFile(getProfilesFilePath(), store);
+
+  // Tự động inject servers.dat (chứa NovusMC ở đầu)
+  import('../media/serverListService.js')
+    .then(m => m.serverListService.injectServersToProfile(profile.id))
+    .catch(() => {});
+
   return profile;
 }
 

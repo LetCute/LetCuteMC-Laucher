@@ -80,9 +80,10 @@ export function ProfileModal({
       })
     } else {
       const first = preselectedVersion ?? (versionCatalog?.releases?.[0] ?? null)
+      const defaultName = first?.id ? `Cấu hình ${first.id}` : ''
       window.launcherApi.getSettings().then(settings => {
         setFormData({
-          name: first?.id ? first.id : '',
+          name: defaultName,
           minecraftVersion: first?.id ?? '',
           gameDir: defaultGameDir || '',
           minMemoryMb: settings.defaultMinMemoryMb || 2048,
@@ -90,7 +91,7 @@ export function ProfileModal({
         })
       }).catch(() => {
         setFormData({
-          name: first?.id ? first.id : '',
+          name: defaultName,
           minecraftVersion: first?.id ?? '',
           gameDir: defaultGameDir || '',
           minMemoryMb: 2048,
@@ -233,7 +234,7 @@ export function ProfileModal({
         <div className="col-span-2">
           <Input
             label="Tên Profile"
-            placeholder="Ví dụ: Survival 1.21"
+            placeholder="Ví dụ: Cấu hình 1.21.7"
             value={formData.name}
             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             error={errors.name}
@@ -257,7 +258,14 @@ export function ProfileModal({
                     else firstList = versionCatalog?.releases ?? []
 
                     if (firstList.length > 0) {
-                      setFormData(p => ({ ...p, minecraftVersion: firstList[0].id }))
+                      const nextVer = firstList[0].id
+                      setFormData(p => ({
+                        ...p,
+                        minecraftVersion: nextVer,
+                        name: (!profile && (p.name === '' || p.name === p.minecraftVersion || p.name === `Cấu hình ${p.minecraftVersion}`))
+                          ? `Cấu hình ${nextVer}`
+                          : p.name
+                      }))
                     }
                   }}
                   options={[
@@ -271,7 +279,13 @@ export function ProfileModal({
               <div className="w-2/3">
                 <Select
                   value={formData.minecraftVersion}
-                  onChange={(val) => setFormData(p => ({ ...p, minecraftVersion: val }))}
+                  onChange={(val) => setFormData(p => ({
+                    ...p,
+                    minecraftVersion: val,
+                    name: (!profile && (p.name === '' || p.name === p.minecraftVersion || p.name === `Cấu hình ${p.minecraftVersion}`))
+                      ? `Cấu hình ${val}`
+                      : p.name
+                  }))}
                   options={(
                     versionTypeFilter === 'snapshots' ? versionCatalog?.snapshots :
                       versionTypeFilter === 'old_beta' ? versionCatalog?.oldBeta :

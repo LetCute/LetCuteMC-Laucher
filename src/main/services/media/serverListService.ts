@@ -1,16 +1,17 @@
 import * as fs from 'fs'
 import * as path from 'path'
-import * as util from 'util'
 // cheerio and prismarine-nbt are lazy-loaded to reduce cold-start time
 import { MinecraftServer } from '../../../shared/types'
 import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
 
+let cheerioModule: typeof import('cheerio') | null = null
 async function getCheerio() {
-  return await import('cheerio')
+  return (cheerioModule ??= await import('cheerio'))
 }
 
+let nbtModule: typeof import('prismarine-nbt') | null = null
 async function getNbt() {
-  return await import('prismarine-nbt')
+  return (nbtModule ??= await import('prismarine-nbt'))
 }
 
 const parseNbt = async (buffer: Buffer | ArrayBuffer) => {
@@ -19,8 +20,108 @@ const parseNbt = async (buffer: Buffer | ArrayBuffer) => {
   return (res as any)?.parsed || res
 }
 
+export interface PinnedServerConfig {
+  ip: string
+  name: string
+  description?: string
+  version?: string
+  tags?: string[]
+  matchIps?: string[]
+}
+
+/**
+ * Danh sách server ghim lên đầu. Thêm server mới vào mảng này theo thứ tự ưu tiên.
+ */
+export const PINNED_SERVERS: PinnedServerConfig[] = [
+  {
+    ip: 'choi.novusmc.online',
+    // Minecraft color formatting: §6 = Vàng cam (Gold), §e = Vàng sáng (Yellow), §l = In đậm (Bold)
+    name: '§6§l[Server Chill Lắm] §e§lNovusMC',
+    description: 'Server Chill Lắm - NovusMC máy chủ Minecraft sinh tồn cộng đồng vui vẻ',
+    version: '1.20.x - 1.21.x',
+    tags: ['Survival', 'Chill', 'SMP', 'VietNam'],
+    matchIps: ['choi.novusmc.online', 'novusmc.online', 'choi.novusmc.online:25565', 'choi.novusmc.online:19012']
+  },
+  {
+    ip: 'mc.aenat.net:25565',
+    name: '§e§l[VIP] §f§lAenat Network',
+    description: 'Aenat Network - Máy chủ Minecraft Việt Nam',
+    version: '1.20.x - 1.21.x',
+    tags: ['VIP', 'Network', 'VietNam'],
+    matchIps: ['mc.aenat.net', 'mc.aenat.net:25565']
+  }
+]
+
+function normalizeIp(ip?: string): string {
+  return ip ? ip.toLowerCase().trim().replace(/:(?:25565|19012|\d+)$/, '') : ''
+}
+
+export function findPinnedServer(ip?: string): PinnedServerConfig | undefined {
+  if (!ip) return undefined
+  const clean = normalizeIp(ip)
+  const full = ip.toLowerCase().trim()
+
+  return PINNED_SERVERS.find(pinned => {
+    const pinnedClean = normalizeIp(pinned.ip)
+    if (clean === pinnedClean || full === pinned.ip.toLowerCase().trim()) return true
+    return pinned.matchIps?.some(m => normalizeIp(m) === clean || m.toLowerCase().trim() === full) ?? false
+  })
+}
+
+export function isPinnedServerIp(ip?: string): boolean {
+  return findPinnedServer(ip) !== undefined
+}
+
+// Backward compatibility
+export const NOVUS_SERVER_IP = PINNED_SERVERS[0]?.ip ?? 'choi.novusmc.online'
+export const NOVUS_SERVER_NAME = PINNED_SERVERS[0]?.name ?? '§6§l[Server Chill Lắm] §e§lNovusMC'
+export const isNovusServerIp = isPinnedServerIp
+
 export class ServerListService {
   private readonly baseUrl = 'https://minecraft-mp.com/country/vietnam'
+
+  /**
+   * Đảm bảo các server trong PINNED_SERVERS luôn ở đầu danh sách theo thứ tự mảng.
+   * Nếu có ở dưới thì xóa khỏi vị trí cũ và đẩy lên đầu; nếu chưa có thì thêm mới vào đầu.
+   */
+  promotePinnedServers(servers: MinecraftServer[], page: number = 1): MinecraftServer[] {
+    const list = servers.filter(s => !isPinnedServerIp(s.ip))
+    if (page > 1) return list
+
+    const pinnedItems: MinecraftServer[] = PINNED_SERVERS.map((pinned, index) => {
+      const existing = servers.find(s => {
+        const found = findPinnedServer(s.ip)
+        return found?.ip.toLowerCase() === pinned.ip.toLowerCase()
+      })
+
+      if (existing) {
+        return {
+          ...existing,
+          name: pinned.name,
+          ip: pinned.ip,
+          isOnline: true
+        }
+      }
+
+      return {
+        id: `pinned_server_${index + 1}`,
+        rank: index + 1,
+        name: pinned.name,
+        ip: pinned.ip,
+        description: pinned.description ?? 'Máy chủ cộng đồng Minecraft',
+        isOnline: true,
+        players: { online: 0, max: 500 },
+        version: pinned.version ?? '1.20.x - 1.21.x',
+        tags: pinned.tags ?? ['Community', 'VietNam']
+      }
+    })
+
+    return [...pinnedItems, ...list]
+  }
+
+  promoteNovusServer(servers: MinecraftServer[], page: number = 1): MinecraftServer[] {
+    return this.promotePinnedServers(servers, page)
+  }
 
   /**
    * Fetches and parses the server list from minecraft-mp.com
@@ -30,21 +131,18 @@ export class ServerListService {
     try {
       const { getLauncherDataDirectory, readJsonFile, writeJsonFile } = await import('../system/storageService.js')
       const cachePath = path.join(getLauncherDataDirectory(), `top-servers-cache-page${page}.json`)
-      
+
       const cache = (await readJsonFile(cachePath, { timestamp: 0, data: [] })) as { timestamp: number, data: MinecraftServer[] }
       const now = Date.now()
       const ONE_DAY = 24 * 60 * 60 * 1000
 
       if (now - cache.timestamp < ONE_DAY && cache.data.length > 0) {
-        return cache.data
+        return this.promotePinnedServers(cache.data, page)
       }
 
       const url = page === 1 ? this.baseUrl + '/' : `${this.baseUrl}/${page}/`
       const res = await fetch(url)
-
-      if (!res.ok) {
-        throw new Error(`HTTP Error: ${res.status}`)
-      }
+      if (!res.ok) throw new Error(`HTTP Error: ${res.status}`)
 
       const html = await res.text()
       const cheerio = await getCheerio()
@@ -53,52 +151,37 @@ export class ServerListService {
 
       $('.servers-table tbody tr').each((_, el) => {
         const $el = $(el)
-
-        // Skip hidden/ad rows that don't have proper data
         if ($el.attr('height') !== '120') return
 
-        const rankStr = $el.find('td:nth-child(1) strong').text().replace('#', '').trim()
-        const rank = parseInt(rankStr, 10) || 0
-
+        const rank = parseInt($el.find('td:nth-child(1) strong').text().replace('#', '').trim(), 10) || 0
         const $aboutTd = $el.find('td.server-about')
         const name = $aboutTd.find('.server-title-responsive a').text().trim()
         const description = $aboutTd.find('.server-description').text().trim()
+        const ip = $el.find('.server-ip-main a.btn-server-ip').text().replace(/\s+/g, ' ').trim()
 
-        // IP
-        const ipRaw = $el.find('.server-ip-main a.btn-server-ip').text()
-        // The IP has whitespace and a flag img inside it, clean it up:
-        const ip = ipRaw.replace(/\n/g, '').replace(/[\t ]+/g, ' ').trim()
-
-        // Favicon and Banner
         const faviconUrl = $el.find('td:nth-child(1) img').attr('src')
-        let bannerUrl = $el.find('.server-card video').attr('src') || $el.find('.server-card video').attr('data-src') || $el.find('.server-card img.card-img-fluid').attr('src')
+        const bannerUrl = $el.find('.server-card video').attr('src') || $el.find('.server-card video').attr('data-src') || $el.find('.server-card img.card-img-fluid').attr('src')
 
-        // Tags
         const tags: string[] = []
         $aboutTd.find('.list-server-tags .btn-tag').each((__, tagEl) => {
           tags.push($(tagEl).text().trim())
         })
 
-        // Status & Players
         const $statusTd = $el.find('td:nth-child(4)')
         const isOnline = $statusTd.find('.btn-success').length > 0
+        const playersBtn = $statusTd.find('.btn-xs-playercount').text()
+        const playersMatch = playersBtn.match(/(\d+)\s*\/\s*(\d+)/)
 
-        const playersBtn = $statusTd.find('.btn-xs-playercount').text() // " 622 / 2026"
         let online = 0
         let max = 0
-        const playersMatch = playersBtn.match(/(\d+)\s*\/\s*(\d+)/)
         if (playersMatch) {
           online = parseInt(playersMatch[1], 10)
           max = parseInt(playersMatch[2], 10)
         } else {
-          // Sometimes it is inside strong and small tags separately
-          const strong = $statusTd.find('strong').text().trim()
-          const small = $statusTd.find('small').text().replace('/', '').trim()
-          online = parseInt(strong, 10) || 0
-          max = parseInt(small, 10) || 0
+          online = parseInt($statusTd.find('strong').text().trim(), 10) || 0
+          max = parseInt($statusTd.find('small').text().replace('/', '').trim(), 10) || 0
         }
 
-        // Version
         const version = $statusTd.find('.btn-version-fade').text().trim()
 
         if (name && ip) {
@@ -107,8 +190,8 @@ export class ServerListService {
             rank,
             name,
             ip,
-            bannerUrl: bannerUrl && bannerUrl.startsWith('/') ? `https://minecraft-mp.com${bannerUrl}` : bannerUrl,
-            faviconUrl: faviconUrl && faviconUrl.startsWith('/') ? `https://minecraft-mp.com${faviconUrl}` : faviconUrl,
+            bannerUrl: bannerUrl?.startsWith('/') ? `https://minecraft-mp.com${bannerUrl}` : bannerUrl,
+            faviconUrl: faviconUrl?.startsWith('/') ? `https://minecraft-mp.com${faviconUrl}` : faviconUrl,
             description,
             isOnline,
             players: { online, max },
@@ -118,142 +201,158 @@ export class ServerListService {
         }
       })
 
-      if (servers.length > 0) {
-        await writeJsonFile(cachePath, { timestamp: now, data: servers }).catch(() => {})
+      const finalServers = this.promotePinnedServers(servers, page)
+      if (finalServers.length > 0) {
+        await writeJsonFile(cachePath, { timestamp: now, data: finalServers }).catch(() => {})
       }
 
-      return servers
+      return finalServers
     } catch (error) {
       console.error('[ServerListService] Error fetching servers:', error)
-      return []
+      return this.promotePinnedServers([], page)
     }
   }
 
   /**
    * Injects top servers into a profile's servers.dat
-   * Removes previously injected servers by checking letcute_top flag.
+   * Chỉ xóa các server có ký hiệu VN#, giữ nguyên 100% server do người dùng tự thêm.
+   * Các server đặc biệt (NovusMC, Aenat) luôn được ghim ở vị trí đầu tiên.
    */
-  async injectServersToProfile(profileId: string, page: number = 1, targetVersion?: string): Promise<boolean> {
+  async injectServersToProfile(profileId: string, page: number = 1, _targetVersion?: string): Promise<boolean> {
     try {
-      let topServers = await this.getTopServers(page)
-
-      // Filter out offline servers and private servers (whitelist)
-      topServers = topServers.filter(srv => {
-        if (!srv.isOnline) return false
-
-        const isPrivateTag = srv.tags.some(t => t.toLowerCase().includes('private') || t.toLowerCase().includes('whitelist'))
-        const isPrivateNameDesc = srv.name.toLowerCase().includes('private') || srv.description.toLowerCase().includes('private') || srv.description.toLowerCase().includes('whitelist')
-        const isPrivateIp = srv.ip.toLowerCase().includes('private server')
-
-        return !isPrivateTag && !isPrivateNameDesc && !isPrivateIp
-      })
-
-      if (topServers.length === 0) {
-        return false
-      }
+      const topServers = await this.getTopServers(page)
+      if (topServers.length === 0) return false
 
       const { getProfiles } = await import('../profile/profileService')
       const profilesStore = await getProfiles()
       const profile = profilesStore.profiles.find((p: any) => p.id === profileId)
-      if (!profile) {
-        throw new Error(`Profile ${profileId} not found`)
-      }
+      if (!profile) throw new Error(`Profile ${profileId} not found`)
 
       const defaultMcDirObj = await detectMinecraftDirectory()
       const gameDir = profile.gameDir ?? defaultMcDirObj.path
       const serversDatPath = path.join(gameDir, 'servers.dat')
 
-      let rootData: any
-      let currentServers: any[] = []
+      // Set lưu các IP đã có (pinned + user servers) để không inject trùng lặp
+      const existingIps = new Set<string>()
 
-      // If servers.dat exists, parse it
-      if (fs.existsSync(serversDatPath)) {
-        const buffer = fs.readFileSync(serversDatPath)
-        const parsed = (await parseNbt(buffer)) as any
-        // prismarine-nbt typings can be weird, util.promisify returns the first argument `parsed` or an object {parsed, type} depending on version. Let's handle both.
-        rootData = parsed.parsed || parsed
+      // 1. Tạo compounds cho pinned servers (NovusMC, Aenat) luôn nằm ở vị trí đầu (index 0, 1, ...)
+      const pinnedCompounds = PINNED_SERVERS.map(pinned => {
+        existingIps.add(pinned.ip.toLowerCase().trim())
+        existingIps.add(normalizeIp(pinned.ip))
+        pinned.matchIps?.forEach(m => {
+          existingIps.add(m.toLowerCase().trim())
+          existingIps.add(normalizeIp(m))
+        })
 
-        if (rootData.value && rootData.value.servers && rootData.value.servers.value) {
-          const srvList = rootData.value.servers.value
-          if (srvList.type === 'compound' && Array.isArray(srvList.value)) {
-            // Keep servers that DO NOT have our letcute_top tag AND do not have our injected names
-            currentServers = srvList.value.filter((srv: any) => {
-              const hasTag = srv.letcute_top && srv.letcute_top.value === 1
-              const nameStr = srv.name && typeof srv.name.value === 'string' ? srv.name.value : ''
-              const isOldInjected = hasTag || nameStr.startsWith('VN#') || nameStr === '§e[VIP] §fAenat Network'
-              return !isOldInjected
-            })
-          }
+        return {
+          name: { type: 'string', value: pinned.name },
+          ip: { type: 'string', value: pinned.ip },
+          acceptTextures: { type: 'byte', value: 1 }
         }
-      } else {
-        // Initialize an empty servers.dat NBT structure
-        rootData = {
-          name: '',
-          type: 'compound',
-          value: {
-            servers: {
-              type: 'list',
-              value: {
-                type: 'compound',
-                value: []
-              }
+      })
+
+      // 2. Đọc file servers.dat hiện tại (nếu có)
+      let rootData: any = {
+        name: '',
+        type: 'compound',
+        value: {
+          servers: {
+            type: 'list',
+            value: {
+              type: 'compound',
+              value: []
             }
           }
         }
       }
 
-      // Convert our fetched servers to NBT compounds
-      let newServersNbt = topServers.map((srv, index) => {
-        const title = `VN#${srv.rank}`
+      let userServers: any[] = []
+      try {
+        const buffer = await fs.promises.readFile(serversDatPath)
+        const parsed = (await parseNbt(buffer)) as any
+        rootData = parsed.parsed || parsed
 
-        const compound: any = {
-          name: { type: 'string', value: title },
-          ip: { type: 'string', value: srv.ip },
-          // Hidden NBT tag that Minecraft ignores, but we use it to recognize our injection!
-          letcute_top: { type: 'byte', value: 1 },
-          acceptTextures: { type: 'byte', value: 1 }
+        const srvList = rootData?.value?.servers
+        let rawServers: any[] = []
+        if (Array.isArray(srvList?.value?.value)) {
+          rawServers = srvList.value.value
+        } else if (Array.isArray(srvList?.value)) {
+          rawServers = srvList.value
         }
 
-        return compound
-      })
+        userServers = rawServers.filter((srv: any) => {
+          const nameStr = typeof srv.name?.value === 'string' ? srv.name.value.trim() : (typeof srv.name === 'string' ? srv.name : '')
+          const ipStr = typeof srv.ip?.value === 'string' ? srv.ip.value.trim() : (typeof srv.ip === 'string' ? srv.ip : '')
 
-      // Remove the pinned server if it's already in the scraped list to prevent duplicates
-      newServersNbt = newServersNbt.filter((srv: any) => srv.ip.value !== 'mc.aenat.net:25565' && srv.ip.value !== 'mc.aenat.net')
+          // CHỈ xóa server do launcher thêm vào qua ký hiệu VN#
+          if (nameStr.startsWith('VN#') || /^VN#\d+/i.test(nameStr)) {
+            return false
+          }
 
-      // Pin mc.aenat.net:25565 to the very top
-      newServersNbt.unshift({
-        name: { type: 'string', value: '§e[VIP] §fAenat Network' },
-        ip: { type: 'string', value: 'mc.aenat.net:25565' },
-        letcute_top: { type: 'byte', value: 1 },
-        acceptTextures: { type: 'byte', value: 1 }
-      })
+          // Server đặc biệt (NovusMC, Aenat) luôn được đưa lên đầu, nên bỏ ở vị trí cũ để không trùng lặp
+          if (isPinnedServerIp(ipStr) || PINNED_SERVERS.some(p => nameStr === p.name) || nameStr.includes('Aenat') || nameStr.includes('NovusMC')) {
+            return false
+          }
 
-      // Filter out any server in currentServers that has the exact same IP as any new server
-      const newIps = new Set(newServersNbt.map((srv: any) => srv.ip.value.toLowerCase()))
-      currentServers = currentServers.filter((srv: any) => {
-        const ipStr = srv.ip && typeof srv.ip.value === 'string' ? srv.ip.value.toLowerCase() : ''
-        return !newIps.has(ipStr)
-      })
+          // Ghi nhận IP server người dùng để tránh inject trùng từ danh sách web
+          if (ipStr) {
+            existingIps.add(ipStr.toLowerCase())
+            existingIps.add(normalizeIp(ipStr))
+          }
 
-      // Combine: User's custom servers first, then our injected servers at the bottom
-      const mergedServers = [...currentServers, ...newServersNbt]
+          // Giữ lại toàn bộ server do người dùng tự thêm
+          return true
+        })
+      } catch (err: any) {
+        if (err.code !== 'ENOENT') {
+          console.warn('[ServerListService] Error reading servers.dat, re-initializing:', err.message)
+        }
+      }
 
-      // Update rootData
+      // 3. Chuẩn bị top servers từ web (chỉ thêm những server chưa có trong pinned hoặc server người dùng)
+      const newServersNbt: any[] = []
+      for (const srv of topServers) {
+        if (!srv.isOnline || isPinnedServerIp(srv.ip)) continue
+
+        const clean = normalizeIp(srv.ip)
+        const full = srv.ip.toLowerCase().trim()
+        if (existingIps.has(clean) || existingIps.has(full)) continue
+
+        const isPrivate =
+          srv.tags.some(t => t.toLowerCase().includes('private') || t.toLowerCase().includes('whitelist')) ||
+          srv.name.toLowerCase().includes('private') ||
+          srv.description.toLowerCase().includes('private') ||
+          srv.description.toLowerCase().includes('whitelist') ||
+          srv.ip.toLowerCase().includes('private server')
+
+        if (isPrivate) continue
+
+        existingIps.add(clean)
+        existingIps.add(full)
+
+        newServersNbt.push({
+          name: { type: 'string', value: `VN#${srv.rank}` },
+          ip: { type: 'string', value: srv.ip },
+          acceptTextures: { type: 'byte', value: 1 }
+        })
+      }
+
+      // Danh sách cuối cùng: [Pinned Servers (Novus, Aenat), User Servers, Top VN Servers (VN#)]
+      const mergedServers = [...pinnedCompounds, ...userServers, ...newServersNbt]
+
       if (!rootData.value) rootData.value = {}
-      if (!rootData.value.servers) {
-        rootData.value.servers = { type: 'list', value: { type: 'compound', value: [] } }
+      rootData.value.servers = {
+        type: 'list',
+        value: {
+          type: 'compound',
+          value: mergedServers
+        }
       }
 
-      // Prismarine-nbt list format requires the nested type
-      rootData.value.servers.value = {
-        type: 'compound',
-        value: mergedServers
-      }
-
-      // Write back uncompressed NBT
-      const nbtModule = await getNbt()
-      const outBuffer = nbtModule.writeUncompressed(rootData)
-      fs.writeFileSync(serversDatPath, outBuffer)
+      // Ghi NBT không nén bất đồng bộ (non-blocking)
+      const nbt = await getNbt()
+      const outBuffer = nbt.writeUncompressed(rootData)
+      await fs.promises.writeFile(serversDatPath, outBuffer)
 
       return true
     } catch (error) {
