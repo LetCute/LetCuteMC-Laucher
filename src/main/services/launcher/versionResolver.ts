@@ -53,22 +53,38 @@ export async function ensureVersionMetadata(
     const manifest = await getCachedVersionManifest()
     const entry = manifest.versions.find((v: any) => v.id === versionId)
     if (!entry?.url) {
-      throw new Error(`Không tìm thấy siêu dữ liệu cho phiên bản ${versionId} trên hệ thống Mojang.`)
+      throw new Error(
+        `Không tìm thấy tệp cấu hình phiên bản "${versionId}.json" trong thư mục: ${path.join(mcRootDir, 'versions', versionId)}. Phiên bản này không có trên hệ thống Mojang (có thể là bản Mod Loader chưa được cài đặt). Vui lòng cài đặt lại phiên bản.`
+      )
     }
 
     const dir = path.dirname(versionJsonPath)
     await fs.mkdir(dir, { recursive: true })
     const res = await fetch(entry.url)
-    if (!res.ok) throw new Error(`Không thể tải version metadata: HTTP ${res.status}`)
+    if (!res.ok) {
+      throw new Error(`Không thể tải thông tin phiên bản từ máy chủ Mojang (HTTP ${res.status}). Vui lòng kiểm tra kết nối mạng.`)
+    }
     const text = await res.text()
     await fs.writeFile(versionJsonPath, text, 'utf8')
   }
 
-  const rawJson = JSON.parse(await fs.readFile(versionJsonPath, 'utf8'))
+  let rawJson: any
+  try {
+    rawJson = JSON.parse(await fs.readFile(versionJsonPath, 'utf8'))
+  } catch {
+    throw new Error(
+      `Tệp thông tin phiên bản "${versionId}.json" tại "${versionJsonPath}" bị lỗi cú pháp hoặc hỏng. Vui lòng xóa tệp để tải lại.`
+    )
+  }
 
   // Resolve inheritsFrom recursively
   if (rawJson.inheritsFrom && rawJson.inheritsFrom !== versionId) {
-    await ensureVersionMetadata(rawJson.inheritsFrom, mcRootDir, log)
+    try {
+      await ensureVersionMetadata(rawJson.inheritsFrom, mcRootDir, log)
+    } catch (parentErr) {
+      const parentMsg = parentErr instanceof Error ? parentErr.message : String(parentErr)
+      throw new Error(`Lỗi tải phiên bản gốc (${rawJson.inheritsFrom}) cho "${versionId}": ${parentMsg}`)
+    }
   }
 
   return rawJson

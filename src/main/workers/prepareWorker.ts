@@ -5,6 +5,7 @@ import type {
   PreparedProfileState,
   LauncherLogLevel,
 } from '../../shared/types'
+import path from 'node:path'
 import fs from 'node:fs/promises'
 import { getVersionManifestCacheDir, applyDefaultGameOptions } from '../services/system/storageService'
 import { ensureJavaRuntime } from '../services/launcher/javaResolver'
@@ -99,7 +100,18 @@ async function startPrepare(
       percent: 35,
     })
     const { Version } = await import('@xmcl/core')
-    const resolved = await Version.parse(mcRootDir, version)
+    let resolved
+    try {
+      resolved = await Version.parse(mcRootDir, version)
+    } catch (parseErr) {
+      const errStr = parseErr instanceof Error ? parseErr.message : String(parseErr)
+      if (errStr.includes('ENOENT') || errStr.toLowerCase().includes('cannot find')) {
+        throw new Error(
+          `Không tìm thấy tệp thông tin phiên bản "${version}.json" trong thư mục: ${path.join(mcRootDir, 'versions', version)}. Vui lòng cài lại phiên bản hoặc tải lại qua Mod Loader.`
+        )
+      }
+      throw new Error(`Tệp thông tin phiên bản "${version}.json" bị hỏng hoặc không thể đọc: ${errStr}`)
+    }
     await ensureLibrariesAndAssets(resolved, mcRootDir, (percent) => {
       postProgress(profileId, version, {
         status: 'downloading',
@@ -187,16 +199,20 @@ async function startPrepare(
 
     postFinished(profileId, finalState, true, 'Prepared successfully.')
   } catch (error) {
-    const errMessage = error instanceof Error ? error.message : String(error)
-    postLog('error', `Prepare failed: ${errMessage}`)
+    const rawErr = error instanceof Error ? error.message : String(error)
+    let friendlyErr = rawErr
+    if (rawErr.includes('ENOENT') && (rawErr.includes('.json') || rawErr.includes('versions'))) {
+      friendlyErr = `Không tìm thấy tệp cấu hình phiên bản (${version}.json) trong thư mục cấu hình game (${gameDir}). Vui lòng kiểm tra lại cấu hình hoặc cài đặt lại phiên bản.`
+    }
+    postLog('error', `Prepare failed: ${friendlyErr}`)
     void writeErrorLog('prepareWorker', error, { profileId, version, gameDir })
     postProgress(profileId, version, {
       status: 'failed',
       title: 'Lỗi chuẩn bị game',
-      message: errMessage,
+      message: friendlyErr,
       percent: 100,
     })
-    postFinished(profileId, null, false, errMessage)
+    postFinished(profileId, null, false, friendlyErr)
   }
 }
 

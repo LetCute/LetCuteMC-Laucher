@@ -378,6 +378,15 @@ body {
   will-change: opacity, visibility;
 }
 
+@keyframes shrinkWidth {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}
+
 .tab-panel-pane[data-active="true"] {
   opacity: 1;
   visibility: visible;
@@ -390,7 +399,6 @@ body {
   visibility: hidden;
   pointer-events: none;
   z-index: 0;
-  content-visibility: hidden;
 }
 
 /* ── Skeleton shimmer ─────────────────────────────────────────────────────── */

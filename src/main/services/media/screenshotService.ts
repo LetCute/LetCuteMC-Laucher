@@ -1,4 +1,5 @@
-import * as fs from 'node:fs'
+import fs from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import * as path from 'node:path'
 import { clipboard, nativeImage, shell } from 'electron'
 import type { MinecraftScreenshot } from '../../../shared/types'
@@ -6,7 +7,7 @@ import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
 
 export class ScreenshotService {
   private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && fs.existsSync(gameDir)) {
+    if (gameDir && existsSync(gameDir)) {
       return gameDir
     }
     const detected = await detectMinecraftDirectory()
@@ -14,14 +15,14 @@ export class ScreenshotService {
   }
 
   /**
-   * Quét toàn bộ ảnh chụp màn hình trong thư mục screenshots
+   * Quét toàn bộ ảnh chụp màn hình trong thư mục screenshots (Non-blocking async)
    */
   async scanScreenshots(gameDir?: string): Promise<MinecraftScreenshot[]> {
     const resolvedDir = await this.resolveGameDir(gameDir)
     if (!resolvedDir) return []
 
     const screenshotsDir = path.join(resolvedDir, 'screenshots')
-    if (!fs.existsSync(screenshotsDir)) {
+    if (!existsSync(screenshotsDir)) {
       return []
     }
 
@@ -29,7 +30,7 @@ export class ScreenshotService {
     const supportedExtensions = ['.png', '.jpg', '.jpeg', '.webp']
 
     try {
-      const entries = fs.readdirSync(screenshotsDir, { withFileTypes: true })
+      const entries = await fs.readdir(screenshotsDir, { withFileTypes: true })
 
       for (const entry of entries) {
         if (!entry.isFile()) continue
@@ -40,9 +41,9 @@ export class ScreenshotService {
         const filePath = path.join(screenshotsDir, entry.name)
 
         try {
-          const stat = fs.statSync(filePath)
+          const stat = await fs.stat(filePath)
           const mime = ext === '.jpg' || ext === '.jpeg' ? 'image/jpeg' : ext === '.webp' ? 'image/webp' : 'image/png'
-          const buffer = fs.readFileSync(filePath)
+          const buffer = await fs.readFile(filePath)
           const dataUrl = `data:${mime};base64,${buffer.toString('base64')}`
 
           results.push({
@@ -70,10 +71,10 @@ export class ScreenshotService {
    */
   async copyScreenshotToClipboard(filePath: string): Promise<boolean> {
     try {
-      if (!fs.existsSync(filePath)) return false
+      if (!existsSync(filePath)) return false
       const img = nativeImage.createFromPath(filePath)
       if (img.isEmpty()) {
-        const buffer = fs.readFileSync(filePath)
+        const buffer = await fs.readFile(filePath)
         const imgFromBuf = nativeImage.createFromBuffer(buffer)
         clipboard.writeImage(imgFromBuf)
       } else {
@@ -91,8 +92,8 @@ export class ScreenshotService {
    */
   async deleteScreenshot(filePath: string): Promise<boolean> {
     try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath)
         return true
       }
       return false
@@ -107,11 +108,13 @@ export class ScreenshotService {
    */
   async deleteMultipleScreenshots(filePaths: string[]): Promise<boolean> {
     try {
-      for (const filePath of filePaths) {
-        if (fs.existsSync(filePath)) {
-          fs.unlinkSync(filePath)
-        }
-      }
+      await Promise.all(
+        filePaths.map(async (filePath) => {
+          if (existsSync(filePath)) {
+            await fs.unlink(filePath).catch(() => {})
+          }
+        })
+      )
       return true
     } catch (e) {
       console.error('[ScreenshotService] Error deleting multiple screenshots:', e)
@@ -124,7 +127,7 @@ export class ScreenshotService {
    */
   async showScreenshotInFolder(filePath: string): Promise<boolean> {
     try {
-      if (fs.existsSync(filePath)) {
+      if (existsSync(filePath)) {
         shell.showItemInFolder(filePath)
         return true
       }
@@ -144,8 +147,8 @@ export class ScreenshotService {
       if (!resolvedDir) return false
 
       const screenshotsDir = path.join(resolvedDir, 'screenshots')
-      if (!fs.existsSync(screenshotsDir)) {
-        fs.mkdirSync(screenshotsDir, { recursive: true })
+      if (!existsSync(screenshotsDir)) {
+        await fs.mkdir(screenshotsDir, { recursive: true })
       }
 
       await shell.openPath(screenshotsDir)

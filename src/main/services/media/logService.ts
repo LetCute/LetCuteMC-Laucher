@@ -1,13 +1,17 @@
-import * as fs from 'node:fs'
+import fs from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import * as path from 'node:path'
 import * as zlib from 'node:zlib'
+import { promisify } from 'node:util'
 import { shell } from 'electron'
 import type { LogFileInfo, MclogsUploadResult } from '../../../shared/types'
 import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
 
+const gunzipAsync = promisify(zlib.gunzip)
+
 export class LogService {
   private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && fs.existsSync(gameDir)) {
+    if (gameDir && existsSync(gameDir)) {
       return gameDir
     }
     const detected = await detectMinecraftDirectory()
@@ -15,7 +19,7 @@ export class LogService {
   }
 
   /**
-   * Liệt kê các tệp log và crash reports
+   * Liệt kê các tệp log và crash reports (Async)
    */
   async listLogFiles(gameDir?: string): Promise<{ activeLogs: LogFileInfo[]; crashReports: LogFileInfo[] }> {
     const resolvedDir = await this.resolveGameDir(gameDir)
@@ -28,9 +32,9 @@ export class LogService {
 
     // 1. Quét thư mục logs/
     const logsDir = path.join(resolvedDir, 'logs')
-    if (fs.existsSync(logsDir)) {
+    if (existsSync(logsDir)) {
       try {
-        const entries = fs.readdirSync(logsDir, { withFileTypes: true })
+        const entries = await fs.readdir(logsDir, { withFileTypes: true })
         for (const entry of entries) {
           if (!entry.isFile()) continue
           const fileName = entry.name
@@ -40,7 +44,7 @@ export class LogService {
 
           if (isLog) {
             try {
-              const stat = fs.statSync(filePath)
+              const stat = await fs.stat(filePath)
               activeLogs.push({
                 id: fileName,
                 fileName,
@@ -62,16 +66,16 @@ export class LogService {
 
     // 2. Quét thư mục crash-reports/
     const crashDir = path.join(resolvedDir, 'crash-reports')
-    if (fs.existsSync(crashDir)) {
+    if (existsSync(crashDir)) {
       try {
-        const entries = fs.readdirSync(crashDir, { withFileTypes: true })
+        const entries = await fs.readdir(crashDir, { withFileTypes: true })
         for (const entry of entries) {
           if (!entry.isFile()) continue
           const fileName = entry.name
           if (fileName.endsWith('.txt') || fileName.endsWith('.log')) {
             const filePath = path.join(crashDir, fileName)
             try {
-              const stat = fs.statSync(filePath)
+              const stat = await fs.stat(filePath)
               crashReports.push({
                 id: fileName,
                 fileName,
@@ -105,20 +109,20 @@ export class LogService {
   }
 
   /**
-   * Đọc nội dung file log hoặc crash report (tự động giải nén .gz nếu cần)
+   * Đọc nội dung file log hoặc crash report (tự động giải nén .gz nếu cần, non-blocking)
    */
   async readLogFile(filePath: string): Promise<string> {
-    if (!fs.existsSync(filePath)) {
+    if (!existsSync(filePath)) {
       throw new Error(`Tệp log không tồn tại: ${filePath}`)
     }
 
     try {
       if (filePath.endsWith('.gz')) {
-        const buffer = fs.readFileSync(filePath)
-        const uncompressed = zlib.gunzipSync(buffer)
+        const buffer = await fs.readFile(filePath)
+        const uncompressed = await gunzipAsync(buffer)
         return uncompressed.toString('utf-8')
       } else {
-        return fs.readFileSync(filePath, 'utf-8')
+        return await fs.readFile(filePath, 'utf-8')
       }
     } catch (err: any) {
       console.error('[LogService] Error reading log file:', err)
@@ -174,8 +178,8 @@ export class LogService {
    */
   async deleteLogFile(filePath: string): Promise<boolean> {
     try {
-      if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath)
+      if (existsSync(filePath)) {
+        await fs.unlink(filePath)
         return true
       }
       return false
@@ -193,21 +197,21 @@ export class LogService {
     if (!resolvedDir) return { success: false, count: 0, freedBytes: 0 }
 
     const logsDir = path.join(resolvedDir, 'logs')
-    if (!fs.existsSync(logsDir)) return { success: true, count: 0, freedBytes: 0 }
+    if (!existsSync(logsDir)) return { success: true, count: 0, freedBytes: 0 }
 
     let count = 0
     let freedBytes = 0
 
     try {
-      const entries = fs.readdirSync(logsDir, { withFileTypes: true })
+      const entries = await fs.readdir(logsDir, { withFileTypes: true })
       for (const entry of entries) {
         if (!entry.isFile()) continue
         if (entry.name.endsWith('.gz')) {
           const filePath = path.join(logsDir, entry.name)
           try {
-            const stat = fs.statSync(filePath)
+            const stat = await fs.stat(filePath)
             freedBytes += stat.size
-            fs.unlinkSync(filePath)
+            await fs.unlink(filePath)
             count++
           } catch (err) {
             console.error(`[LogService] Error deleting old log ${entry.name}:`, err)
@@ -230,8 +234,8 @@ export class LogService {
       if (!resolvedDir) return false
 
       const targetDir = path.join(resolvedDir, type)
-      if (!fs.existsSync(targetDir)) {
-        fs.mkdirSync(targetDir, { recursive: true })
+      if (!existsSync(targetDir)) {
+        await fs.mkdir(targetDir, { recursive: true })
       }
 
       await shell.openPath(targetDir)

@@ -116,7 +116,9 @@ services/launcher/
 ├── versionManifestCacheService
 ├── prepareGameService
 ├── launchManager
-└── crashDiagnostic
+├── crashDiagnostic
+├── minecraftDirectoryService
+└── minecraftScannerService
 ```
 
 ### Content
@@ -129,7 +131,8 @@ services/content/
 ├── modDependencyService
 ├── modConflictService
 ├── modUpdaterService
-└── preLaunchIntegrityService
+├── preLaunchIntegrityService
+└── skinIntegrationService
 ```
 
 Hỗ trợ:
@@ -148,7 +151,7 @@ Hỗ trợ:
 ```text
 services/profile/
 ├── profileService
-└── profileTemplateService
+└── profilePackageService
 ```
 
 ### System
@@ -163,7 +166,9 @@ services/system/
 ├── mirrorService
 ├── taskManagerService
 ├── discordRpcService
-└── autoUpdaterService
+├── autoUpdaterService
+├── httpAgent
+└── systemInfoService
 ```
 
 ### Media

@@ -7,6 +7,15 @@ on:
   release:
     types: [published]
   workflow_dispatch:
+    inputs:
+      channel:
+        description: 'Kênh phát hành (stable: chính thức | beta: thử nghiệm)'
+        required: true
+        default: 'stable'
+        type: choice
+        options:
+          - stable
+          - beta
 
 permissions:
   contents: write
@@ -42,14 +51,18 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: ${{ contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') || github.event.inputs.channel == 'beta' }}
           files: |
             release/*.exe
             release/*.deb
             release/latest.yml
             release/latest-linux.yml
 
-      - name: Upload to Cloudflare R2 (Windows)
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && matrix.os == 'windows-latest'
+      # -------------------------------------------------------------------------
+      # BẢN CHÍNH THỨC (STABLE) -> Đẩy vào thư mục gốc để người dùng tự động update
+      # -------------------------------------------------------------------------
+      - name: Upload to Cloudflare R2 - Stable (Windows)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha') && !contains(github.ref, '-rc') && github.event.inputs.channel != 'beta' && matrix.os == 'windows-latest'
         shell: bash
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
@@ -70,8 +83,8 @@ jobs:
             --include "*.exe" \
             --include "latest.yml"
 
-      - name: Upload to Cloudflare R2 (Linux)
-        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && matrix.os == 'ubuntu-latest'
+      - name: Upload to Cloudflare R2 - Stable (Linux)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha') && !contains(github.ref, '-rc') && github.event.inputs.channel != 'beta' && matrix.os == 'ubuntu-latest'
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -84,6 +97,51 @@ jobs:
             --include "*.deb" \
             --include "latest-linux.yml"
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive \
+            --exclude "*" \
+            --include "*.deb" \
+            --include "latest-linux.yml"
+
+      # -------------------------------------------------------------------------
+      # BẢN BETA (THỬ NGHIỆM) -> Đẩy vào thư mục /beta/ riêng biệt, tránh auto-update nhầm
+      # -------------------------------------------------------------------------
+      - name: Upload to Cloudflare R2 - Beta (Windows)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && (contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') || github.event.inputs.channel == 'beta') && matrix.os == 'windows-latest'
+        shell: bash
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 rm s3://storage-letcute/letcutemc-launcher/beta/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive \
+            --exclude "*" \
+            --include "*.exe" \
+            --include "latest.yml"
+          aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/beta/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive \
+            --exclude "*" \
+            --exclude "win-unpacked/*" \
+            --include "*.exe" \
+            --include "latest.yml"
+
+      - name: Upload to Cloudflare R2 - Beta (Linux)
+        if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && (contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') || github.event.inputs.channel == 'beta') && matrix.os == 'ubuntu-latest'
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: auto
+        run: |
+          aws s3 rm s3://storage-letcute/letcutemc-launcher/beta/ \
+            --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
+            --recursive \
+            --exclude "*" \
+            --include "*.deb" \
+            --include "latest-linux.yml"
+          aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/beta/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
             --exclude "*" \

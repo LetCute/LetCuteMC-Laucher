@@ -1,7 +1,13 @@
 import { app, BrowserWindow, Menu } from 'electron'
 import path from 'node:path'
-import { exec } from 'node:child_process'
 import isDev from 'electron-is-dev'
+
+// Suppress deprecated punycode warning from third-party dependencies
+process.noDeprecation = true
+
+if (isDev) {
+  process.env.ELECTRON_DISABLE_SECURITY_WARNINGS = 'true'
+}
 
 // Trên Linux (đặc biệt là máy ảo), việc tắt hẳn Hardware Acceleration có thể gây lỗi trong suốt cửa sổ.
 // Thay vào đó, ta dùng cờ ignore-gpu-blocklist để ép bật WebGL bằng software rendering (SwiftShader).
@@ -29,14 +35,12 @@ function shouldKeepAliveForGame(): boolean {
   return Boolean(isGameRunningFn?.() || isLauncherHiddenForGameFn?.())
 }
 
-const EMPTY_WORKING_SET_CMD =
-  'powershell.exe -NoProfile -NonInteractive -WindowStyle Hidden -EncodedCommand "QQBkAGQALQBUAHkAcABlACAALQBNAGUAbQBiAGUAcgBEAGUAZgBpAG4AaQB0AGkAbwBuACAAJwBbAEQAbABsAEkAbQBwAG8AcgB0ACgAIgBwAHMAYQBwAGkALgBkAGwAbAAiACkAXQAgAHAAdQBiAGwAaQBjACAAcwB0AGEAdABpAGMAIABlAHgAdABlAHIAbgAgAGkAbgB0ACAARQBtAHAAdAB5AFcAbwByAGsAaQBuAGcAUwBlAHQAKABJAG4AdABQAHQAcgAgAGgAdwBQAHIAbwBjACkAOwAnACAALQBOAGEAbQBlACAAUABzAEEAcABpACAALQBOAGEAbQBlAHMAcABhAGMAZQAgAFcAaQBuADMAMgA7AAoARwBlAHQALQBQAHIAbwBjAGUAcwBzACAALQBOAGEAbQBlACAATABlAHQAQwB1AHQAZQBNAEMAIAAtAEUAcgByAG8AcgBBAGMAdABpAG8AbgAgAFMAaQBsAGUAbgB0AGwAeQBDAG8AbgB0AGkAbgB1AGUAIAB8ACAARgBvAHIARQBhAGMAaAAtAE8AYgBqAGUAYwB0ACAAewAgAFsAVwBpAG4AMwAyAC4AUABzAEEAcABpAF0AOgA6AEUAbQBwAHQAeQBXAG8AcgBrAGkAbgBnAFMAZQB0ACgAJABfAC4ASABhAG4AZABsAGUAKQAgAH0A"'
-
 export function trimLauncherMemory(): void {
-  if (process.platform !== 'win32') return
-  try {
-    exec(EMPTY_WORKING_SET_CMD, () => {})
-  } catch { }
+  if (global.gc) {
+    try {
+      global.gc()
+    } catch { }
+  }
 }
 
 function createWindow(): void {
@@ -87,8 +91,8 @@ function createWindow(): void {
     mainWindow?.setSkipTaskbar(true)
   })
 
-  mainWindow.webContents.on('console-message', (_event, _level, message, line, sourceId) => {
-    console.log(`[Renderer] ${message} (${sourceId}:${line})`)
+  mainWindow.webContents.on('console-message', (event: any) => {
+    console.log(`[Renderer] ${event.message} (${event.sourceId}:${event.line})`)
   })
 
   if (isDev) {
@@ -120,11 +124,6 @@ app.whenReady().then(() => {
     m.initAutoUpdater()
     // Update check is now triggered manually by the renderer via IPC
   })
-
-  // Thu hồi RAM định kỳ sau khi app khởi động xong và ổn định
-  setTimeout(() => {
-    trimLauncherMemory()
-  }, 4000)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {

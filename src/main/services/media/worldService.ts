@@ -1,11 +1,15 @@
-import * as fs from 'node:fs'
+import fs from 'node:fs/promises'
+import { existsSync } from 'node:fs'
 import * as path from 'node:path'
 import * as util from 'node:util'
 import * as zlib from 'node:zlib'
+import { promisify } from 'node:util'
 import { shell } from 'electron'
 // adm-zip and prismarine-nbt are lazy-loaded to reduce cold-start time
 import type { MinecraftWorld, WorldBackupItem, WorldDifficulty, WorldGameType } from '../../../shared/types'
 import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+
+const gzipAsync = promisify(zlib.gzip)
 
 async function getNbt() {
   return await import('prismarine-nbt')
@@ -21,17 +25,17 @@ const parseNbt = async (buffer: Buffer | ArrayBuffer) => {
   return (res as any)?.parsed || res
 }
 
-function getFolderSizeBytes(dirPath: string): number {
+async function getFolderSizeBytes(dirPath: string): Promise<number> {
   let totalSize = 0
   try {
-    const entries = fs.readdirSync(dirPath, { withFileTypes: true })
+    const entries = await fs.readdir(dirPath, { withFileTypes: true })
     for (const entry of entries) {
       const fullPath = path.join(dirPath, entry.name)
       if (entry.isDirectory()) {
-        totalSize += getFolderSizeBytes(fullPath)
+        totalSize += await getFolderSizeBytes(fullPath)
       } else if (entry.isFile()) {
         try {
-          const stat = fs.statSync(fullPath)
+          const stat = await fs.stat(fullPath)
           totalSize += stat.size
         } catch {}
       }
@@ -46,7 +50,7 @@ function sanitizeFolderName(name: string): string {
 
 export class WorldService {
   private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && fs.existsSync(gameDir)) {
+    if (gameDir && existsSync(gameDir)) {
       return gameDir
     }
     const detected = await detectMinecraftDirectory()
@@ -54,26 +58,26 @@ export class WorldService {
   }
 
   /**
-   * Quét toàn bộ thế giới trong thư mục saves
+   * Quét toàn bộ thế giới trong thư mục saves (Async)
    */
   async scanWorlds(gameDir?: string): Promise<MinecraftWorld[]> {
     const resolvedDir = await this.resolveGameDir(gameDir)
     if (!resolvedDir) return []
 
     const savesDir = path.join(resolvedDir, 'saves')
-    if (!fs.existsSync(savesDir)) {
+    if (!existsSync(savesDir)) {
       return []
     }
 
     const backupsDir = path.join(resolvedDir, 'backups')
-    const allBackupFiles = fs.existsSync(backupsDir)
-      ? fs.readdirSync(backupsDir).filter(f => f.endsWith('.zip'))
+    const allBackupFiles = existsSync(backupsDir)
+      ? (await fs.readdir(backupsDir)).filter(f => f.endsWith('.zip'))
       : []
 
     const results: MinecraftWorld[] = []
 
     try {
-      const entries = fs.readdirSync(savesDir, { withFileTypes: true })
+      const entries = await fs.readdir(savesDir, { withFileTypes: true })
 
       for (const entry of entries) {
         if (!entry.isDirectory()) continue
@@ -82,10 +86,10 @@ export class WorldService {
         const worldPath = path.join(savesDir, folderName)
         const levelDatPath = path.join(worldPath, 'level.dat')
 
-        if (!fs.existsSync(levelDatPath)) continue
+        if (!existsSync(levelDatPath)) continue
 
         try {
-          const buffer = fs.readFileSync(levelDatPath)
+          const buffer = await fs.readFile(levelDatPath)
           const parsed = (await parseNbt(buffer)) as any
           const root = parsed?.parsed || parsed
           const nbtModule = await getNbt()
@@ -123,7 +127,7 @@ export class WorldService {
             lastPlayed = Number(data.LastPlayed)
           } else {
             try {
-              const stat = fs.statSync(levelDatPath)
+              const stat = await fs.stat(levelDatPath)
               lastPlayed = stat.mtimeMs
             } catch {}
           }
@@ -134,14 +138,14 @@ export class WorldService {
           // Read icon.png if present
           let iconBase64: string | null = null
           const iconPath = path.join(worldPath, 'icon.png')
-          if (fs.existsSync(iconPath)) {
+          if (existsSync(iconPath)) {
             try {
-              const iconBuf = fs.readFileSync(iconPath)
+              const iconBuf = await fs.readFile(iconPath)
               iconBase64 = `data:image/png;base64,${iconBuf.toString('base64')}`
             } catch {}
           }
 
-          const sizeBytes = getFolderSizeBytes(worldPath)
+          const sizeBytes = await getFolderSizeBytes(worldPath)
 
           // Count backups for this folder
           const backupCount = allBackupFiles.filter(f => f.startsWith(`${folderName}_`) || f.startsWith(`${folderName}.`)).length
@@ -182,13 +186,13 @@ export class WorldService {
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
     const worldPath = path.join(resolvedDir, 'saves', folderName)
-    if (!fs.existsSync(worldPath)) {
+    if (!existsSync(worldPath)) {
       throw new Error(`Thư mục thế giới "${folderName}" không tồn tại.`)
     }
 
     const backupsDir = path.join(resolvedDir, 'backups')
-    if (!fs.existsSync(backupsDir)) {
-      fs.mkdirSync(backupsDir, { recursive: true })
+    if (!existsSync(backupsDir)) {
+      await fs.mkdir(backupsDir, { recursive: true })
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
@@ -201,7 +205,7 @@ export class WorldService {
       zip.addLocalFolder(worldPath)
       zip.writeZip(backupPath)
 
-      const stat = fs.statSync(backupPath)
+      const stat = await fs.stat(backupPath)
       return {
         success: true,
         backupPath,
@@ -222,16 +226,16 @@ export class WorldService {
     if (!resolvedDir) return []
 
     const backupsDir = path.join(resolvedDir, 'backups')
-    if (!fs.existsSync(backupsDir)) return []
+    if (!existsSync(backupsDir)) return []
 
     try {
-      const files = fs.readdirSync(backupsDir).filter(f => f.endsWith('.zip'))
+      const files = (await fs.readdir(backupsDir)).filter(f => f.endsWith('.zip'))
       const backups: WorldBackupItem[] = []
 
       for (const fileName of files) {
         const filePath = path.join(backupsDir, fileName)
         try {
-          const stat = fs.statSync(filePath)
+          const stat = await fs.stat(filePath)
           const targetFolderName = fileName.split('_')[0] || fileName.replace('.zip', '')
 
           if (folderName && !fileName.startsWith(`${folderName}_`) && !fileName.startsWith(`${folderName}.`)) {
@@ -262,7 +266,7 @@ export class WorldService {
   async restoreWorldBackup(gameDir: string | undefined, backupFilePath: string, targetFolderName?: string): Promise<{ success: boolean; folderName: string }> {
     const resolvedDir = await this.resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
-    if (!fs.existsSync(backupFilePath)) throw new Error('Tệp sao lưu không tồn tại.')
+    if (!existsSync(backupFilePath)) throw new Error('Tệp sao lưu không tồn tại.')
 
     const fileName = path.basename(backupFilePath)
     const inferredFolder = targetFolderName || fileName.split('_')[0] || 'restored_world'
@@ -274,10 +278,10 @@ export class WorldService {
       const zip = new AdmZip(backupFilePath)
 
       // Xóa sạch thư mục cũ nếu đã có
-      if (fs.existsSync(targetPath)) {
-        fs.rmSync(targetPath, { recursive: true, force: true })
+      if (existsSync(targetPath)) {
+        await fs.rm(targetPath, { recursive: true, force: true })
       }
-      fs.mkdirSync(targetPath, { recursive: true })
+      await fs.mkdir(targetPath, { recursive: true })
 
       zip.extractAllTo(targetPath, true)
 
@@ -295,8 +299,8 @@ export class WorldService {
    * Xóa bản sao lưu
    */
   async deleteWorldBackup(backupFilePath: string): Promise<boolean> {
-    if (fs.existsSync(backupFilePath)) {
-      fs.unlinkSync(backupFilePath)
+    if (existsSync(backupFilePath)) {
+      await fs.unlink(backupFilePath)
       return true
     }
     return false
@@ -310,7 +314,7 @@ export class WorldService {
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
     const worldPath = path.join(resolvedDir, 'saves', folderName)
-    if (!fs.existsSync(worldPath)) throw new Error(`Không tìm thấy thư mục thế giới "${folderName}".`)
+    if (!existsSync(worldPath)) throw new Error(`Không tìm thấy thư mục thế giới "${folderName}".`)
 
     try {
       const AdmZip = await getAdmZip()
@@ -330,11 +334,11 @@ export class WorldService {
   async importWorldZip(gameDir: string | undefined, sourceZipPath: string): Promise<{ success: boolean; folderName: string; name: string }> {
     const resolvedDir = await this.resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
-    if (!fs.existsSync(sourceZipPath)) throw new Error('Tệp ZIP không tồn tại.')
+    if (!existsSync(sourceZipPath)) throw new Error('Tệp ZIP không tồn tại.')
 
     const savesDir = path.join(resolvedDir, 'saves')
-    if (!fs.existsSync(savesDir)) {
-      fs.mkdirSync(savesDir, { recursive: true })
+    if (!existsSync(savesDir)) {
+      await fs.mkdir(savesDir, { recursive: true })
     }
 
     try {
@@ -352,13 +356,13 @@ export class WorldService {
       const zipBaseName = sanitizeFolderName(path.basename(sourceZipPath, path.extname(sourceZipPath)))
       let targetFolderName = zipBaseName
       let counter = 1
-      while (fs.existsSync(path.join(savesDir, targetFolderName))) {
+      while (existsSync(path.join(savesDir, targetFolderName))) {
         targetFolderName = `${zipBaseName}_${counter}`
         counter++
       }
 
       const targetPath = path.join(savesDir, targetFolderName)
-      fs.mkdirSync(targetPath, { recursive: true })
+      await fs.mkdir(targetPath, { recursive: true })
 
       // Nếu level.dat nằm ở thư mục con trong zip:
       const levelDatDir = path.dirname(levelDatEntry.entryName)
@@ -370,10 +374,10 @@ export class WorldService {
             const relPath = entry.entryName.slice(prefix.length)
             const destFilePath = path.join(targetPath, relPath)
             const destFileDir = path.dirname(destFilePath)
-            if (!fs.existsSync(destFileDir)) {
-              fs.mkdirSync(destFileDir, { recursive: true })
+            if (!existsSync(destFileDir)) {
+              await fs.mkdir(destFileDir, { recursive: true })
             }
-            fs.writeFileSync(destFilePath, entry.getData())
+            await fs.writeFile(destFilePath, entry.getData())
           }
         }
       } else {
@@ -384,9 +388,9 @@ export class WorldService {
       // Đọc tên LevelName từ level.dat đã giải nén
       let worldName = targetFolderName
       const extractedLevelDat = path.join(targetPath, 'level.dat')
-      if (fs.existsSync(extractedLevelDat)) {
+      if (existsSync(extractedLevelDat)) {
         try {
-          const buf = fs.readFileSync(extractedLevelDat)
+          const buf = await fs.readFile(extractedLevelDat)
           const parsed = (await parseNbt(buf)) as any
           const root = parsed?.parsed || parsed
           const nbtModule = await getNbt()
@@ -417,11 +421,11 @@ export class WorldService {
 
     const savesDir = path.join(resolvedDir, 'saves')
     const sourcePath = path.join(savesDir, folderName)
-    if (!fs.existsSync(sourcePath)) throw new Error('Không tìm thấy thế giới gốc.')
+    if (!existsSync(sourcePath)) throw new Error('Không tìm thấy thế giới gốc.')
 
     let newFolderName = `${folderName}_copy`
     let counter = 1
-    while (fs.existsSync(path.join(savesDir, newFolderName))) {
+    while (existsSync(path.join(savesDir, newFolderName))) {
       newFolderName = `${folderName}_copy_${counter}`
       counter++
     }
@@ -429,7 +433,7 @@ export class WorldService {
     const destPath = path.join(savesDir, newFolderName)
 
     try {
-      fs.cpSync(sourcePath, destPath, { recursive: true })
+      await fs.cp(sourcePath, destPath, { recursive: true })
 
       // Cập nhật tên trong level.dat nếu có
       if (newWorldName) {
@@ -454,10 +458,10 @@ export class WorldService {
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
     const levelDatPath = path.join(resolvedDir, 'saves', folderName, 'level.dat')
-    if (!fs.existsSync(levelDatPath)) throw new Error('Không tìm thấy tệp level.dat.')
+    if (!existsSync(levelDatPath)) throw new Error('Không tìm thấy tệp level.dat.')
 
     try {
-      const buffer = fs.readFileSync(levelDatPath)
+      const buffer = await fs.readFile(levelDatPath)
       const parsed = (await parseNbt(buffer)) as any
       const root = parsed.parsed || parsed
 
@@ -472,8 +476,8 @@ export class WorldService {
 
       const nbtModule = await getNbt()
       const uncompressed = nbtModule.writeUncompressed(root)
-      const gzipped = zlib.gzipSync(uncompressed)
-      fs.writeFileSync(levelDatPath, gzipped)
+      const gzipped = await gzipAsync(uncompressed)
+      await fs.writeFile(levelDatPath, gzipped)
 
       return true
     } catch (e: any) {
@@ -490,8 +494,8 @@ export class WorldService {
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
     const worldPath = path.join(resolvedDir, 'saves', folderName)
-    if (fs.existsSync(worldPath)) {
-      fs.rmSync(worldPath, { recursive: true, force: true })
+    if (existsSync(worldPath)) {
+      await fs.rm(worldPath, { recursive: true, force: true })
       return true
     }
     return false
@@ -508,8 +512,8 @@ export class WorldService {
       ? path.join(resolvedDir, 'saves', folderName)
       : path.join(resolvedDir, 'saves')
 
-    if (!fs.existsSync(targetPath)) {
-      fs.mkdirSync(targetPath, { recursive: true })
+    if (!existsSync(targetPath)) {
+      await fs.mkdir(targetPath, { recursive: true })
     }
 
     await shell.openPath(targetPath)

@@ -20,7 +20,7 @@ import type {
 } from '../../shared/types'
 type ResolvedVersion = import('@xmcl/core').ResolvedVersion
 import { ensureJavaRuntime } from '../services/launcher/javaResolver'
-import { diagnoseAndRecoverCrash } from '../services/launcher/crashDiagnostic'
+import { diagnoseAndRecoverCrash, formatCrashSummary } from '../services/launcher/crashDiagnostic'
 import { getSettings } from '../services/system/settingsService'
 import { writeErrorLog } from '../services/media/errorLogService'
 import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
@@ -297,13 +297,15 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     child.on('exit', async (code) => {
       const ok = code === 0 || code === null
       if (!ok) {
-        const recovery = await diagnoseAndRecoverCrash(input.gameDir, accumulatedLogs)
-        if (recovery) {
+        const recovery = await diagnoseAndRecoverCrash(input.gameDir, accumulatedLogs, code)
+        const summary = formatCrashSummary(recovery)
+        postLog(jobId, 'error', `[CrashDiagnostic] ${summary}`)
+        if (recovery.disabledModName) {
           postLog(jobId, 'warn', `[AutoRecovery] ${recovery.summary}`)
         }
         postStatus(jobId, 'failed')
-        postProgress(jobId, { status: 'failed', title: 'Minecraft bị đóng đột ngột', message: `Tiến trình kết thúc với mã ${code}.`, percent: 100 })
-        postMsg({ type: 'finished', jobId, ok: false, message: `Minecraft crash với mã thoát ${code}` })
+        postProgress(jobId, { status: 'failed', title: 'Minecraft bị đóng đột ngột', message: summary, percent: 100 })
+        postMsg({ type: 'finished', jobId, ok: false, message: summary })
       } else {
         postStatus(jobId, 'idle')
         postProgress(jobId, { status: 'idle', title: 'Sẵn sàng', message: 'Minecraft đã kết thúc bình thường.', percent: 0 })
@@ -321,12 +323,16 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       postMsg({ type: 'finished', jobId, ok: false, message: 'Launch cancelled' })
       return
     }
-    const errMsg = error instanceof Error ? error.message : String(error)
-    postLog(jobId, 'error', `Khởi động thất bại: ${errMsg}`)
+    const rawErr = error instanceof Error ? error.message : String(error)
+    let friendlyErr = rawErr
+    if (rawErr.includes('ENOENT') && (rawErr.includes('.json') || rawErr.includes('versions'))) {
+      friendlyErr = `Không tìm thấy tệp thông tin phiên bản "${input.version}.json" trong thư mục cấu hình game (${input.gameDir}). Vui lòng kiểm tra lại cấu hình hoặc cài đặt lại phiên bản.`
+    }
+    postLog(jobId, 'error', `Khởi động thất bại: ${friendlyErr}`)
     void writeErrorLog('launchWorker', error, { jobId, profileId: input.profileId, version: input.version })
     postStatus(jobId, 'failed')
-    postProgress(jobId, { status: 'failed', title: 'Lỗi khởi động', message: errMsg, percent: 100 })
-    postMsg({ type: 'error', jobId, message: errMsg })
+    postProgress(jobId, { status: 'failed', title: 'Lỗi khởi động', message: friendlyErr, percent: 100 })
+    postMsg({ type: 'error', jobId, message: friendlyErr })
   }
 }
 

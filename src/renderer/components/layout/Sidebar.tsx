@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Box,
   Layers,
@@ -154,17 +154,31 @@ export function Sidebar({
   }, [shouldLaunchAfterPrepare, prepareState?.isReady, isPreparing])
 
   // Show error toast if launch fails (only once per error)
-  const lastShownErrorRef = useState<{ error: string | null }>({ error: null })[0]
+  const lastShownLaunchErrorRef = useRef<string | null>(null)
   useEffect(() => {
     if (isFailed && state?.error) {
-      if (lastShownErrorRef.error !== state.error) {
-        lastShownErrorRef.error = state.error
-        showToast('error', state.error)
+      if (lastShownLaunchErrorRef.current !== state.error) {
+        lastShownLaunchErrorRef.current = state.error
+        showToast('error', state.error, { title: state.progress?.title || 'Lỗi khởi động game' })
       }
     } else if (!isFailed) {
-      lastShownErrorRef.error = null
+      lastShownLaunchErrorRef.current = null
     }
-  }, [isFailed, state?.error, showToast, lastShownErrorRef])
+  }, [isFailed, state?.error, state?.progress?.title, showToast])
+
+  // Show error toast if prepare fails
+  const lastShownPrepareErrorRef = useRef<string | null>(null)
+  useEffect(() => {
+    if (prepareProgress?.status === 'failed' && prepareProgress.message) {
+      setShouldLaunchAfterPrepare(false)
+      if (lastShownPrepareErrorRef.current !== prepareProgress.message) {
+        lastShownPrepareErrorRef.current = prepareProgress.message
+        showToast('error', prepareProgress.message, { title: prepareProgress.title || 'Lỗi chuẩn bị game' })
+      }
+    } else if (prepareProgress?.status !== 'failed') {
+      lastShownPrepareErrorRef.current = null
+    }
+  }, [prepareProgress?.status, prepareProgress?.message, prepareProgress?.title, showToast])
 
   const handlePlay = async () => {
 
