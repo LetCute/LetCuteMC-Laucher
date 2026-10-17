@@ -59,13 +59,17 @@ function createWindow(): void {
     backgroundColor: '#1c2127',
     frame: false,
     titleBarStyle: 'hidden',
-    show: true,
+    show: false,
     webPreferences: {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
       sandbox: false
     }
+  })
+
+  mainWindow.once('ready-to-show', () => {
+    mainWindow?.show()
   })
 
   // Chặn điều hướng hoặc mở popup trái phép, chỉ mở link ngoài bằng trình duyệt hệ thống nếu là https/http
