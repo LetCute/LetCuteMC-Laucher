@@ -1,6 +1,6 @@
 {
   "name": "letcutemc",
-  "version": "1.1.129",
+  "version": "1.1.130",
   "description": "LetCuteMC Minecraft Launcher",
   "author": "LetCuteMC <contact@letcute.com>",
   "license": "UNLICENSED",
@@ -100,7 +100,7 @@
       "main": "dist-electron/main/main.js"
     },
     "win": {
-      "icon": "public/logo_256.png",
+      "icon": "public/logo.ico",
       "target": [
         {
           "target": "nsis",
