@@ -1,4 +1,6 @@
 import { app, BrowserWindow } from 'electron'
+import * as path from 'path'
+import * as fs from 'fs'
 
 // electron-updater is lazy-loaded to reduce startup cost
 let _autoUpdater: typeof import('electron-updater').autoUpdater | null = null
@@ -10,7 +12,29 @@ async function getAutoUpdater() {
   return _autoUpdater
 }
 
+// Xóa pending update nếu version đã cài = version pending, tránh installer chạy lại mỗi lần thoát
+function cleanStalePendingUpdate() {
+  try {
+    const pendingDir = path.join(app.getPath('userData'), '..', 'letcutemc-updater', 'pending')
+    const infoPath = path.join(pendingDir, 'update-info.json')
+    if (!fs.existsSync(infoPath)) return
+
+    const info = JSON.parse(fs.readFileSync(infoPath, 'utf-8'))
+    const fileName: string = info.fileName || ''
+    // Extract version from filename like "LetCuteMC-1.1.131-windows-x64.exe"
+    const match = fileName.match(/-(\d+\.\d+\.\d+)-/)
+    if (match && match[1] === app.getVersion()) {
+      // Đã cài version này rồi, xóa pending để không install lại
+      fs.rmSync(pendingDir, { recursive: true, force: true })
+      console.log(`[AutoUpdater] Đã xóa pending update cũ (v${match[1]} đã cài).`)
+    }
+  } catch (err) {
+    console.warn('[AutoUpdater] Lỗi khi dọn pending update:', err)
+  }
+}
+
 export async function initAutoUpdater() {
+  cleanStalePendingUpdate()
   const autoUpdater = await getAutoUpdater()
   // Config autoUpdater
   autoUpdater.autoDownload = true
