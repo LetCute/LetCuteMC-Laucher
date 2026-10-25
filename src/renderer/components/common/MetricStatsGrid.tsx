@@ -31,11 +31,11 @@ export const MetricStatsGrid: React.FC<MetricStatsGridProps> = ({ items, columns
         return (
           <div
             key={item.id}
-            className="p-3.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 flex items-center gap-3.5 shadow-sm hover:border-zinc-700 transition-colors"
+            className="p-3.5 rounded-md border border-zinc-800/80 bg-zinc-900/85 flex items-center gap-3.5 shadow-sm hover:border-zinc-700 transition-colors"
           >
             <div
               className={cn(
-                'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border shadow-inner',
+                'h-10 w-10 rounded-md flex items-center justify-center shrink-0 border shadow-inner',
                 item.iconColor || 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
               )}
             >

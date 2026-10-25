@@ -32,7 +32,7 @@ export const ContentItemCard: React.FC<ContentItemCardProps> = ({
     <div
       onClick={onClick}
       className={cn(
-        'group flex items-center justify-between gap-3.5 p-3 px-3.5 rounded-2xl border transition-all duration-150 shadow-sm cv-auto',
+        'group flex items-center justify-between gap-3.5 p-3 px-3.5 rounded-md border transition-all duration-150 shadow-sm cv-auto',
         highlighted
           ? 'border-emerald-500/50 bg-zinc-900/95 ring-1 ring-emerald-500/20'
           : disabled
@@ -46,7 +46,7 @@ export const ContentItemCard: React.FC<ContentItemCardProps> = ({
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
           className={cn(
-            'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border shadow-inner transition-colors',
+            'h-10 w-10 rounded-md flex items-center justify-center shrink-0 border shadow-inner transition-colors',
             iconClassName || 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
           )}
         >

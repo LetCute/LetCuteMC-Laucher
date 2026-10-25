@@ -18,7 +18,7 @@ export function DirectoryStatusCard({
   onRescan
 }: DirectoryStatusCardProps) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-md border border-border bg-card p-5">
       <div className="mb-4 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           {status === 'found' ? (
@@ -34,7 +34,7 @@ export function DirectoryStatusCard({
       </div>
 
       {/* Path display */}
-      <div className="rounded-xl border border-border bg-background/50 px-3.5 py-2.5 mb-4">
+      <div className="rounded-md border border-border bg-background/50 px-3.5 py-2.5 mb-4">
         <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
           Đường dẫn hiện tại
         </p>

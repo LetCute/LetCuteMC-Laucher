@@ -18,7 +18,7 @@ const statItems = [
 
 export function QuickStats({ stats }: QuickStatsProps) {
   return (
-    <section className="rounded-2xl border border-border bg-card p-5">
+    <section className="rounded-md border border-border bg-card p-5">
       <h3 className="mb-4 text-sm font-semibold uppercase tracking-widest text-muted-foreground">
         Thư viện
       </h3>
@@ -29,7 +29,7 @@ export function QuickStats({ stats }: QuickStatsProps) {
           return (
             <div
               key={item.key}
-              className={`rounded-xl border ${item.bg} p-3.5`}
+              className={`rounded-md border ${item.bg} p-3.5`}
             >
               <div className="flex items-center justify-between mb-2">
                 <Icon className={`h-4 w-4 ${item.color}`} strokeWidth={2} />

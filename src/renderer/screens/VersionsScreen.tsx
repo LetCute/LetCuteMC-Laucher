@@ -80,7 +80,7 @@ export function VersionsScreen({
               onClick={handleOpenVersionsFolder}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Mở thư mục .minecraft/versions trong Windows Explorer"
             >
               <FolderOpen size={14} className="text-primary" />
@@ -91,7 +91,7 @@ export function VersionsScreen({
               disabled={isWorking}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Tải lại danh mục từ Mojang"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isWorking && 'animate-spin')} />
@@ -181,7 +181,7 @@ export function VersionsScreen({
                 <div
                   key={ver.id}
                   className={cn(
-                    'group flex items-center justify-between gap-3 p-3 px-3.5 rounded-2xl border transition-all duration-150 shadow-sm',
+                    'group flex items-center justify-between gap-3 p-3 px-3.5 rounded-md border transition-all duration-150 shadow-sm',
                     isInstalled
                       ? 'border-emerald-500/40 bg-zinc-900/95 hover:border-emerald-500/60'
                       : 'border-zinc-800/80 bg-zinc-900/85 hover:border-emerald-500/40 hover:bg-zinc-900'
@@ -191,7 +191,7 @@ export function VersionsScreen({
                   <div className="flex items-center gap-3 min-w-0 flex-1">
                     <div
                       className={cn(
-                        'h-10 w-10 rounded-xl flex items-center justify-center shrink-0 border shadow-inner transition-colors',
+                        'h-10 w-10 rounded-md flex items-center justify-center shrink-0 border shadow-inner transition-colors',
                         isInstalled
                           ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                           : ver.type === 'snapshot'
@@ -250,7 +250,7 @@ export function VersionsScreen({
                       onClick={() => onCreateProfile(ver)}
                       variant="outline"
                       size="sm"
-                      className="h-8 px-2.5 text-xs font-semibold bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-xl gap-1"
+                      className="h-8 px-2.5 text-xs font-semibold bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50 rounded-md gap-1"
                       title={`Tạo cấu hình chơi Minecraft ${ver.name}`}
                     >
                       <PlusCircle size={12} />
@@ -262,7 +262,7 @@ export function VersionsScreen({
                         onClick={() => handleOpenSpecificVersionFolder(ver.path!)}
                         variant="outline"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:text-white hover:bg-zinc-800 rounded-xl"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
                         title="Mở thư mục phiên bản"
                       >
                         <FolderOpen size={13} />
@@ -274,7 +274,7 @@ export function VersionsScreen({
                         onClick={() => handleDeleteVersion(ver)}
                         variant="outline"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-xl"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-md"
                         title="Xóa bản cài đặt này"
                       >
                         <Trash2 size={13} />

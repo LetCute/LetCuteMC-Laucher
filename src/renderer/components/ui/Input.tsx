@@ -21,7 +21,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none">
+            <div className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none z-10 flex items-center justify-center">
               {icon}
             </div>
           )}
@@ -31,7 +31,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             type={type}
             data-slot="input"
             className={cn(
-              "h-10 w-full min-w-0 rounded-xl border bg-card px-3 py-2 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground",
+              "h-10 w-full min-w-0 rounded-md border bg-card px-3 py-2 text-sm text-foreground transition-colors outline-none placeholder:text-muted-foreground",
               "focus-visible:border-primary/60 focus-visible:ring-2 focus-visible:ring-ring/30",
               "disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50",
               error

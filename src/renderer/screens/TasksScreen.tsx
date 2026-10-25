@@ -77,7 +77,7 @@ function TaskCard({ task, onCancel }: { task: BackgroundTask; onCancel: (id: str
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="relative overflow-hidden flex items-center justify-between gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/40 transition-all duration-200 shadow-md"
+      className="relative overflow-hidden flex items-center justify-between gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/40 transition-all duration-200 shadow-md"
     >
       {/* Background Progress Bar (if running) */}
       {isRunning && (
@@ -89,7 +89,7 @@ function TaskCard({ task, onCancel }: { task: BackgroundTask; onCancel: (id: str
 
       <div className="flex items-center gap-3.5 min-w-0 flex-1 relative z-10">
         <div className={[
-          'flex h-5 w-5 shrink-0 items-center justify-center rounded-lg border transition-all duration-150',
+          'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border transition-all duration-150',
           isRunning
             ? 'border-primary bg-primary text-primary-foreground'
             : isSuccess

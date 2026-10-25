@@ -135,6 +135,7 @@ export async function syncModpackVersionFolder(
   const chain = await getVersionInheritanceChain(versionId, mcRootDir)
   for (let i = 0; i < chain.length; i++) {
     const ver = chain[i]
+    if (!ver) continue
     const isInheritingLoader = i < chain.length - 1
     const srcVerDir = path.join(mcRootDir, 'versions', ver)
     const destVerDir = path.join(gameDir, 'versions', ver)
@@ -319,6 +320,11 @@ export async function ensureLibrariesAndAssets(
           })
         }
       }
-    } catch {}
+    } catch (err) {
+      if (err instanceof Error && err.message === 'PREPARE_CANCELLED') {
+        throw err
+      }
+      console.warn(`[versionResolver] Lỗi tải tài nguyên phụ: ${err instanceof Error ? err.message : String(err)}`)
+    }
   }
 }

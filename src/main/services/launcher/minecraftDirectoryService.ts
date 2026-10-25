@@ -26,3 +26,15 @@ export async function detectMinecraftDirectory(): Promise<MinecraftDirectoryResu
   }
 }
 
+/**
+ * Trả về thư mục game hợp lệ: nếu gameDir hợp lệ và tồn tại thì trả về gameDir,
+ * ngược lại tự động phát hiện thư mục .minecraft mặc định.
+ */
+export async function resolveGameDir(gameDir?: string): Promise<string> {
+  if (gameDir && (await pathExists(gameDir))) {
+    return gameDir
+  }
+  const detected = await detectMinecraftDirectory()
+  return detected.path || ''
+}
+

@@ -17,7 +17,7 @@ export const ProfileCard = ({ profile, onSetActive, onEdit, onDelete }: ProfileC
   return (
     <div
       className={[
-        'relative flex flex-col rounded-2xl border bg-card p-5 transition-all duration-200',
+        'relative flex flex-col rounded-md border bg-card p-5 transition-all duration-200',
         isActive
           ? 'border-primary/50 ring-1 ring-primary/20 shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_8%,transparent)]'
           : 'border-border hover:border-border/80 hover:bg-card/80',

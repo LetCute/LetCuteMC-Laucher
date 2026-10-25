@@ -27,7 +27,7 @@ export const ModChangelogModal = ({
 
   const modalNode = (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/75 backdrop-blur-sm p-4 animate-in fade-in duration-200 select-none">
-      <div className="w-full max-w-lg rounded-2xl border border-zinc-800/90 bg-zinc-900 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+      <div className="w-full max-w-lg rounded-md border border-zinc-800/90 bg-zinc-900 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
         {/* Header */}
         <div className="p-4 border-b border-zinc-800 flex items-center justify-between gap-3 bg-zinc-950/60">
           <div className="flex items-center gap-3 min-w-0">
@@ -35,10 +35,10 @@ export const ModChangelogModal = ({
               <img
                 src={updateItem.projectIconUrl}
                 alt={updateItem.modName}
-                className="h-10 w-10 rounded-xl object-contain bg-zinc-900 border border-zinc-800 shrink-0"
+                className="h-10 w-10 rounded-md object-contain bg-zinc-900 border border-zinc-800 shrink-0"
               />
             ) : (
-              <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0">
+              <div className="h-10 w-10 rounded-md bg-primary/15 border border-primary/30 flex items-center justify-center text-primary shrink-0">
                 <ArrowUpCircle size={20} />
               </div>
             )}
@@ -54,7 +54,7 @@ export const ModChangelogModal = ({
 
           <button
             onClick={onClose}
-            className="h-8 w-8 rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-zinc-800/80 transition-colors"
+            className="h-8 w-8 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-zinc-800/80 transition-colors"
           >
             <X size={16} />
           </button>
@@ -78,7 +78,7 @@ export const ModChangelogModal = ({
             <FileText size={13} className="text-primary" />
             <span>Nhật ký thay đổi (Changelog):</span>
           </div>
-          <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/70 text-xs text-zinc-300 font-sans leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto selection:bg-primary/30">
+          <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/70 text-xs text-zinc-300 font-sans leading-relaxed whitespace-pre-wrap max-h-60 overflow-y-auto selection:bg-primary/30">
             {updateItem.changelog}
           </div>
         </div>

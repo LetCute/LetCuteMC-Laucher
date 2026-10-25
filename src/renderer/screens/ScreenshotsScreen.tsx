@@ -315,7 +315,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         profileName={profileName}
         subtitle={
           <span className="flex items-center gap-2 flex-wrap">
-            <span>Tổng cộng: <strong className="text-zinc-100 font-semibold">{screenshots.length}</strong> ảnh</span>
+            <span>Tổng cộng: <strong className="text-zinc-200 font-semibold">{screenshots.length}</strong> ảnh</span>
             <span className="text-zinc-600">·</span>
             <span>Dung lượng: <strong className="text-primary font-semibold">{formatBytes(totalSize)}</strong></span>
             {selectedIds.size > 0 && (
@@ -334,7 +334,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   onClick={clearSelection}
                   variant="outline"
                   size="sm"
-                  className="h-8 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white text-xs"
+                  className="h-8 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-zinc-200 text-xs"
                   title="Hủy bỏ chọn"
                 >
                   Hủy chọn
@@ -357,7 +357,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               onClick={handleOpenFolder}
               variant="outline"
               size="sm"
-              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Mở thư mục screenshots trong Explorer"
             >
               <FolderOpen size={13} className="text-primary" />
@@ -369,7 +369,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               disabled={isLoading}
               variant="outline"
               size="sm"
-              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Làm mới danh sách ảnh"
             >
               <RefreshCw size={13} className={cn(isLoading && 'animate-spin')} />
@@ -384,7 +384,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         {/* Search Field */}
         <div className="flex-1 min-w-[200px]">
           <Input
-            className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 h-8.5 rounded-xl text-xs"
+            className="bg-zinc-900/90 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:border-primary/60 h-8.5 rounded-md text-xs"
             type="text"
             placeholder="Tìm kiếm theo tên ảnh, ngày chụp..."
             value={searchQuery}
@@ -400,10 +400,10 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             size="sm"
             onClick={toggleSelectAll}
             className={cn(
-              'h-8.5 px-3 border text-xs gap-1.5 rounded-xl shrink-0 transition-all shadow-sm',
+              'h-8.5 px-3 border text-xs gap-1.5 rounded-md shrink-0 transition-all shadow-sm',
               isAllSelected
                 ? 'bg-primary/15 border-primary/40 text-primary font-semibold hover:bg-primary/25'
-                : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-zinc-700'
+                : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700'
             )}
           >
             {isAllSelected ? (
@@ -416,11 +416,11 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         )}
 
         {/* Grid Size Switcher */}
-        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-xl p-0.5 h-8.5 shrink-0">
+        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-md p-0.5 h-8.5 shrink-0">
           <button
             onClick={() => setGridSize('normal')}
             className={cn(
-              'px-2.5 h-full rounded-lg text-xs font-medium flex items-center gap-1 transition-all',
+              'px-2.5 h-full rounded-md text-xs font-medium flex items-center gap-1 transition-all',
               gridSize === 'normal'
                 ? 'bg-primary/20 text-primary font-semibold'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -433,7 +433,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
           <button
             onClick={() => setGridSize('large')}
             className={cn(
-              'px-2.5 h-full rounded-lg text-xs font-medium flex items-center gap-1 transition-all',
+              'px-2.5 h-full rounded-md text-xs font-medium flex items-center gap-1 transition-all',
               gridSize === 'large'
                 ? 'bg-primary/20 text-primary font-semibold'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -455,11 +455,11 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
           </div>
         ) : filteredScreenshots.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-20 text-center gap-3">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
+            <div className="flex h-14 w-14 items-center justify-center rounded-md bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
               <Camera size={26} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-100">
+              <p className="text-sm font-semibold text-zinc-200">
                 {searchQuery ? 'Không tìm thấy ảnh chụp phù hợp' : 'Chưa có ảnh chụp màn hình nào'}
               </p>
               <p className="text-xs text-muted-foreground mt-1 max-w-sm leading-relaxed">
@@ -513,7 +513,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                         key={screenshot.id}
                         onClick={(e) => handleCardClick(screenshot, fullIndex, e)}
                         className={cn(
-                          'group relative rounded-xl overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02] cv-auto',
+                          'group relative rounded-md overflow-hidden border bg-zinc-950 transition-all duration-200 cursor-pointer shadow-sm hover:shadow-xl hover:scale-[1.02] cv-auto',
                           isSelected
                             ? 'border-primary ring-2 ring-primary/40'
                             : 'border-zinc-800/90 hover:border-primary/50'
@@ -547,7 +547,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                             type="button"
                             onClick={(e) => toggleSelect(screenshot.id, e)}
                             className={cn(
-                              'absolute top-2 left-2 h-7 w-7 rounded-lg flex items-center justify-center transition-all z-20 shadow-md',
+                              'absolute top-2 left-2 h-7 w-7 rounded-md flex items-center justify-center transition-all z-20 shadow-md',
                               isSelected
                                 ? 'bg-primary text-primary-foreground ring-2 ring-primary/40'
                                 : selectedIds.size > 0
@@ -570,7 +570,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                                 e.stopPropagation()
                                 setActiveLightboxIndex(fullIndex)
                               }}
-                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              className="h-6.5 w-6.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
                               title="Xem phóng to"
                             >
                               <Maximize2 size={11} />
@@ -582,7 +582,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                                 e.stopPropagation()
                                 void handleCopy(screenshot)
                               }}
-                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              className="h-6.5 w-6.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
                               title="Sao chép ảnh (Ctrl+C)"
                             >
                               <Copy size={11} />
@@ -594,7 +594,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                                 e.stopPropagation()
                                 handleShowInFolder(screenshot.filePath)
                               }}
-                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
+                              className="h-6.5 w-6.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-zinc-200 hover:text-primary hover:bg-black flex items-center justify-center shadow-md transition-colors"
                               title="Mở trong Folder"
                             >
                               <FolderOpen size={11} />
@@ -606,7 +606,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                                 e.stopPropagation()
                                 void handleDelete(screenshot)
                               }}
-                              className="h-6.5 w-6.5 rounded-lg bg-black/70 backdrop-blur-md border border-white/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center shadow-md transition-colors"
+                              className="h-6.5 w-6.5 rounded-md bg-black/70 backdrop-blur-md border border-white/10 text-destructive hover:bg-destructive hover:text-white flex items-center justify-center shadow-md transition-colors"
                               title="Xóa ảnh"
                             >
                               <Trash2 size={11} />
@@ -631,17 +631,17 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         >
           {/* Floating Dialog Card */}
           <div
-            className="relative w-full max-w-5xl bg-zinc-950/95 border border-zinc-800/90 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh]"
+            className="relative w-full max-w-5xl bg-zinc-950/95 border border-zinc-800/90 rounded-md shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-200 max-h-[90vh]"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Modal Header */}
             <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800/80 bg-zinc-900/60 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/15 text-primary border border-primary/30 shrink-0">
+                <div className="flex h-7 w-7 items-center justify-center rounded-md bg-primary/15 text-primary border border-primary/30 shrink-0">
                   <Camera size={14} />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="text-xs font-bold text-zinc-100 truncate" title={activeScreenshot.fileName}>
+                  <h3 className="text-xs font-bold text-zinc-200 truncate" title={activeScreenshot.fileName}>
                     {activeScreenshot.fileName}
                   </h3>
                   <p className="text-[11px] text-zinc-400 flex items-center gap-2 mt-0.5">
@@ -653,7 +653,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               </div>
 
               <div className="flex items-center gap-2">
-                <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-lg">
+                <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900 border border-zinc-800 rounded-md">
                   {(activeLightboxIndex ?? 0) + 1} / {filteredScreenshots.length}
                 </span>
 
@@ -662,7 +662,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   size="sm"
                   onClick={() => handleCopy(activeScreenshot)}
                   disabled={isCopying}
-                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5 rounded-md"
                   title="Sao chép ảnh (Ctrl+C)"
                 >
                   {isCopying ? <Loader2 size={12} className="animate-spin" /> : <Copy size={12} className="text-primary" />}
@@ -673,7 +673,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   variant="outline"
                   size="sm"
                   onClick={() => handleShowInFolder(activeScreenshot.filePath)}
-                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 rounded-lg"
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5 rounded-md"
                   title="Mở trong File Explorer"
                 >
                   <FolderOpen size={12} />
@@ -684,7 +684,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                   variant="outline"
                   size="sm"
                   onClick={() => handleDelete(activeScreenshot)}
-                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5 rounded-lg"
+                  className="h-7.5 px-2.5 text-xs bg-zinc-900 border-zinc-700 text-destructive hover:bg-destructive/20 hover:border-destructive/40 gap-1.5 rounded-md"
                   title="Xóa ảnh này"
                 >
                   <Trash2 size={12} />
@@ -694,7 +694,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                 <button
                   type="button"
                   onClick={() => setActiveLightboxIndex(null)}
-                  className="p-1 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ml-1.5"
+                  className="p-1 rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors ml-1.5"
                   title="Đóng (Esc)"
                 >
                   <X size={18} />
@@ -712,7 +712,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                     e.stopPropagation()
                     handlePrev()
                   }}
-                  className="absolute left-4 z-10 p-2 rounded-xl bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-xl backdrop-blur-md"
+                  className="absolute left-4 z-10 p-2 rounded-md bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 transition-all hover:scale-105 shadow-xl backdrop-blur-md"
                   title="Ảnh trước (Mũi tên trái)"
                 >
                   <ChevronLeft size={20} />
@@ -724,7 +724,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                 <img
                   src={activeScreenshot.dataUrl}
                   alt={activeScreenshot.fileName}
-                  className="max-h-[72vh] max-w-full object-contain rounded-lg shadow-xl border border-zinc-800/80"
+                  className="max-h-[72vh] max-w-full object-contain rounded-md shadow-xl border border-zinc-800/80"
                 />
               </div>
 
@@ -736,7 +736,7 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
                     e.stopPropagation()
                     handleNext()
                   }}
-                  className="absolute right-4 z-10 p-2 rounded-xl bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-white transition-all hover:scale-105 shadow-xl backdrop-blur-md"
+                  className="absolute right-4 z-10 p-2 rounded-md bg-zinc-900/85 hover:bg-zinc-800 border border-zinc-700/80 text-zinc-200 transition-all hover:scale-105 shadow-xl backdrop-blur-md"
                   title="Ảnh tiếp theo (Mũi tên phải)"
                 >
                   <ChevronRight size={20} />

@@ -103,12 +103,12 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
   }, []);
 
   return (
-    <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#1c2127] text-white font-sans relative">
+    <div className="flex h-screen w-screen flex-col items-center justify-center bg-[#1c2127] text-zinc-200 font-sans relative">
       
-      <div className="relative z-10 flex flex-col items-center max-w-md w-full px-6 py-10 bg-zinc-900/80 border border-zinc-800/80 shadow-2xl rounded-2xl backdrop-blur-md">
+      <div className="relative z-10 flex flex-col items-center max-w-md w-full px-6 py-10 bg-zinc-900/80 border border-zinc-800/80 shadow-2xl rounded-md backdrop-blur-md">
         <img src="./logo.png" alt="LetCuteMC" className="w-24 h-24 mb-6 drop-shadow-[0_0_15px_rgba(34,197,94,0.5)] animate-pulse" />
         
-        <h1 className="text-2xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-green-500 mb-2">
+        <h1 className="text-2xl font-bold text-zinc-200 mb-2">
           LetCuteMC Launcher
         </h1>
         
@@ -148,7 +148,7 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
         <div className="w-full h-1.5 bg-zinc-800/80 rounded-full overflow-hidden relative">
           {(phase === 'downloading' || phase === 'ready') ? (
             <div 
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-primary to-green-500 transition-all duration-300 ease-out"
+              className="absolute top-0 left-0 h-full bg-primary transition-all duration-300 ease-out"
               style={{ width: `${progress}%` }}
             />
           ) : phase === 'checking' ? (

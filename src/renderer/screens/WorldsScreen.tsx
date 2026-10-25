@@ -422,7 +422,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               Quản lý Thế giới
             </h2>
             {profileName && (
-              <span className="text-xs font-medium text-zinc-300 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-lg truncate max-w-xs">
+              <span className="text-xs font-medium text-zinc-300 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-md truncate max-w-xs">
                 Cấu hình: <strong className="text-primary font-semibold">{profileName}</strong>
               </span>
             )}
@@ -451,7 +451,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
             onClick={() => handleOpenFolder()}
             variant="outline"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
             title="Mở thư mục saves trong Explorer"
           >
             <FolderOpen size={14} className="mr-1.5" />
@@ -463,7 +463,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
             disabled={isLoading}
             variant="outline"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
             title="Làm mới danh sách"
           >
             <RefreshCw size={13} className={cn(isLoading && 'animate-spin', 'mr-1.5')} />
@@ -477,7 +477,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         {/* Search Field */}
         <div className="flex-1 min-w-[220px]">
           <Input
-            className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 h-9 rounded-xl text-xs"
+            className="bg-zinc-900/90 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:border-primary/60 h-9 rounded-md text-xs"
             type="text"
             placeholder="Tìm kiếm theo tên thế giới, thư mục, seed..."
             value={searchQuery}
@@ -492,15 +492,15 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/80 border-zinc-700/70 text-zinc-100 hover:text-white hover:bg-zinc-800 hover:border-primary/50 text-xs gap-2 rounded-xl shrink-0 transition-all shadow-sm"
+              className="h-9 px-3 bg-zinc-900/80 border-zinc-700/70 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/50 text-xs gap-2 rounded-md shrink-0 transition-all shadow-sm"
             >
               <Filter size={13} className="text-primary" />
               <span className="text-zinc-400 text-[11px]">Chế độ:</span>
-              <span className="font-semibold text-zinc-100">{selectedTypeObj.label}</span>
+              <span className="font-semibold text-zinc-200">{selectedTypeObj.label}</span>
               <ChevronDown size={13} className="text-zinc-400 ml-0.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
+          <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-md backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
             <DropdownMenuLabel className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 px-3 py-1.5">
               Chế độ chơi
             </DropdownMenuLabel>
@@ -513,10 +513,10 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                   key={opt.id}
                   onClick={() => setSelectedType(opt.id)}
                   className={cn(
-                    'flex items-center justify-between px-3 py-2 text-xs rounded-xl cursor-pointer transition-all duration-150',
+                    'flex items-center justify-between px-3 py-2 text-xs rounded-md cursor-pointer transition-all duration-150',
                     isSelected
-                      ? 'bg-primary/20 text-white font-semibold border border-primary/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
-                      : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-white'
+                      ? 'bg-primary/20 text-zinc-200 font-semibold border border-primary/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                      : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200'
                   )}
                 >
                   <div className="flex items-center gap-2.5">
@@ -536,15 +536,15 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
             <Button
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/80 border-zinc-700/70 text-zinc-100 hover:text-white hover:bg-zinc-800 hover:border-primary/50 text-xs gap-2 rounded-xl shrink-0 transition-all shadow-sm"
+              className="h-9 px-3 bg-zinc-900/80 border-zinc-700/70 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/50 text-xs gap-2 rounded-md shrink-0 transition-all shadow-sm"
             >
               <ArrowUpDown size={13} className="text-primary" />
               <span className="text-zinc-400 text-[11px]">Sắp xếp:</span>
-              <span className="font-semibold text-zinc-100">{selectedSortObj.label}</span>
+              <span className="font-semibold text-zinc-200">{selectedSortObj.label}</span>
               <ChevronDown size={13} className="text-zinc-400 ml-0.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-52 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
+          <DropdownMenuContent align="end" className="w-52 bg-zinc-900/95 border-zinc-700/60 rounded-md backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
             <DropdownMenuLabel className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 px-3 py-1.5">
               Sắp xếp thế giới
             </DropdownMenuLabel>
@@ -556,10 +556,10 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                   key={opt.id}
                   onClick={() => setSortBy(opt.id)}
                   className={cn(
-                    'flex items-center justify-between px-3 py-2 text-xs rounded-xl cursor-pointer transition-all duration-150',
+                    'flex items-center justify-between px-3 py-2 text-xs rounded-md cursor-pointer transition-all duration-150',
                     isSelected
-                      ? 'bg-primary/20 text-white font-semibold border border-primary/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
-                      : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-white'
+                      ? 'bg-primary/20 text-zinc-200 font-semibold border border-primary/30 shadow-[0_0_12px_rgba(6,182,212,0.2)]'
+                      : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200'
                   )}
                 >
                   <span>{opt.label}</span>
@@ -580,11 +580,11 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
           </div>
         ) : filteredWorlds.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-20 text-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
+            <div className="flex h-16 w-16 items-center justify-center rounded-md bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
               <Globe size={32} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-100">
+              <p className="text-sm font-semibold text-zinc-200">
                 {searchQuery || selectedType !== 'all'
                   ? 'Không tìm thấy thế giới phù hợp'
                   : 'Chưa có thế giới Minecraft nào'}
@@ -625,12 +625,12 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               return (
                 <div
                   key={world.folderName}
-                  className="group relative flex flex-col justify-between p-4 rounded-2xl border border-zinc-800/90 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cv-auto"
+                  className="group relative flex flex-col justify-between p-4 rounded-md border border-zinc-800/90 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cv-auto"
                 >
                   {/* Top Section: Thumbnail + Info */}
                   <div className="flex items-start gap-3.5">
                     {/* Thumbnail */}
-                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-zinc-700/60 bg-zinc-950 shadow-inner group-hover:border-primary/40 transition-colors">
+                    <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-zinc-700/60 bg-zinc-950 shadow-inner group-hover:border-primary/40 transition-colors">
                       {world.iconBase64 ? (
                         <img
                           src={world.iconBase64}
@@ -641,7 +641,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                           style={{ imageRendering: 'pixelated' }}
                         />
                       ) : (
-                        <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-emerald-950/50 via-zinc-900 to-teal-950/40 text-primary">
+                        <div className="flex h-full w-full flex-col items-center justify-center bg-zinc-800/80 text-zinc-400">
                           <Globe size={26} className="opacity-80" />
                         </div>
                       )}
@@ -762,7 +762,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => openBackupsModal(world)}
-                        className="h-8 px-2.5 text-xs gap-1 bg-zinc-800/80 border-zinc-700/80 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-primary/40 transition-all"
+                        className="h-8 px-2.5 text-xs gap-1 bg-zinc-800/80 border-zinc-700/80 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/40 transition-all"
                         title="Quản lý lịch sử bản sao lưu & Khôi phục"
                       >
                         <RotateCcw size={12} className="text-zinc-400" />
@@ -774,7 +774,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                         variant="outline"
                         size="sm"
                         onClick={() => handleExportZip(world)}
-                        className="h-8 px-2.5 text-xs gap-1 bg-zinc-800/80 border-zinc-700/80 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-primary/40 transition-all"
+                        className="h-8 px-2.5 text-xs gap-1 bg-zinc-800/80 border-zinc-700/80 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/40 transition-all"
                         title="Xuất bản đồ thành tệp ZIP"
                       >
                         <FileArchive size={12} className="text-zinc-400" />
@@ -788,7 +788,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                         variant="outline"
                         size="icon-sm"
                         onClick={() => handleOpenFolder(world.folderName)}
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-primary/40 transition-all"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/40 transition-all"
                         title="Mở thư mục trong Explorer"
                       >
                         <FolderOpen size={13} />
@@ -800,16 +800,16 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
                           <Button
                             variant="outline"
                             size="icon-sm"
-                            className="h-8 w-8 bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:text-white hover:bg-zinc-800 hover:border-primary/40 transition-all"
+                            className="h-8 w-8 bg-zinc-800/80 border-zinc-700/80 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 hover:border-primary/40 transition-all"
                             title="Thao tác khác"
                           >
                             <MoreHorizontal size={14} />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
+                        <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-md backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50 animate-in fade-in zoom-in-95 duration-150">
                           <DropdownMenuItem
                             onClick={() => openRenameModal(world)}
-                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-white rounded-xl transition-all"
+                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200 rounded-md transition-all"
                           >
                             <Pencil size={13} className="text-zinc-400" />
                             <span>Đổi tên hiển thị</span>
@@ -817,7 +817,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
 
                           <DropdownMenuItem
                             onClick={() => handleDuplicate(world)}
-                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-white rounded-xl transition-all"
+                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200 rounded-md transition-all"
                           >
                             <Copy size={13} className="text-zinc-400" />
                             <span>Nhân bản thế giới</span>
@@ -827,7 +827,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
 
                           <DropdownMenuItem
                             onClick={() => handleDeleteWorld(world)}
-                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-destructive focus:text-destructive focus:bg-destructive/15 rounded-xl transition-all"
+                            className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-destructive focus:text-destructive focus:bg-destructive/15 rounded-md transition-all"
                           >
                             <Trash2 size={13} />
                             <span>Xóa vĩnh viễn</span>
@@ -928,10 +928,10 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               {backupsList.map((backup) => (
                 <div
                   key={backup.id}
-                  className="flex items-center justify-between gap-3 p-3 rounded-xl border border-zinc-800 bg-zinc-900/90 hover:border-primary/40 transition-all"
+                  className="flex items-center justify-between gap-3 p-3 rounded-md border border-zinc-800 bg-zinc-900/90 hover:border-primary/40 transition-all"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-zinc-100 truncate font-mono">
+                    <p className="text-xs font-semibold text-zinc-200 truncate font-mono">
                       {backup.fileName}
                     </p>
                     <div className="flex items-center gap-3 text-[10px] text-muted-foreground mt-1">

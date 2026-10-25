@@ -113,7 +113,7 @@ export function ImportProfileModal({
             <p className="text-sm font-semibold text-zinc-200">Đang đọc dữ liệu gói cấu hình...</p>
           </div>
         ) : !previewInfo?.valid ? (
-          <div className="p-4 rounded-2xl border border-red-800/60 bg-red-950/20 flex items-start gap-3 text-red-300">
+          <div className="p-4 rounded-md border border-red-800/60 bg-red-950/20 flex items-start gap-3 text-red-300">
             <AlertCircle size={20} className="shrink-0 text-red-400 mt-0.5" />
             <div className="space-y-1">
               <p className="text-sm font-bold">Không thể nạp tệp này</p>
@@ -126,9 +126,9 @@ export function ImportProfileModal({
           manifest && (
             <>
               {/* Package Banner Header */}
-              <div className="p-4 rounded-2xl border border-primary/40 bg-primary/10 flex items-center justify-between gap-3 shadow-md">
+              <div className="p-4 rounded-md border border-primary/40 bg-primary/10 flex items-center justify-between gap-3 shadow-md">
                 <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-11 w-11 rounded-2xl bg-primary/20 border border-primary/40 text-primary flex items-center justify-center shrink-0">
+                  <div className="h-11 w-11 rounded-md bg-primary/20 border border-primary/40 text-primary flex items-center justify-center shrink-0">
                     <Package size={22} />
                   </div>
                   <div className="min-w-0">
@@ -152,7 +152,7 @@ export function ImportProfileModal({
 
               {/* Author & Description */}
               {(manifest.author || manifest.description) && (
-                <div className="p-3 rounded-xl border border-zinc-800/80 bg-zinc-900/80 space-y-1 text-[11px]">
+                <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-900/80 space-y-1 text-[11px]">
                   {manifest.author && (
                     <div className="flex items-center gap-1.5 text-zinc-400">
                       <User size={13} className="text-zinc-500" />
@@ -172,7 +172,7 @@ export function ImportProfileModal({
                 </p>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
                   {manifest.includedFeatures.mods && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Box size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">
                         Mods ({manifest.modsCount || 'Có'})
@@ -181,35 +181,35 @@ export function ImportProfileModal({
                   )}
 
                   {manifest.includedFeatures.config && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Settings2 size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">Cài đặt Config</span>
                     </div>
                   )}
 
                   {manifest.includedFeatures.options && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Sliders size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">Phím & Đồ họa</span>
                     </div>
                   )}
 
                   {manifest.includedFeatures.shaderpacks && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Zap size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">Shader Packs</span>
                     </div>
                   )}
 
                   {manifest.includedFeatures.resourcepacks && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Image size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">Resource Packs</span>
                     </div>
                   )}
 
                   {manifest.includedFeatures.servers && (
-                    <div className="p-2 rounded-lg bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
+                    <div className="p-2 rounded-md bg-zinc-900/90 border border-zinc-800 flex items-center gap-2 text-zinc-200">
                       <Server size={13} className="text-primary" />
                       <span className="text-[11px] font-medium truncate">Máy chủ</span>
                     </div>

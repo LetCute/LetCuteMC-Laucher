@@ -43,10 +43,11 @@ export function useAccounts(options?: UseAccountsOptions) {
       return state
     } catch (e) {
       console.error('Failed to load account state:', e)
+      showToast('error', 'Không thể tải danh sách tài khoản. Vui lòng khởi động lại launcher.')
     } finally {
       setLoading(false)
     }
-  }, [setAccountState])
+  }, [setAccountState, showToast])
 
   const selectAccount = useCallback(
     async (accountId: string) => {
@@ -59,8 +60,9 @@ export function useAccounts(options?: UseAccountsOptions) {
           showToast('success', `Đã chuyển sang tài khoản "${acc.username}"`)
         }
         return updated
-      } catch (e: any) {
-        showToast('error', e?.message || 'Không thể chọn tài khoản này.')
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Không thể chọn tài khoản này.'
+        showToast('error', message)
       }
     },
     [setAccountState, options, showToast]
@@ -77,8 +79,9 @@ export function useAccounts(options?: UseAccountsOptions) {
           showToast('info', `Đã xóa tài khoản "${acc.username}"`)
         }
         return updated
-      } catch (e: any) {
-        showToast('error', e?.message || 'Không thể xóa tài khoản.')
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Không thể xóa tài khoản.'
+        showToast('error', message)
       }
     },
     [accountState.accounts, setAccountState, options, showToast]
@@ -97,8 +100,9 @@ export function useAccounts(options?: UseAccountsOptions) {
         options?.appendLog?.('success', `Đã thêm tài khoản Offline: ${trimmed}`)
         showToast('success', `Đã tạo tài khoản Offline "${trimmed}" thành công!`)
         return updated
-      } catch (e: any) {
-        showToast('error', e?.message || 'Không thể tạo tài khoản Offline.')
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Không thể tạo tài khoản Offline.'
+        showToast('error', message)
       }
     },
     [setAccountState, options, showToast]
@@ -114,10 +118,11 @@ export function useAccounts(options?: UseAccountsOptions) {
       options?.appendLog?.('success', `Đăng nhập Microsoft thành công: ${msAccount.username}`)
       showToast('success', `Đăng nhập Microsoft thành công: ${msAccount.username}`)
       return updated
-    } catch (e: any) {
+    } catch (e) {
       console.error('Microsoft login failed:', e)
-      options?.appendLog?.('error', `Đăng nhập Microsoft thất bại: ${e?.message || e}`)
-      showToast('error', e?.message || 'Đăng nhập Microsoft thất bại.')
+      const message = e instanceof Error ? e.message : 'Đăng nhập Microsoft thất bại.'
+      options?.appendLog?.('error', `Đăng nhập Microsoft thất bại: ${message}`)
+      showToast('error', message)
     } finally {
       setIsLoggingIn(false)
     }
@@ -132,8 +137,9 @@ export function useAccounts(options?: UseAccountsOptions) {
         setAccountState(updated)
         showToast('success', `Đã đổi tên thành "${trimmed}"`)
         return updated
-      } catch (e: any) {
-        showToast('error', e?.message || 'Không thể đổi tên tài khoản.')
+      } catch (e) {
+        const message = e instanceof Error ? e.message : 'Không thể đổi tên tài khoản.'
+        showToast('error', message)
       }
     },
     [setAccountState, showToast]
@@ -147,9 +153,10 @@ export function useAccounts(options?: UseAccountsOptions) {
         return updated
       } catch (e) {
         console.error('Failed to refresh Microsoft account:', e)
+        showToast('error', 'Không thể làm mới phiên đăng nhập Microsoft. Vui lòng đăng nhập lại.')
       }
     },
-    [setAccountState]
+    [setAccountState, showToast]
   )
 
   const accounts = useMemo(() => accountState?.accounts || [], [accountState])

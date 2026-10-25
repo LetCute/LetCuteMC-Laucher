@@ -425,12 +425,12 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               Nhật ký & Phân tích Lỗi
             </h2>
             {profileName && (
-              <span className="text-xs font-medium text-zinc-300 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-lg truncate max-w-xs">
+              <span className="text-xs font-medium text-zinc-300 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-md truncate max-w-xs">
                 Cấu hình: <strong className="text-primary font-semibold">{profileName}</strong>
               </span>
             )}
             {selectedFile && (
-              <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-lg flex items-center gap-1.5">
+              <span className="text-xs font-mono text-zinc-400 px-2.5 py-1 bg-zinc-900/90 border border-zinc-800 rounded-md flex items-center gap-1.5">
                 <FileText size={12} className="text-primary" />
                 <span className="text-zinc-200 font-semibold">{selectedFile.fileName}</span>
                 <span className="text-zinc-500">({formatBytes(selectedFile.sizeBytes)})</span>
@@ -478,7 +478,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
             disabled={!rawLogContent}
             variant="outline"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
             title="Sao chép toàn bộ nội dung log"
           >
             <Copy size={13} className="mr-1.5" />
@@ -491,7 +491,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
                 title="Mở thư mục lưu trữ trong Explorer"
               >
                 <FolderOpen size={14} />
@@ -499,17 +499,17 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                 <ChevronDown size={12} className="text-zinc-400" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
+            <DropdownMenuContent align="end" className="w-48 bg-zinc-900/95 border-zinc-700/60 rounded-md backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
               <DropdownMenuItem
                 onClick={() => handleOpenFolder('logs')}
-                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-white rounded-xl"
+                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200 rounded-md"
               >
                 <FolderOpen size={13} />
                 <span>Thư mục logs/</span>
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => handleOpenFolder('crash-reports')}
-                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-white rounded-xl"
+                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200 rounded-md"
               >
                 <AlertOctagon size={13} className="text-red-400" />
                 <span>Thư mục crash-reports/</span>
@@ -517,7 +517,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               <DropdownMenuSeparator className="bg-zinc-800 my-1" />
               <DropdownMenuItem
                 onClick={handleClearOldLogs}
-                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-amber-400 hover:bg-zinc-800/90 rounded-xl"
+                className="cursor-pointer text-xs py-2 px-2.5 gap-2 text-amber-400 hover:bg-zinc-800/90 rounded-md"
               >
                 <Trash2 size={13} />
                 <span>Dọn dẹp log cũ (.gz)</span>
@@ -531,7 +531,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
             disabled={isLoadingFiles}
             variant="outline"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
             title="Làm mới log"
           >
             <RefreshCw size={13} className={cn(isLoadingFiles && 'animate-spin', 'mr-1.5')} />
@@ -543,7 +543,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
       {/* Category Pills & File Selection */}
       <div className="flex items-center justify-between gap-3 flex-wrap">
         {/* Category Switcher */}
-        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-xl border border-zinc-800">
+        <div className="flex items-center gap-1.5 bg-zinc-900/80 p-1 rounded-md border border-zinc-800">
           {/* latest.log button */}
           <button
             onClick={() => {
@@ -551,7 +551,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               if (latestLog) setSelectedFile(latestLog)
             }}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all',
+              'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all',
               activeCategory === 'latest'
                 ? 'bg-primary/20 text-primary border border-primary/30 shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -568,7 +568,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               if (crashReports[0]) setSelectedFile(crashReports[0])
             }}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all',
+              'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all',
               activeCategory === 'crashes'
                 ? 'bg-red-500/20 text-red-400 border border-red-500/30 shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -590,7 +590,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               if (historyLogs[0]) setSelectedFile(historyLogs[0])
             }}
             className={cn(
-              'px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-all',
+              'px-3 py-1.5 rounded-md text-xs font-semibold flex items-center gap-1.5 transition-all',
               activeCategory === 'history'
                 ? 'bg-primary/20 text-primary border border-primary/30 shadow-sm'
                 : 'text-zinc-400 hover:text-zinc-200'
@@ -610,13 +610,13 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                 <Button
                   variant="outline"
                   size="sm"
-                  className="h-8 px-3 bg-zinc-900/90 border-zinc-700/70 text-zinc-200 hover:text-white text-xs gap-1.5 rounded-xl max-w-xs truncate"
+                  className="h-8 px-3 bg-zinc-900/90 border-zinc-700/70 text-zinc-200 hover:text-zinc-200 text-xs gap-1.5 rounded-md max-w-xs truncate"
                 >
                   <span className="truncate">{selectedFile?.fileName || 'Chọn tệp...'}</span>
                   <ChevronDown size={12} className="text-zinc-400 shrink-0" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64 max-h-72 overflow-y-auto bg-zinc-900/95 border-zinc-700/60 rounded-2xl backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
+              <DropdownMenuContent align="end" className="w-64 max-h-72 overflow-y-auto bg-zinc-900/95 border-zinc-700/60 rounded-md backdrop-blur-xl p-1.5 shadow-[0_12px_40px_rgba(0,0,0,0.6)] z-50">
                 <DropdownMenuLabel className="text-[10px] uppercase font-bold tracking-wider text-zinc-400 px-3 py-1.5">
                   {activeCategory === 'crashes' ? 'Danh sách Crash Reports' : 'Danh sách tệp log cũ'}
                 </DropdownMenuLabel>
@@ -628,10 +628,10 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                       key={file.id}
                       onClick={() => setSelectedFile(file)}
                       className={cn(
-                        'flex items-center justify-between px-3 py-2 text-xs rounded-xl cursor-pointer transition-all',
+                        'flex items-center justify-between px-3 py-2 text-xs rounded-md cursor-pointer transition-all',
                         isSelected
-                          ? 'bg-primary/20 text-white font-semibold border border-primary/30'
-                          : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-white'
+                          ? 'bg-primary/20 text-zinc-200 font-semibold border border-primary/30'
+                          : 'text-zinc-200 hover:bg-zinc-800/90 hover:text-zinc-200'
                       )}
                     >
                       <div className="min-w-0 pr-2">
@@ -667,7 +667,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
             <div
               key={index}
               className={cn(
-                'flex items-start gap-3.5 p-3.5 rounded-2xl border shadow-lg backdrop-blur-md',
+                'flex items-start gap-3.5 p-3.5 rounded-md border shadow-lg backdrop-blur-md',
                 diag.type === 'danger'
                   ? 'bg-red-950/40 border-red-800/60 text-red-200'
                   : 'bg-amber-950/40 border-amber-800/60 text-amber-200'
@@ -675,7 +675,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
             >
               <div
                 className={cn(
-                  'h-8 w-8 rounded-xl flex items-center justify-center shrink-0 shadow-md',
+                  'h-8 w-8 rounded-md flex items-center justify-center shrink-0 shadow-md',
                   diag.type === 'danger' ? 'bg-red-500/20 text-red-400' : 'bg-amber-500/20 text-amber-400'
                 )}
               >
@@ -684,7 +684,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
 
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold uppercase tracking-wider text-white">
+                  <span className="text-xs font-bold uppercase tracking-wider text-zinc-200">
                     {diag.title}
                   </span>
                   <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-black/40 text-zinc-300">
@@ -693,7 +693,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                 </div>
                 <p className="text-xs text-zinc-300 mt-1 leading-relaxed">{diag.description}</p>
                 {diag.suggestion && (
-                  <div className="mt-2 pt-2 border-t border-white/10 flex items-start gap-1.5 text-xs text-white">
+                  <div className="mt-2 pt-2 border-t border-white/10 flex items-start gap-1.5 text-xs text-zinc-200">
                     <Sparkles size={13} className="text-primary shrink-0 mt-0.5" />
                     <span>
                       <strong>Hướng khắc phục:</strong> {diag.suggestion}
@@ -711,7 +711,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
         {/* Search Field */}
         <div className="flex-1 min-w-[200px]">
           <Input
-            className="bg-zinc-900/90 border-zinc-800 text-zinc-100 placeholder:text-zinc-500 focus:border-primary/60 h-9 rounded-xl text-xs"
+            className="bg-zinc-900/90 border-zinc-800 text-zinc-200 placeholder:text-zinc-500 focus:border-primary/60 h-9 rounded-md text-xs"
             type="text"
             placeholder="Tìm kiếm trong log (Exception, Missing, Mod, Player...)"
             value={searchQuery}
@@ -721,13 +721,13 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
         </div>
 
         {/* Level Filters */}
-        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-xl p-0.5 h-9 shrink-0 gap-0.5">
+        <div className="flex items-center bg-zinc-900/90 border border-zinc-800 rounded-md p-0.5 h-9 shrink-0 gap-0.5">
           {(['ALL', 'INFO', 'WARN', 'ERROR', 'FATAL'] as LogLevel[]).map((lvl) => (
             <button
               key={lvl}
               onClick={() => setSelectedLevel(lvl)}
               className={cn(
-                'px-2.5 h-full rounded-lg text-xs font-medium transition-all',
+                'px-2.5 h-full rounded-md text-xs font-medium transition-all',
                 selectedLevel === lvl
                   ? lvl === 'ERROR' || lvl === 'FATAL'
                     ? 'bg-red-500/20 text-red-400 font-bold'
@@ -748,10 +748,10 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           size="sm"
           onClick={() => setAutoScroll((prev) => !prev)}
           className={cn(
-            'h-9 px-3 text-xs gap-1.5 rounded-xl shrink-0 transition-all border-zinc-700/70 shadow-sm',
+            'h-9 px-3 text-xs gap-1.5 rounded-md shrink-0 transition-all border-zinc-700/70 shadow-sm',
             autoScroll
               ? 'bg-primary/20 text-primary border-primary/40 font-semibold'
-              : 'bg-zinc-900/80 text-zinc-300 hover:text-white'
+              : 'bg-zinc-900/80 text-zinc-300 hover:text-zinc-200'
           )}
           title="Tự động cuộn xuống dòng mới nhất khi chơi game"
         >
@@ -761,7 +761,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
       </div>
 
       {/* Terminal Log Console */}
-      <div className="flex-1 min-h-0 relative flex flex-col rounded-2xl border border-zinc-800/80 bg-zinc-900/85 transition-all shadow-md overflow-hidden">
+      <div className="flex-1 min-h-0 relative flex flex-col rounded-md border border-zinc-800/80 bg-zinc-900/85 transition-all shadow-md overflow-hidden">
         {isLoadingContent ? (
           <div className="flex h-full flex-col items-center justify-center gap-3 text-center py-20">
             <Loader2 size={32} className="animate-spin text-primary" />
@@ -769,11 +769,11 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           </div>
         ) : filteredLines.length === 0 ? (
           <div className="flex h-full flex-col items-center justify-center py-20 text-center gap-3">
-            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
+            <div className="flex h-16 w-16 items-center justify-center rounded-md bg-zinc-800/40 border border-zinc-700/40 text-zinc-400">
               <FileText size={32} />
             </div>
             <div>
-              <p className="text-sm font-semibold text-zinc-100">
+              <p className="text-sm font-semibold text-zinc-200">
                 {searchQuery || selectedLevel !== 'ALL'
                   ? 'Không tìm thấy dòng log phù hợp'
                   : 'Tệp log trống hoặc chưa có dữ liệu'}
@@ -796,7 +796,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                 <div
                   key={line.id}
                   className={cn(
-                    'flex items-start gap-2.5 py-0.5 px-2 rounded-lg hover:bg-zinc-800/70 transition-colors',
+                    'flex items-start gap-2.5 py-0.5 px-2 rounded-md hover:bg-zinc-800/70 transition-colors',
                     isError && 'bg-red-950/25 text-red-300 font-medium',
                     isWarn && 'bg-amber-950/20 text-amber-200',
                     line.level === 'UNKNOWN' && line.raw.startsWith('\tat ') && 'text-red-400/80 pl-6'
@@ -882,7 +882,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                     showToast('success', 'Đã sao chép liên kết vào Clipboard!')
                   }
                 }}
-                className="text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
+                className="text-xs bg-zinc-900 border-zinc-700 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5"
               >
                 <Copy size={13} />
                 Sao chép Link
@@ -901,7 +901,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
               onClick={() => {
                 if (mclogsResult) void launcherClient.openExternal(mclogsResult.url)
               }}
-              className="p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 hover:border-primary/50 hover:bg-zinc-900 transition-all flex items-center justify-between gap-3 cursor-pointer group shadow-sm"
+              className="p-3.5 rounded-md bg-zinc-900/90 border border-zinc-800 hover:border-primary/50 hover:bg-zinc-900 transition-all flex items-center justify-between gap-3 cursor-pointer group shadow-sm"
               title="Nhấn để mở trên trình duyệt web"
             >
               <div className="min-w-0 flex-1">
@@ -916,7 +916,7 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
                   e.stopPropagation()
                   void launcherClient.openExternal(mclogsResult.url)
                 }}
-                className="p-2.5 rounded-xl bg-zinc-800 text-zinc-300 hover:text-white hover:bg-primary hover:text-primary-foreground transition-all shrink-0 shadow-sm"
+                className="p-2.5 rounded-md bg-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-primary hover:text-primary-foreground transition-all shrink-0 shadow-sm"
                 title="Mở trong trình duyệt web ngoài"
               >
                 <ExternalLink size={16} />

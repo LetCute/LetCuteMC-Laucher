@@ -37,7 +37,7 @@ interface AccountsScreenProps {
 
 // Helper to convert base64 data URL to ArrayBuffer for uploading
 function dataUrlToArrayBuffer(dataUrl: string): ArrayBuffer {
-  const base64 = dataUrl.split(',')[1]
+  const base64 = dataUrl.split(',')[1] ?? ''
   const binaryString = window.atob(base64)
   const len = binaryString.length
   const bytes = new Uint8Array(len)
@@ -61,7 +61,7 @@ const GallerySkinItem = ({
       type="button"
       onClick={onSelect}
       className={[
-        'rounded-xl p-2 flex flex-col items-center gap-1.5 transition-all group relative border text-left',
+        'rounded-md p-2 flex flex-col items-center gap-1.5 transition-all group relative border text-left',
         isSelected
           ? 'border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.2)]'
           : 'border-border/40 bg-background/40 backdrop-blur-sm hover:border-primary/40 hover:bg-background/80 hover:-translate-y-0.5',
@@ -607,7 +607,7 @@ export const AccountsScreen = ({
                   key={acc.id}
                   onClick={() => !isActive && !isWorking && handleSelectAccount(acc.id)}
                   className={[
-                    'group relative flex flex-col items-center rounded-2xl border p-4 transition-all duration-200 cursor-pointer shadow-md',
+                    'group relative flex flex-col items-center rounded-md border p-4 transition-all duration-200 cursor-pointer shadow-md',
                     isWorking ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
                       ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
@@ -615,7 +615,7 @@ export const AccountsScreen = ({
                   ].join(' ')}
                 >
                   {isActive && (
-                    <div className="absolute top-0 right-0 flex h-7 w-7 items-center justify-center rounded-bl-xl rounded-tr-[15px] bg-primary text-primary-foreground z-10">
+                    <div className="absolute top-0 right-0 flex h-7 w-7 items-center justify-center rounded-bl-md rounded-tr-md bg-primary text-primary-foreground z-10">
                       <Check size={13} strokeWidth={3} />
                     </div>
                   )}
@@ -667,7 +667,7 @@ export const AccountsScreen = ({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center h-full gap-3 text-center py-12">
-            <div className="h-16 w-16 rounded-2xl bg-accent/50 border border-border flex items-center justify-center">
+            <div className="h-16 w-16 rounded-md bg-accent/50 border border-border flex items-center justify-center">
               <UserCircle size={28} className="text-muted-foreground/50" />
             </div>
             <p className="text-sm font-medium text-muted-foreground">Chưa có tài khoản nào</p>
@@ -701,7 +701,7 @@ export const AccountsScreen = ({
           ) : (
             <>
               <div className="flex items-stretch gap-6">
-                <div className="shrink-0 rounded-xl border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
+                <div className="shrink-0 rounded-md border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
                   <SkinViewer3D
                     skinUrl={pendingSkinFile || undefined}
                     capeUrl={pendingCapeFile || undefined}
@@ -714,7 +714,7 @@ export const AccountsScreen = ({
                 </div>
 
                 <div className="flex-1 flex flex-col gap-4">
-                  <div className="flex gap-2 bg-muted/30 p-1 rounded-xl border border-border">
+                  <div className="flex gap-2 bg-muted/30 p-1 rounded-md border border-border">
                     <Button variant={skinTab === 'name' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('name')}>Tên</Button>
                     <Button variant={skinTab === 'skin' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('skin')}>Skin</Button>
                     <Button variant={skinTab === 'cape' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('cape')}>Cape</Button>
@@ -736,7 +736,7 @@ export const AccountsScreen = ({
                             />
                           </div>
                           {!renameAllowed && renameTargetType === 'microsoft' && (
-                            <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-lg text-xs">
+                            <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-md text-xs">
                               {renameCooldownMessage || 'Tài khoản Premium này chưa được phép đổi tên.'}
                             </div>
                           )}
@@ -760,7 +760,7 @@ export const AccountsScreen = ({
 
                       <div className="flex items-center gap-3">
                         {pendingSkinFile ? (
-                          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border border-primary/40 bg-black/10">
+                          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-md border border-primary/40 bg-black/10">
                             <span className="text-xs font-medium text-primary">Đã nạp file skin</span>
                             <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => setPendingSkinFile(null)} title="Gỡ bỏ">
                               <Trash2 size={16} />
@@ -776,7 +776,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('default')}
-                          className={['flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'default' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                          className={['flex items-center gap-3 p-3 rounded-md border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'default' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -792,7 +792,7 @@ export const AccountsScreen = ({
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('slim')}
-                          className={['flex items-center gap-3 p-3 rounded-xl border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'slim' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                          className={['flex items-center gap-3 p-3 rounded-md border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'slim' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                         >
                           <div className="flex items-end gap-0.5">
                             <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
@@ -849,7 +849,7 @@ export const AccountsScreen = ({
                       {skinModalTargetType === 'local' ? (
                         <div className="flex items-center gap-3">
                           {pendingCapeFile ? (
-                            <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-xl border border-primary/40 bg-black/10">
+                            <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-md border border-primary/40 bg-black/10">
                               <span className="text-xs font-medium text-primary">Đã nạp file áo choàng</span>
                               <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => { setPendingCapeFile(null); setSelectedCapeUrl(null); }} title="Gỡ bỏ">
                                 <Trash2 size={16} />
@@ -862,7 +862,7 @@ export const AccountsScreen = ({
                       ) : (
                         // Microsoft Capes
                         <div className="space-y-3">
-                          <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20 text-xs text-primary flex items-start gap-2">
+                          <div className="p-2.5 rounded-md bg-primary/10 border border-primary/20 text-xs text-primary flex items-start gap-2">
                             <Sparkles size={14} className="shrink-0 mt-0.5" />
                             <span>Tài khoản Microsoft (Bản quyền) chỉ có thể trang bị các áo choàng chính chủ được cấp phép trên hệ thống Mojang.</span>
                           </div>
@@ -871,9 +871,9 @@ export const AccountsScreen = ({
                             <button
                               type="button"
                               onClick={() => { setPendingCapeId(''); setPendingCapeFile(null); setSelectedCapeUrl(null); }}
-                              className={['flex items-center gap-2 p-2.5 rounded-xl border transition-all shadow-sm', pendingCapeId === '' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                              className={['flex items-center gap-2 p-2.5 rounded-md border transition-all shadow-sm', pendingCapeId === '' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                             >
-                              <div className="h-8 w-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                              <div className="h-8 w-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
                                 <XCircle size={14} className="text-muted-foreground" />
                               </div>
                               <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng áo choàng</span>
@@ -884,7 +884,7 @@ export const AccountsScreen = ({
                                 key={cape.id}
                                 type="button"
                                 onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url); setSelectedCapeUrl(cape.url); }}
-                                className={['flex items-center gap-3 p-2.5 rounded-xl border transition-all shadow-sm', pendingCapeId === cape.id ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                                className={['flex items-center gap-3 p-2.5 rounded-md border transition-all shadow-sm', pendingCapeId === cape.id ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
                               >
                                 <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
                                 <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
@@ -893,7 +893,7 @@ export const AccountsScreen = ({
                               </button>
                             ))}
                             {mojangProfile?.capes?.length === 0 && (
-                              <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-border">
+                              <div className="col-span-2 p-3 text-center rounded-md border border-dashed border-border">
                                 <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào trên Mojang.</span>
                               </div>
                             )}
@@ -921,7 +921,10 @@ export const AccountsScreen = ({
 
                     <div className="flex items-center gap-2">
                       <div className="relative">
-                        <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <Search
+                          size={13}
+                          className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none z-10"
+                        />
                         <Input
                           placeholder="Tìm skin / người chơi..."
                           className="h-8 text-xs pl-8 w-44 sm:w-52"
@@ -991,7 +994,7 @@ export const AccountsScreen = ({
                         <Loader2 size={24} className="animate-spin text-muted-foreground" />
                       </div>
                     ) : paginatedSkins.length === 0 ? (
-                      <div className="col-span-4 flex flex-col items-center justify-center text-center py-8 gap-2 bg-accent/10 rounded-xl border border-dashed border-border/60">
+                      <div className="col-span-4 flex flex-col items-center justify-center text-center py-8 gap-2 bg-accent/10 rounded-md border border-dashed border-border/60">
                         <p className="text-xs text-muted-foreground">Không có skin nào trong danh mục phù hợp với từ khóa.</p>
                         {galleryQuery.trim() && (
                           <Button
@@ -1030,7 +1033,10 @@ export const AccountsScreen = ({
                     </label>
 
                     <div className="relative">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                      <Search
+                        size={13}
+                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none z-10"
+                      />
                       <Input
                         placeholder="Tìm kiếm áo choàng..."
                         className="h-8 text-xs pl-8 w-48"
@@ -1054,7 +1060,7 @@ export const AccountsScreen = ({
                             type="button"
                             onClick={() => handleSelectGalleryCape(cape)}
                             className={[
-                              'border rounded-xl p-2 flex flex-col items-center gap-1.5 transition-all group relative',
+                              'border rounded-md p-2 flex flex-col items-center gap-1.5 transition-all group relative',
                               isSelected
                                 ? 'border-primary bg-primary/10 shadow-[0_0_12px_rgba(var(--primary),0.2)] ring-1 ring-primary'
                                 : 'border-border/40 bg-background/40 backdrop-blur-sm hover:border-primary/40 hover:bg-background/80 hover:-translate-y-0.5',
@@ -1097,9 +1103,9 @@ export const AccountsScreen = ({
           <div className="space-y-1.5">
             <button
               onClick={handleMicrosoftLogin} disabled={isWorking}
-              className="w-full group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
+              className="w-full group flex items-center gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
                 <Key size={20} />
               </div>
               <div className="min-w-0 flex-1">
@@ -1119,9 +1125,9 @@ export const AccountsScreen = ({
           {!showLocalInput ? (
             <button
               onClick={() => setShowLocalInput(true)} disabled={isWorking}
-              className="group flex items-center gap-4 p-4 rounded-2xl border border-zinc-800/80 bg-zinc-900/90 hover:border-amber-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
+              className="group flex items-center gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/90 hover:border-amber-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
             >
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:bg-amber-500/25">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:bg-amber-500/25">
                 <FlaskConical size={20} />
               </div>
               <div className="min-w-0 flex-1">
@@ -1133,7 +1139,7 @@ export const AccountsScreen = ({
               </div>
             </button>
           ) : (
-            <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/5 space-y-3">
+            <div className="p-4 rounded-md border border-amber-500/30 bg-amber-500/5 space-y-3">
               <div className="flex items-center gap-2">
                 <FlaskConical size={16} className="text-amber-400" />
                 <span className="text-sm font-bold text-foreground/80">Tạo tài khoản Local</span>

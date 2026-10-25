@@ -5,24 +5,16 @@ import * as zlib from 'node:zlib'
 import { promisify } from 'node:util'
 import { shell } from 'electron'
 import type { LogFileInfo, MclogsUploadResult } from '../../../shared/types'
-import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+import { resolveGameDir } from '../launcher/minecraftDirectoryService'
 
 const gunzipAsync = promisify(zlib.gunzip)
 
 export class LogService {
-  private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && existsSync(gameDir)) {
-      return gameDir
-    }
-    const detected = await detectMinecraftDirectory()
-    return detected.path || ''
-  }
-
   /**
    * Liệt kê các tệp log và crash reports (Async)
    */
   async listLogFiles(gameDir?: string): Promise<{ activeLogs: LogFileInfo[]; crashReports: LogFileInfo[] }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     const activeLogs: LogFileInfo[] = []
     const crashReports: LogFileInfo[] = []
 
@@ -173,10 +165,22 @@ export class LogService {
     }
   }
 
+  private isSafeLogPath(filePath: string): boolean {
+    if (!filePath || typeof filePath !== 'string') return false
+    const lower = filePath.toLowerCase()
+    const validExt = lower.endsWith('.log') || lower.endsWith('.log.gz') || lower.endsWith('.txt')
+    if (!validExt) return false
+    const parts = path.normalize(filePath).split(path.sep)
+    return parts.includes('logs') || parts.includes('crash-reports')
+  }
+
   /**
    * Xóa một file log hoặc crash report
    */
   async deleteLogFile(filePath: string): Promise<boolean> {
+    if (!this.isSafeLogPath(filePath)) {
+      throw new Error('Tệp không hợp lệ hoặc không thuộc thư mục logs/crash-reports.')
+    }
     try {
       if (existsSync(filePath)) {
         await fs.unlink(filePath)
@@ -193,7 +197,7 @@ export class LogService {
    * Dọn dẹp các tệp log cũ (.log.gz)
    */
   async clearOldLogs(gameDir?: string): Promise<{ success: boolean; count: number; freedBytes: number }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) return { success: false, count: 0, freedBytes: 0 }
 
     const logsDir = path.join(resolvedDir, 'logs')
@@ -230,7 +234,7 @@ export class LogService {
    */
   async openLogsFolder(gameDir?: string, type: 'logs' | 'crash-reports' = 'logs'): Promise<boolean> {
     try {
-      const resolvedDir = await this.resolveGameDir(gameDir)
+      const resolvedDir = await resolveGameDir(gameDir)
       if (!resolvedDir) return false
 
       const targetDir = path.join(resolvedDir, type)

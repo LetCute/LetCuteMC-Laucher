@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import type { MinecraftVersionCatalog, MinecraftVersionItem } from '@/shared/types'
 import { launcherClient } from '../services/launcherClient'
 import { useConfirm } from '../components/ui/ConfirmDialogContext'
+import { useToast } from '../components/ui/Toast'
 import { Box, FlaskConical, HardDrive, History } from 'lucide-react'
 import type { FilterCategoryOption } from '../components/common/ScreenFilterBar'
 
@@ -95,6 +96,7 @@ export function useVersions({
   const [activeTab, setActiveTab] = useState<VersionTabKey>('releases')
   const [searchTerm, setSearchTerm] = useState('')
   const confirm = useConfirm()
+  const { showToast } = useToast()
 
   const installedCount = catalog?.all.filter((v) => v.isInstalled).length || 0
 
@@ -160,8 +162,14 @@ export function useVersions({
       isDestructive: true,
     })
     if (!isOk) return
-    await launcherClient.deleteVersion(v.path)
-    onRefresh?.()
+    try {
+      await launcherClient.deleteVersion(v.path)
+      showToast('success', `Đã xóa bản cài đặt ${v.name}`)
+      onRefresh?.()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      showToast('error', `Không thể xóa phiên bản: ${msg}`)
+    }
   }
 
   const handleOpenSpecificVersionFolder = async (path: string) => {

@@ -1,29 +1,11 @@
 import fs from 'node:fs/promises'
-import os from 'node:os'
 import path from 'node:path'
+import {
+  getDefaultMinecraftDirectory,
+  getDefaultLauncherDataDirectory as getLauncherDataDirectory,
+} from '../../utils/platform.js'
 
-export function getDefaultMinecraftDirectory(): string {
-  if (process.platform === 'win32') {
-    try {
-      const { app } = require('electron')
-      return path.join(app.getPath('appData'), '.minecraft')
-    } catch {
-      return path.join(process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'), '.minecraft')
-    }
-  }
-  if (process.platform === 'darwin') {
-    return path.join(os.homedir(), 'Library', 'Application Support', 'minecraft')
-  }
-  return path.join(os.homedir(), '.minecraft')
-}
-
-/** Launcher data dir: ~/.letcutemc (TLauncher-style, sibling to .minecraft) */
-export function getLauncherDataDirectory(): string {
-  const base = process.platform === 'win32'
-    ? (process.env.APPDATA || path.join(os.homedir(), 'AppData', 'Roaming'))
-    : os.homedir()
-  return path.join(base, '.letcutemc')
-}
+export { getDefaultMinecraftDirectory, getLauncherDataDirectory }
 
 export async function ensureLauncherDataDirectory(): Promise<void> {
   await fs.mkdir(getLauncherDataDirectory(), { recursive: true })

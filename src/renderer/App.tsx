@@ -407,7 +407,7 @@ function MainApp() {
           <p className="text-sm text-muted-foreground mb-6 max-w-md">{appError}</p>
           <button
             onClick={() => void initializeAppData()}
-            className="px-6 h-11 rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_15%,transparent)]"
+            className="px-6 h-11 rounded-md bg-primary hover:bg-primary/90 text-primary-foreground font-bold transition shadow-[0_0_24px_color-mix(in_oklch,var(--primary)_15%,transparent)]"
           >
             Thử lại
           </button>

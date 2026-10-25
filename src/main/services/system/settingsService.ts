@@ -45,7 +45,15 @@ function migrateSettings(raw: Partial<LauncherSettings> & Record<string, unknown
     merged.performanceMode = 'auto'
   }
 
-  merged.downloadConcurrency = Math.max(1, Math.min(merged.downloadConcurrency, 16))
+  // Sanitize RAM bounds
+  if (typeof merged.defaultMinMemoryMb !== 'number' || isNaN(merged.defaultMinMemoryMb) || merged.defaultMinMemoryMb < 512) {
+    merged.defaultMinMemoryMb = 1024
+  }
+  if (typeof merged.defaultMaxMemoryMb !== 'number' || isNaN(merged.defaultMaxMemoryMb) || merged.defaultMaxMemoryMb < merged.defaultMinMemoryMb) {
+    merged.defaultMaxMemoryMb = Math.max(4096, merged.defaultMinMemoryMb)
+  }
+
+  merged.downloadConcurrency = Math.max(1, Math.min(typeof merged.downloadConcurrency === 'number' && !isNaN(merged.downloadConcurrency) ? Math.floor(merged.downloadConcurrency) : 4, 16))
   return merged
 }
 

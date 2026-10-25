@@ -50,7 +50,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
               onClick={handleOpenFolder}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Mở thư mục shaderpacks trong Windows Explorer"
             >
               <FolderOpen size={14} className="text-primary" />
@@ -62,7 +62,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
               disabled={loading}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Quét lại thư mục shaderpacks"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
@@ -130,7 +130,7 @@ export const ShaderPacksScreen = ({ gameDir, profileName }: ShaderPacksScreenPro
                         onClick={() => handleDelete(pack)}
                         variant="outline"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-xl transition-all"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-md transition-all"
                         title="Xóa shader này"
                       >
                         <Trash2 size={13} />

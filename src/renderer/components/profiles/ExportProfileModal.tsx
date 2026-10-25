@@ -98,9 +98,9 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
     >
       <div className="space-y-4 text-xs select-none">
         {/* Profile Target Info Header */}
-        <div className="p-3.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 flex items-center justify-between gap-3 shadow-sm">
+        <div className="p-3.5 rounded-md border border-zinc-800/80 bg-zinc-900/85 flex items-center justify-between gap-3 shadow-sm">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="h-10 w-10 rounded-xl bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-md bg-primary/15 border border-primary/30 text-primary flex items-center justify-center shrink-0">
               <Package size={20} />
             </div>
             <div className="min-w-0">
@@ -150,7 +150,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeMods(!includeMods)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeMods
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'
@@ -179,7 +179,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeConfig(!includeConfig)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeConfig
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'
@@ -208,7 +208,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeOptions(!includeOptions)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeOptions
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'
@@ -237,7 +237,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeShaderPacks(!includeShaderPacks)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeShaderPacks
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'
@@ -266,7 +266,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeResourcePacks(!includeResourcePacks)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeResourcePacks
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'
@@ -295,7 +295,7 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
             <div
               onClick={() => !isExporting && setIncludeServers(!includeServers)}
               className={cn(
-                'p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2.5',
+                'p-2.5 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-2.5',
                 includeServers
                   ? 'bg-primary/15 border-primary/50 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800/80 text-muted-foreground hover:bg-zinc-900'

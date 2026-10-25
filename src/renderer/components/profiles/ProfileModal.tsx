@@ -31,7 +31,7 @@ interface FormState {
 }
 
 const selectClass =
-  'w-full h-10 rounded-xl border border-border bg-input px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/60 focus:ring-2 focus:ring-ring/30 disabled:opacity-50'
+  'w-full h-10 rounded-md border border-border bg-input px-3 text-sm text-foreground outline-none transition-colors focus:border-primary/60 focus:ring-2 focus:ring-ring/30 disabled:opacity-50'
 
 export function ProfileModal({
   isOpen,
@@ -317,7 +317,7 @@ export function ProfileModal({
             />
           )}
           {isVersionNotInstalled && modLoader === 'vanilla' && (
-            <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/8 border border-amber-500/20 rounded-lg p-2.5">
+            <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/8 border border-amber-500/20 rounded-md p-2.5">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>
                 Phiên bản này chưa được tải. Launcher sẽ tải tự động khi chạy lần đầu.
@@ -360,7 +360,7 @@ export function ProfileModal({
         )}
 
         {!profile && modLoader !== 'vanilla' && (
-          <div className="col-span-2 flex items-start gap-2 text-xs text-primary/90 bg-primary/10 border border-primary/20 rounded-lg p-2.5">
+          <div className="col-span-2 flex items-start gap-2 text-xs text-primary/90 bg-primary/10 border border-primary/20 rounded-md p-2.5">
             <Info size={13} className="mt-0.5 shrink-0" />
             <span>
               Launcher sẽ tự động tải và cài đặt nền tảng {modLoader === 'fabric' ? 'Fabric' : 'Quilt'} vào thư mục game.

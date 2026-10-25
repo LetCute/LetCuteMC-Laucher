@@ -112,8 +112,8 @@ export const ModConflictModal = ({
           <>
             {/* Status Summary Banner */}
             {criticalCount === 0 && warningCount === 0 ? (
-              <div className="p-4 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3.5 shadow-sm">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <div className="p-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3.5 shadow-sm">
+                <div className="h-10 w-10 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
                   <CheckCircle2 size={22} />
                 </div>
                 <div>
@@ -126,9 +126,9 @@ export const ModConflictModal = ({
                 </div>
               </div>
             ) : criticalCount > 0 ? (
-              <div className="p-4 rounded-2xl border border-rose-500/40 bg-rose-500/10 flex items-center justify-between gap-3 shadow-sm">
+              <div className="p-4 rounded-md border border-rose-500/40 bg-rose-500/10 flex items-center justify-between gap-3 shadow-sm">
                 <div className="flex items-center gap-3.5">
-                  <div className="h-10 w-10 rounded-xl bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
+                  <div className="h-10 w-10 rounded-md bg-rose-500/20 text-rose-400 border border-rose-500/30 flex items-center justify-center shrink-0">
                     <AlertTriangle size={22} />
                   </div>
                   <div>
@@ -142,8 +142,8 @@ export const ModConflictModal = ({
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3.5 shadow-sm">
-                <div className="h-10 w-10 rounded-xl bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
+              <div className="p-4 rounded-md border border-amber-500/30 bg-amber-500/10 flex items-center gap-3.5 shadow-sm">
+                <div className="h-10 w-10 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0">
                   <AlertCircle size={22} />
                 </div>
                 <div>
@@ -166,7 +166,7 @@ export const ModConflictModal = ({
                     <div
                       key={conflict.id}
                       className={cn(
-                        'p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-3 shadow-sm',
+                        'p-3.5 rounded-md border transition-all flex flex-col justify-between gap-3 shadow-sm',
                         isCrit
                           ? 'border-rose-500/40 bg-zinc-950/80 ring-1 ring-rose-500/20'
                           : 'border-amber-500/30 bg-zinc-950/60'

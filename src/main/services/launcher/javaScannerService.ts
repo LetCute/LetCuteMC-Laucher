@@ -12,10 +12,14 @@ import type {
 } from '../../../shared/types'
 import { autoInstallJava, getDefaultJavaInstallDir } from './javaInstallerService'
 import { getJavaCacheFilePath } from '../system/storageService'
+import {
+  JAVA_EXE,
+  getPlatformJavaCandidateRoots,
+  getPlatformWhereJavaCommand,
+} from '../../utils/platform.js'
 
 const execFileAsync = promisify(execFile)
 
-const JAVA_EXE = process.platform === 'win32' ? 'java.exe' : 'java'
 const INSPECT_TIMEOUT_MS = 8000
 const INSPECT_MAX_BUFFER = 1024 * 1024
 const SCAN_MAX_DEPTH = 3
@@ -306,34 +310,8 @@ export function getKnownJavaRoots(customScanDirs: string[] = []): string[] {
   }
 
   // Cross-platform vendor roots
-  if (process.platform === 'linux') {
-    add('/usr/lib/jvm')
-    add('/usr/lib64/jvm')
-    add('/usr/java')
-    add('/opt/java')
-    add('/opt/jdk')
-    add(path.join(os.homedir(), '.sdkman/candidates/java'))
-    add(path.join(os.homedir(), '.jenv/versions'))
-    add(path.join(os.homedir(), '.asdf/installs/java'))
-    add(path.join(os.homedir(), '.local/share/jvm'))
-  } else if (process.platform === 'darwin') {
-    add('/Library/Java/JavaVirtualMachines')
-    add(path.join(os.homedir(), 'Library/Java/JavaVirtualMachines'))
-    add(path.join(os.homedir(), '.sdkman/candidates/java'))
-  } else if (process.platform === 'win32') {
-    const pf = process.env['ProgramFiles'] || 'C:\\Program Files'
-    const pf86 = process.env['ProgramFiles(x86)'] || 'C:\\Program Files (x86)'
-    const localAppData = process.env['LOCALAPPDATA'] || path.join(os.homedir(), 'AppData', 'Local')
-
-    add(path.join(pf, 'Java'))
-    add(path.join(pf, 'Eclipse Adoptium'))
-    add(path.join(pf, 'Semeru'))
-    add(path.join(pf, 'Zulu'))
-    add(path.join(pf, 'BellSoft'))
-    add(path.join(pf, 'Microsoft'))
-    add(path.join(pf, 'Amazon Corretto'))
-    add(path.join(pf86, 'Java'))
-    add(path.join(localAppData, 'Programs', 'Eclipse Adoptium'))
+  for (const root of getPlatformJavaCandidateRoots()) {
+    add(root)
   }
 
   return [...roots]
@@ -359,25 +337,9 @@ async function collectPathJavaExecutables(): Promise<string[]> {
 }
 
 async function collectWhereJava(): Promise<string[]> {
-  if (process.platform !== 'win32') {
-    try {
-      const { stdout } = await execFileAsync('which', ['-a', 'java'], {
-        timeout: 5000,
-        windowsHide: true,
-        maxBuffer: 256 * 1024,
-      })
-      return stdout
-        .split(/\r?\n/)
-        .map((l) => l.trim())
-        .filter(Boolean)
-        .map((p) => path.resolve(p))
-    } catch {
-      return []
-    }
-  }
-
+  const { command, args } = getPlatformWhereJavaCommand()
   try {
-    const { stdout } = await execFileAsync('where.exe', ['java'], {
+    const { stdout } = await execFileAsync(command, args, {
       timeout: 5000,
       windowsHide: true,
       maxBuffer: 256 * 1024,

@@ -3,6 +3,7 @@ import type { GameContentItem, GameContentType } from '@/shared/types'
 import { launcherClient } from '../services/launcherClient'
 import { queryCache, CACHE_TTL } from '../services/queryCache'
 import { useConfirm } from '../components/ui/ConfirmDialogContext'
+import { useToast } from '../components/ui/Toast'
 
 interface UseGameContentProps {
   gameDir: string
@@ -29,6 +30,7 @@ export function useGameContent({
   const [loading, setLoading] = useState(false)
   const [operatingItems, setOperatingItems] = useState<Set<string>>(new Set())
   const confirm = useConfirm()
+  const { showToast } = useToast()
 
   const cacheKey = `${type}:${gameDir}`
 
@@ -54,6 +56,7 @@ export function useGameContent({
       setItems(list)
     } catch (e) {
       console.error(`Failed to load ${type}:`, e)
+      showToast('error', `Không thể tải danh sách ${itemTypeName}: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setLoading(false)
     }
@@ -80,9 +83,11 @@ export function useGameContent({
     setOperatingItems((prev) => new Set(prev).add(item.path))
     try {
       await launcherClient.deleteGameContent(gameDir, item.path)
+      showToast('success', `Đã xóa ${itemTypeName} "${item.name}"`)
       await refetchItems()
     } catch (e) {
       console.error(e)
+      showToast('error', `Lỗi xóa ${itemTypeName}: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
       setOperatingItems((prev) => {
         const n = new Set(prev)
@@ -93,12 +98,21 @@ export function useGameContent({
   }
 
   const handleDropImport = async (paths: string[]) => {
+    let imported = 0
+    let failed = 0
     for (const p of paths) {
       try {
         await launcherClient.importGameContent({ gameDir, sourcePath: p, type })
+        imported++
       } catch (e) {
         console.error(e)
+        failed++
       }
+    }
+    if (failed > 0) {
+      showToast('error', `Thêm thất bại ${failed} tệp ${itemTypeName}.`)
+    } else if (imported > 0) {
+      showToast('success', `Đã thêm thành công ${imported} ${itemTypeName}`)
     }
     await refetchItems()
   }

@@ -35,7 +35,7 @@ interface LaunchPanelProps {
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-border bg-background/50 px-3.5 py-3">
+    <div className="rounded-md border border-border bg-background/50 px-3.5 py-3">
       <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground mb-1">
         {label}
       </p>
@@ -139,7 +139,7 @@ export function LaunchPanel({
   const canCancel = isBusy && !isRunning
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-border bg-card h-full flex flex-col">
+    <section className="overflow-hidden rounded-md border border-border bg-card h-full flex flex-col">
       {/* Hero Header */}
       <div
         className="border-b border-border p-6 shrink-0 relative overflow-hidden"
@@ -198,7 +198,7 @@ export function LaunchPanel({
 
             {/* Progress bar when busy */}
             {showProgress && jobProgress && (
-              <div className="rounded-xl border border-border bg-muted/30 p-3.5 space-y-2">
+              <div className="rounded-md border border-border bg-muted/30 p-3.5 space-y-2">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-foreground">{jobProgress.title}</span>
                   <span className="text-muted-foreground">{percent}%</span>
@@ -215,7 +215,7 @@ export function LaunchPanel({
 
             {/* Prepare Progress bar (background file downloading) */}
             {!isBusy && isPreparing && prepareProgress && (
-              <div className="rounded-xl border border-border bg-primary/5 p-3.5 space-y-2 animate-in fade-in duration-200">
+              <div className="rounded-md border border-border bg-primary/5 p-3.5 space-y-2 animate-in fade-in duration-200">
                 <div className="flex items-center justify-between text-xs">
                   <span className="font-semibold text-primary">{prepareProgress.title}</span>
                   <span className="text-muted-foreground">{prepareProgress.percent}%</span>
@@ -232,7 +232,7 @@ export function LaunchPanel({
 
             {/* Ready to play status indicator */}
             {!isBusy && !isPreparing && false && ( // prepareState removed
-              <div className="flex items-center gap-2.5 rounded-xl border border-primary/20 bg-primary/5 p-3 px-3.5 text-xs text-primary animate-in fade-in duration-200">
+              <div className="flex items-center gap-2.5 rounded-md border border-primary/20 bg-primary/5 p-3 px-3.5 text-xs text-primary animate-in fade-in duration-200">
                 <CheckCircle2 size={14} className="shrink-0 text-primary" />
                 <span className="font-semibold">Tất cả tệp game đã sẵn sàng (Ready to Play)</span>
               </div>
@@ -242,7 +242,7 @@ export function LaunchPanel({
             <div className="space-y-2.5 pt-2">
               {/* Java missing */}
               {javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/8 p-3.5 text-sm text-red-300">
+                <div className="flex items-start gap-2.5 rounded-md border border-red-500/25 bg-red-500/8 p-3.5 text-sm text-red-300">
                   <AlertTriangle size={15} className="mt-0.5 shrink-0 text-red-400" />
                   <div>
                     <p className="font-semibold">Java không tìm thấy</p>
@@ -253,7 +253,7 @@ export function LaunchPanel({
 
               {/* Java warning */}
               {javaSelection?.warning && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-amber-500/25 bg-amber-500/8 p-3.5 text-sm text-amber-300">
+                <div className="flex items-start gap-2.5 rounded-md border border-amber-500/25 bg-amber-500/8 p-3.5 text-sm text-amber-300">
                   <AlertTriangle size={15} className="mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">Cảnh báo Java</p>
@@ -264,7 +264,7 @@ export function LaunchPanel({
 
               {/* Failed error */}
               {isFailed && state?.error && (
-                <div className="flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/8 p-3.5 text-sm text-red-300">
+                <div className="flex items-start gap-2.5 rounded-md border border-red-500/25 bg-red-500/8 p-3.5 text-sm text-red-300">
                   <XCircle size={15} className="mt-0.5 shrink-0 text-red-400" />
                   <div>
                     <p className="font-semibold">Khởi động thất bại</p>
@@ -278,7 +278,7 @@ export function LaunchPanel({
             {javaInstallState !== 'idle' && (
               <div
                 className={[
-                  'flex items-start gap-2.5 rounded-xl border p-3.5 text-sm animate-in fade-in',
+                  'flex items-start gap-2.5 rounded-md border p-3.5 text-sm animate-in fade-in',
                   javaInstallState === 'success'
                     ? 'border-emerald-500/25 bg-emerald-500/8 text-emerald-300'
                     : javaInstallState === 'installing'
@@ -337,7 +337,7 @@ export function LaunchPanel({
                 disabled={!activeProfile || isBusy || isStarting || isPreparing}
                 onClick={handlePlay}
                 variant={isFailed ? "danger" : "primary"}
-                className="relative w-full h-14 rounded-xl font-bold text-base"
+                className="relative w-full h-14 rounded-md font-bold text-base"
               >
                 {showProgress && (
                   <span
@@ -376,11 +376,11 @@ export function LaunchPanel({
                 <Button
                   disabled
                   variant="outline"
-                  className="relative w-full h-14 rounded-xl font-bold text-base cursor-not-allowed bg-muted/30 text-muted-foreground border-dashed border-border"
+                  className="relative w-full h-14 rounded-md font-bold text-base cursor-not-allowed bg-muted/30 text-muted-foreground border-dashed border-border"
                 >
                   <span>LOGIN REQUIRED</span>
                 </Button>
-                <p className="text-xs text-center text-red-400/90 font-medium bg-red-500/8 border border-red-500/15 rounded-lg py-2">
+                <p className="text-xs text-center text-red-400/90 font-medium bg-red-500/8 border border-red-500/15 rounded-md py-2">
                   Vào Cài đặt &gt; Tài khoản để đăng nhập Microsoft.
                 </p>
               </div>
@@ -390,7 +390,7 @@ export function LaunchPanel({
                 disabled={!activeProfile || isBusy || isStarting || isPreparing}
                 onClick={handlePlay}
                 variant={isFailed ? "danger" : "primary"}
-                className="relative w-full h-14 rounded-xl font-bold text-base"
+                className="relative w-full h-14 rounded-md font-bold text-base"
               >
                 {showProgress && (
                   <span
@@ -430,7 +430,7 @@ export function LaunchPanel({
               <Button
                 onClick={() => void startPrepare(true)}
                 variant="outline"
-                className="w-full h-10 rounded-xl font-semibold text-xs border-dashed border-border"
+                className="w-full h-10 rounded-md font-semibold text-xs border-dashed border-border"
               >
                 <AlertTriangle size={14} className="text-amber-400" />
                 <span>Sửa lỗi tệp tin (Repair)</span>
@@ -453,7 +453,7 @@ export function LaunchPanel({
           <Button
             disabled
             variant="outline"
-            className="w-full h-14 rounded-xl font-bold text-base bg-muted text-muted-foreground cursor-not-allowed"
+            className="w-full h-14 rounded-md font-bold text-base bg-muted text-muted-foreground cursor-not-allowed"
           >
             CHƯA CHỌN CẤU HÌNH
           </Button>

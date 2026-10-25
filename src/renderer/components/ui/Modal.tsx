@@ -33,7 +33,7 @@ export const Modal = ({
 
       {/* Dialog */}
       <div
-        className={`relative w-full ${maxWidth} bg-card border border-border rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] z-10`}
+        className={`relative w-full ${maxWidth} bg-card border border-border rounded-md shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] z-10`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -46,7 +46,7 @@ export const Modal = ({
           </div>
           <button
             onClick={onClose}
-            className="ml-4 p-1.5 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+            className="ml-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
           >
             <X size={18} />
           </button>

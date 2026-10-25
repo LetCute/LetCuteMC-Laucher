@@ -145,59 +145,33 @@ function ToastItem({ toast, onClose }: { toast: ToastItemData; onClose: () => vo
     info: <Info className="h-4 w-4 text-sky-400 shrink-0" />,
   }
 
-  const containerStyles = {
-    error: 'border-rose-500/30 bg-gradient-to-br from-rose-950/80 via-zinc-950/95 to-zinc-950/95 text-zinc-100 shadow-[0_12px_36px_rgba(244,63,94,0.18)]',
-    success: 'border-emerald-500/30 bg-gradient-to-br from-emerald-950/80 via-zinc-950/95 to-zinc-950/95 text-zinc-100 shadow-[0_12px_36px_rgba(16,185,129,0.18)]',
-    info: 'border-sky-500/30 bg-gradient-to-br from-sky-950/80 via-zinc-950/95 to-zinc-950/95 text-zinc-100 shadow-[0_12px_36px_rgba(14,165,233,0.18)]',
-  }
-
-  const iconBgStyles = {
-    error: 'bg-rose-500/15 border-rose-500/30',
-    success: 'bg-emerald-500/15 border-emerald-500/30',
-    info: 'bg-sky-500/15 border-sky-500/30',
-  }
-
-  const titleStyles = {
-    error: 'text-rose-300',
-    success: 'text-emerald-300',
-    info: 'text-sky-300',
-  }
-
   const progressBgStyles = {
-    error: 'bg-rose-500/50',
-    success: 'bg-emerald-500/50',
-    info: 'bg-sky-500/50',
+    error: 'bg-rose-500',
+    success: 'bg-emerald-500',
+    info: 'bg-sky-500',
   }
 
   return (
     <div
       onMouseEnter={() => setIsPaused(true)}
       onMouseLeave={() => setIsPaused(false)}
-      className={cn(
-        'group relative w-full overflow-hidden rounded-2xl border p-3.5 shadow-2xl backdrop-blur-xl pointer-events-auto transition-all duration-300 animate-in fade-in slide-in-from-bottom-3',
-        containerStyles[toast.type]
-      )}
+      className="group relative w-full overflow-hidden rounded-md border border-zinc-800 bg-zinc-900/95 p-3.5 text-zinc-200 shadow-xl shadow-black/50 backdrop-blur-md pointer-events-auto transition-all duration-200 animate-in fade-in slide-in-from-bottom-3"
     >
       <div className="flex items-start gap-3">
-        {/* Icon Badge */}
-        <div
-          className={cn(
-            'flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border mt-0.5 shadow-inner',
-            iconBgStyles[toast.type]
-          )}
-        >
+        {/* Icon */}
+        <div className="shrink-0 mt-0.5">
           {icons[toast.type]}
         </div>
 
         {/* Content */}
         <div className="flex-1 min-w-0 pr-1">
           <div className="flex items-center justify-between gap-2">
-            <h4 className={cn('text-xs font-semibold tracking-wide', titleStyles[toast.type])}>
+            <h4 className="text-xs font-semibold tracking-wide text-zinc-200">
               {toast.title}
             </h4>
           </div>
 
-          <p className="mt-1 text-xs leading-relaxed text-zinc-300/90 whitespace-pre-line break-words max-h-36 overflow-y-auto select-text scrollbar-thin">
+          <p className="mt-1 text-xs leading-relaxed text-zinc-400 whitespace-pre-line break-words max-h-36 overflow-y-auto select-text scrollbar-thin">
             {toast.message}
           </p>
         </div>
@@ -208,7 +182,7 @@ function ToastItem({ toast, onClose }: { toast: ToastItemData; onClose: () => vo
             <button
               onClick={handleCopy}
               title={isCopied ? 'Đã sao chép!' : 'Sao chép thông báo'}
-              className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+              className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
             >
               {isCopied ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
             </button>
@@ -216,7 +190,7 @@ function ToastItem({ toast, onClose }: { toast: ToastItemData; onClose: () => vo
           <button
             onClick={onClose}
             title="Đóng"
-            className="flex h-6 w-6 items-center justify-center rounded-lg text-zinc-400 hover:text-zinc-100 hover:bg-white/10 transition-colors"
+            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800 transition-colors"
           >
             <XIcon className="h-3.5 w-3.5" />
           </button>
@@ -224,7 +198,7 @@ function ToastItem({ toast, onClose }: { toast: ToastItemData; onClose: () => vo
       </div>
 
       {/* Progress countdown bar */}
-      <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-white/5 overflow-hidden">
+      <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-zinc-800/80 overflow-hidden">
         <div
           className={cn('h-full transition-all ease-linear', progressBgStyles[toast.type])}
           style={{

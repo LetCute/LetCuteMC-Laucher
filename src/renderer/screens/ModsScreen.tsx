@@ -166,7 +166,7 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
               disabled={loading}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
               Làm mới
@@ -176,7 +176,7 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
               onClick={handleOpenFolder}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
             >
               <Box className="h-3.5 w-3.5 text-primary" />
               Thư mục
@@ -187,9 +187,9 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
 
       {/* ─── Prominent Updates Banner ────────────────────────────────────────────── */}
       {updateCheckResult && updateCheckResult.updatesAvailableCount > 0 && (
-        <div className="p-4 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 shadow-lg flex items-center justify-between gap-4 animate-in fade-in duration-200">
+        <div className="p-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 shadow-lg flex items-center justify-between gap-4 animate-in fade-in duration-200">
           <div className="flex items-center gap-3.5">
-            <div className="h-10 w-10 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0">
+            <div className="h-10 w-10 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0">
               <Zap size={22} />
             </div>
             <div>
@@ -345,7 +345,7 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                               variant="outline"
                               size="sm"
                               onClick={() => setSelectedChangelogMod(updateItem)}
-                              className="h-8 px-2 text-xs bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-white hover:bg-zinc-800 gap-1 rounded-xl"
+                              className="h-8 px-2 text-xs bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 gap-1 rounded-md"
                               title="Xem nhật ký thay đổi"
                             >
                               <FileText size={12} />
@@ -356,7 +356,7 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                               size="sm"
                               disabled={isUpdatingThis}
                               onClick={() => handleUpdateSingleMod(updateItem)}
-                              className="h-8 px-2.5 text-xs font-bold gap-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-xl"
+                              className="h-8 px-2.5 text-xs font-bold gap-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 rounded-md"
                               title="Cập nhật bản mới"
                             >
                               {isUpdatingThis ? (
@@ -375,10 +375,10 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                           variant="outline"
                           size="icon-sm"
                           className={cn(
-                            'h-8 w-8 rounded-xl border transition-all',
+                            'h-8 w-8 rounded-md border transition-all',
                             isEnabled
                               ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50'
-                              : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-white hover:bg-zinc-800'
+                              : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
                           )}
                           title={isEnabled ? 'Bấm để tắt mod' : 'Bấm để bật mod'}
                         >
@@ -394,7 +394,7 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                           onClick={() => handleDeleteMod(mod)}
                           variant="outline"
                           size="icon-sm"
-                          className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-xl transition-all"
+                          className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-md transition-all"
                           title="Xóa mod này"
                         >
                           <Trash2 size={13} />

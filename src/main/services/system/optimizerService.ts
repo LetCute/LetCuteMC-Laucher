@@ -16,8 +16,9 @@ import type {
   InstallEssentialModResult,
   InstallAllEssentialModsResult,
 } from '../../../shared/types'
-import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+import { detectMinecraftDirectory, resolveGameDir } from '../launcher/minecraftDirectoryService'
 import { extractBaseMinecraftVersion, detectLoaderFromVersion } from '../content/modDependencyService'
+import { getDedicatedGpuEnvironment } from '../../utils/platform.js'
 
 const USER_AGENT = 'LetCuteMC-Launcher/1.0 (contact@letcute.com)'
 
@@ -286,10 +287,8 @@ export class OptimizerService {
     }
 
     // 2. Tìm Preset được chọn
-    let selectedPreset = JVM_PRESETS.find((p) => p.id === preset)
-    if (!selectedPreset) {
-      selectedPreset = JVM_PRESETS[0] // fallback to aikar
-    }
+    const fallbackPreset = JVM_PRESETS[0]!
+    let selectedPreset = JVM_PRESETS.find((p) => p.id === preset) ?? fallbackPreset
 
     // Kiểm tra tương thích phiên bản Java:
     // Nếu chọn ZGC nhưng Java < 21 hoặc Shenandoah nhưng Java < 17, fallback về Aikar's G1GC
@@ -297,7 +296,7 @@ export class OptimizerService {
       console.warn(
         `[OptimizerService] Preset ${selectedPreset.name} yêu cầu Java >= ${selectedPreset.minJavaVersion}, nhưng runtime là Java ${javaMajorVersion}. Tự động chuyển về Aikar's Flags.`
       )
-      selectedPreset = JVM_PRESETS[0]
+      selectedPreset = fallbackPreset
     }
 
     // Thêm các cờ của Preset
@@ -326,15 +325,7 @@ export class OptimizerService {
    * Trả về biến môi trường ép chạy Card đồ họa rời (High-Performance GPU)
    */
   public getGpuEnvironmentVariables(enableDedicatedGpu = true): Record<string, string> {
-    if (!enableDedicatedGpu) return {}
-
-    return {
-      __NV_PRIME_RENDER_OFFLOAD: '1',
-      __GLX_VENDOR_LIBRARY_NAME: 'nvidia',
-      __VK_LAYER_NV_optimus: 'NVIDIA_only',
-      DRI_PRIME: '1',
-      SHIM_MCCOMPAT: '1',
-    }
+    return getDedicatedGpuEnvironment(enableDedicatedGpu)
   }
 
   /**
@@ -343,7 +334,7 @@ export class OptimizerService {
   public async optimizeInGameVideoSettings(
     options: OptimizeVideoSettingsOptions
   ): Promise<OptimizeVideoSettingsResult> {
-    const resolvedDir = await this.resolveGameDir(options.gameDir)
+    const resolvedDir = await resolveGameDir(options.gameDir)
     if (!resolvedDir) {
       return {
         success: false,
@@ -459,7 +450,9 @@ export class OptimizerService {
             sodiumConfigUpdated = true
             changesApplied.push('Đã tối ưu cấu hình Sodium / Embeddium (Leaf culling, Entity culling)')
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[OptimizerService] Không thể tối ưu sodium-options.json:', err)
+        }
       }
 
       return {
@@ -485,7 +478,7 @@ export class OptimizerService {
    * Kiểm tra trạng thái tối ưu hóa máy yếu hiện tại
    */
   public async checkLowEndOptimizationStatus(gameDir?: string): Promise<LowEndBoostCheckResult> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     let currentRenderDistance = 12
     let mipmapLevels = 4
     let cloudsEnabled = true
@@ -497,17 +490,20 @@ export class OptimizerService {
         try {
           const content = fs.readFileSync(optionsPath, 'utf8')
           for (const line of content.split(/\r?\n/)) {
+            const val = line.split(':')[1]?.trim() || ''
             if (line.startsWith('renderDistance:')) {
-              currentRenderDistance = parseInt(line.split(':')[1], 10) || 12
+              currentRenderDistance = parseInt(val, 10) || 12
             } else if (line.startsWith('mipmapLevels:')) {
-              mipmapLevels = parseInt(line.split(':')[1], 10) || 4
+              mipmapLevels = parseInt(val, 10) || 4
             } else if (line.startsWith('renderClouds:')) {
-              cloudsEnabled = line.split(':')[1]?.trim() !== 'false'
+              cloudsEnabled = val !== 'false'
             } else if (line.startsWith('graphicsMode:')) {
-              fastGraphics = line.split(':')[1]?.trim() === '0'
+              fastGraphics = val === '0'
             }
           }
-        } catch {}
+        } catch (err) {
+          console.warn('[OptimizerService] Không thể đọc options.txt:', err)
+        }
       }
     }
 
@@ -517,7 +513,9 @@ export class OptimizerService {
     if (modsDir && fs.existsSync(modsDir)) {
       try {
         installedModFiles = fs.readdirSync(modsDir).map((f) => f.toLowerCase())
-      } catch {}
+      } catch (err) {
+        console.warn('[OptimizerService] Không thể đọc thư mục mods:', err)
+      }
     }
 
     const essentialMods: EssentialModItem[] = ESSENTIAL_LOW_END_MODS.map((m) => {
@@ -588,7 +586,9 @@ export class OptimizerService {
           oldLogsSet.add(file)
           try {
             oldLogsSize += fs.statSync(file).size
-          } catch {}
+          } catch {
+            // File might have been deleted/locked during scan, skip
+          }
         }
       }
 
@@ -603,7 +603,9 @@ export class OptimizerService {
           crashReportsSet.add(file)
           try {
             crashReportsSize += fs.statSync(file).size
-          } catch {}
+          } catch {
+            // File might have been deleted/locked during scan, skip
+          }
         }
       }
 
@@ -615,7 +617,9 @@ export class OptimizerService {
           crashReportsSet.add(file)
           try {
             crashReportsSize += fs.statSync(file).size
-          } catch {}
+          } catch {
+            // File might have been deleted/locked during scan, skip
+          }
         }
       }
 
@@ -629,7 +633,9 @@ export class OptimizerService {
             tempCacheSet.add(file)
             try {
               tempCacheSize += fs.statSync(file).size
-            } catch {}
+            } catch {
+              // File might have been deleted/locked during scan, skip
+            }
           }
         }
       }
@@ -654,12 +660,16 @@ export class OptimizerService {
               tempCacheSet.add(file)
               try {
                 tempCacheSize += fs.statSync(file).size
-              } catch {}
+              } catch {
+                // File might have been deleted/locked during scan, skip
+              }
             }
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[OptimizerService] Không thể quét launcher cache dir:', err)
+    }
 
     const oldLogsPaths = Array.from(oldLogsSet)
     items.push({
@@ -759,7 +769,7 @@ export class OptimizerService {
     rawMcVersion: string = '1.20.1',
     rawLoader: string = 'fabric'
   ): Promise<InstallEssentialModResult> {
-    const targetDir = await this.resolveGameDir(gameDir)
+    const targetDir = await resolveGameDir(gameDir)
     if (!targetDir) {
       return { success: false, modId: modSlug, message: 'Không tìm thấy thư mục game.' }
     }
@@ -769,7 +779,9 @@ export class OptimizerService {
       if (!fs.existsSync(modsDir)) {
         fs.mkdirSync(modsDir, { recursive: true })
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[OptimizerService] Không thể tạo thư mục mods:', err)
+    }
 
     const baseMcVersion = extractBaseMinecraftVersion(rawMcVersion)
     let loader = detectLoaderFromVersion(rawLoader)
@@ -888,7 +900,9 @@ export class OptimizerService {
             const stat = fs.statSync(fullPath)
             size += stat.size
             files.push(fullPath)
-          } catch {}
+          } catch {
+            // File inaccessible, skip
+          }
         } else if (entry.isDirectory() && currentDepth < maxDepth) {
           // Tránh duyệt sâu vào các thư mục game nhạy cảm như thế giới lưu (saves), mods chính
           const skipDirs = ['saves', 'mods', 'resourcepacks', 'shaderpacks', 'screenshots', 'versions']
@@ -899,17 +913,11 @@ export class OptimizerService {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn(`[OptimizerService] Không thể quét thư mục ${dirPath}:`, err)
+    }
 
     return { size, files }
-  }
-
-  private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && fs.existsSync(gameDir)) {
-      return gameDir
-    }
-    const detected = await detectMinecraftDirectory()
-    return detected.path || ''
   }
 
   private async resolveAllGameDirs(primaryGameDir?: string): Promise<string[]> {
@@ -934,7 +942,9 @@ export class OptimizerService {
           }
         }
       }
-    } catch {}
+    } catch (err) {
+      console.warn('[OptimizerService] Không thể đọc profiles để resolve game dirs:', err)
+    }
     return Array.from(dirs)
   }
 }

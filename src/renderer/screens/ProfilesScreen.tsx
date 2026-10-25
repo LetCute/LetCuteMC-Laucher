@@ -44,7 +44,7 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
     return () => { isMounted = false }
   }, [profile.id, profile.gameDir, isModpack])
 
-  const imageClass = "w-10 h-10 rounded-lg shadow-sm object-cover bg-black/20"
+  const imageClass = "w-10 h-10 rounded-md shadow-sm object-cover bg-black/20"
 
   if (iconData) {
     return <img src={iconData} className={imageClass} alt="Modpack" />
@@ -140,7 +140,7 @@ export const ProfilesScreen = ({
       {/* Drag Overlay Notice */}
       {isDraggingOver && (
         <div className="absolute inset-0 z-30 bg-zinc-950/80 backdrop-blur-sm flex flex-col items-center justify-center gap-3 pointer-events-none">
-          <div className="h-16 w-16 rounded-2xl bg-primary/20 text-primary border border-primary/40 flex items-center justify-center animate-bounce">
+          <div className="h-16 w-16 rounded-md bg-primary/20 text-primary border border-primary/40 flex items-center justify-center animate-bounce">
             <FileArchive size={32} />
           </div>
           <p className="text-base font-bold text-foreground">Thả tệp .letcutepack hoặc .zip để nhập cấu hình!</p>
@@ -164,7 +164,7 @@ export const ProfilesScreen = ({
                 disabled={isWorking || isReloading}
                 variant="outline"
                 size="sm"
-                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
                 title="Tải lại danh sách cấu hình và quét thư mục instance"
               >
                 <RefreshCw size={14} className={cn("text-primary", isReloading && "animate-spin")} />
@@ -177,7 +177,7 @@ export const ProfilesScreen = ({
               disabled={isWorking}
               variant="outline"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
               title="Nhập gói cấu hình từ bạn bè hoặc tệp sao lưu"
             >
               <DownloadCloud size={14} className="text-primary" />
@@ -212,7 +212,7 @@ export const ProfilesScreen = ({
                       onSetActive(profile.id)
                     }}
                     className={cn(
-                      'group flex items-center justify-between gap-4 p-4 rounded-2xl border transition-all duration-200 shadow-md cursor-pointer',
+                      'group flex items-center justify-between gap-4 p-4 rounded-md border transition-all duration-200 shadow-md cursor-pointer',
                       isActive
                         ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
                         : 'border-zinc-800/80 bg-zinc-900/85 hover:bg-zinc-900 hover:border-primary/40'
@@ -258,7 +258,7 @@ export const ProfilesScreen = ({
                         }}
                         variant="ghost"
                         size="icon-sm"
-                        className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 disabled:opacity-50 disabled:pointer-events-none h-8 w-8 rounded-xl"
+                        className="bg-emerald-500/15 text-emerald-400 hover:bg-emerald-500/25 border border-emerald-500/30 disabled:opacity-50 disabled:pointer-events-none h-8 w-8 rounded-md"
                       >
                         <Play size={13} className="fill-current" />
                       </Button>
@@ -271,7 +271,7 @@ export const ProfilesScreen = ({
                         }}
                         variant="outline"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-primary hover:text-white hover:bg-zinc-800 rounded-xl"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-primary hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
                       >
                         <Share2 size={13} />
                       </Button>
@@ -284,7 +284,7 @@ export const ProfilesScreen = ({
                         }}
                         variant="outline"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-200 hover:text-white hover:bg-zinc-800 rounded-xl"
+                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
                       >
                         <Edit2 size={13} />
                       </Button>

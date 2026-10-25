@@ -143,6 +143,7 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       loadMetadataProgressive(list)
     } catch (e) {
       console.error('Failed to load mods:', e)
+      showToast('error', 'Không thể quét danh sách mod. Kiểm tra lại thư mục game.')
     } finally {
       setLoading(false)
     }
@@ -245,8 +246,9 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       } else {
         showToast('error', res.message)
       }
-    } catch (e: any) {
-      showToast('error', e?.message || 'Có lỗi xảy ra khi xử lý xung đột.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Có lỗi xảy ra khi xử lý xung đột.'
+      showToast('error', message)
     } finally {
       setIsResolvingConflict(false)
     }
@@ -272,8 +274,9 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       } else {
         showToast('error', res.message)
       }
-    } catch (e: any) {
-      showToast('error', e?.message || 'Có lỗi khi tự động giải quyết xung đột.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Có lỗi khi tự động giải quyết xung đột.'
+      showToast('error', message)
     } finally {
       setIsResolvingConflict(false)
     }
@@ -319,8 +322,9 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       } else if (res.unresolvedMods?.length > 0) {
         showToast('error', 'Một số mod phụ thuộc không thể tải tự động.')
       }
-    } catch (e: any) {
-      showToast('error', e?.message || 'Lỗi khi tự động sửa dependencies.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Lỗi khi tự động sửa dependencies.'
+      showToast('error', message)
     } finally {
       setIsFixingDeps(false)
     }
@@ -369,8 +373,9 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       } else {
         showToast('error', res.error || 'Cập nhật mod thất bại.')
       }
-    } catch (e: any) {
-      showToast('error', e?.message || 'Lỗi khi cập nhật mod.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Lỗi khi cập nhật mod.'
+      showToast('error', message)
     } finally {
       setUpdatingModIds((prev) => {
         const n = new Set(prev)
@@ -393,8 +398,9 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       if (res.failedCount > 0) {
         showToast('error', `${res.failedCount} mods cập nhật thất bại.`)
       }
-    } catch (e: any) {
-      showToast('error', e?.message || 'Lỗi khi cập nhật toàn bộ mod.')
+    } catch (e) {
+      const message = e instanceof Error ? e.message : 'Lỗi khi cập nhật toàn bộ mod.'
+      showToast('error', message)
     } finally {
       setIsUpdatingAll(false)
     }

@@ -1,4 +1,5 @@
 import { handleIpc } from './ipcHelper'
+import type { MicrosoftAccount } from '../../shared/types'
 import {
   getAccountState,
   selectAccount,
@@ -57,7 +58,7 @@ export function registerAccountIpc(): void {
     return saveLocalSkin(accountId, skinUrl, skinModel, capeUrl)
   })
   handleIpc('account:remove', (accountId: string) => removeAccount(accountId))
-  handleIpc('account:save-microsoft', (account: any) => saveMicrosoftAccount(account))
+  handleIpc('account:save-microsoft', (account: MicrosoftAccount) => saveMicrosoftAccount(account))
   handleIpc('account:login-microsoft', () => loginWithMicrosoft())
   handleIpc('account:refresh-microsoft', (accountId: string) => refreshMicrosoftAccountToken(accountId))
 
@@ -70,9 +71,9 @@ export function registerAccountIpc(): void {
       let targetUrl = url.trim()
       const nmcSkinMatch = targetUrl.match(/namemc\.com\/skin\/([a-fA-F0-9]+)/i)
       const nmcTexMatch = targetUrl.match(/namemc\.com\/texture\/([a-fA-F0-9]+)/i)
-      if (nmcSkinMatch) {
+      if (nmcSkinMatch?.[1]) {
         targetUrl = `https://textures.minecraft.net/texture/${nmcSkinMatch[1]}`
-      } else if (nmcTexMatch) {
+      } else if (nmcTexMatch?.[1]) {
         targetUrl = `https://textures.minecraft.net/texture/${nmcTexMatch[1]}`
       } else if (/^[a-fA-F0-9]{64}$/.test(targetUrl)) {
         targetUrl = `https://textures.minecraft.net/texture/${targetUrl}`
@@ -111,7 +112,7 @@ export function registerAccountIpc(): void {
       let cleanQuery = query.trim()
 
       const profMatch = cleanQuery.match(/namemc\.com\/profile\/([a-zA-Z0-9_.-]+)/i)
-      if (profMatch) {
+      if (profMatch?.[1]) {
         cleanQuery = profMatch[1]
       }
 
@@ -127,20 +128,26 @@ export function registerAccountIpc(): void {
               headers: { 'User-Agent': 'LetCuteMC-Launcher' },
             })
             if (sessionRes.ok) {
-              const sessionData = (await sessionRes.json()) as any
-              const prop = sessionData.properties?.find((p: any) => p.name === 'textures')
+              const sessionData = (await sessionRes.json()) as {
+                properties?: Array<{ name: string; value: string }>
+              }
+              const prop = sessionData.properties?.find((p) => p.name === 'textures')
               if (prop?.value) {
-                const tex = JSON.parse(Buffer.from(prop.value, 'base64').toString())
-                const skin = tex?.textures?.SKIN
-                const cape = tex?.textures?.CAPE
-                if (skin?.url) {
-                  return {
-                    url: skin.url.replace('http://', 'https://'),
-                    model: (skin.metadata?.model === 'slim' ? 'slim' : 'default') as 'slim' | 'default',
-                    capeUrl: cape?.url ? cape.url.replace('http://', 'https://') : undefined,
-                    username: profileData.name,
-                    uuid: profileData.id,
+                try {
+                  const tex = JSON.parse(Buffer.from(prop.value, 'base64').toString('utf8'))
+                  const skin = tex?.textures?.SKIN
+                  const cape = tex?.textures?.CAPE
+                  if (skin?.url) {
+                    return {
+                      url: (skin.url as string).replace('http://', 'https://'),
+                      model: (skin.metadata?.model === 'slim' ? 'slim' : 'default') as 'slim' | 'default',
+                      capeUrl: cape?.url ? (cape.url as string).replace('http://', 'https://') : undefined,
+                      username: profileData.name,
+                      uuid: profileData.id,
+                    }
                   }
+                } catch {
+                  // ignore corrupt textures payload
                 }
               }
             }

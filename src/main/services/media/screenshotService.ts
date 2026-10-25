@@ -3,22 +3,14 @@ import { existsSync } from 'node:fs'
 import * as path from 'node:path'
 import { clipboard, nativeImage, shell } from 'electron'
 import type { MinecraftScreenshot } from '../../../shared/types'
-import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+import { resolveGameDir } from '../launcher/minecraftDirectoryService'
 
 export class ScreenshotService {
-  private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && existsSync(gameDir)) {
-      return gameDir
-    }
-    const detected = await detectMinecraftDirectory()
-    return detected.path || ''
-  }
-
   /**
    * Quét toàn bộ ảnh chụp màn hình trong thư mục screenshots (Non-blocking async)
    */
   async scanScreenshots(gameDir?: string): Promise<MinecraftScreenshot[]> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) return []
 
     const screenshotsDir = path.join(resolvedDir, 'screenshots')
@@ -87,10 +79,21 @@ export class ScreenshotService {
     }
   }
 
+  private isSafeScreenshotPath(filePath: string): boolean {
+    if (!filePath || typeof filePath !== 'string') return false
+    const ext = path.extname(filePath).toLowerCase()
+    if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) return false
+    const parts = path.normalize(filePath).split(path.sep)
+    return parts.includes('screenshots')
+  }
+
   /**
    * Xóa một tệp ảnh chụp màn hình
    */
   async deleteScreenshot(filePath: string): Promise<boolean> {
+    if (!this.isSafeScreenshotPath(filePath)) {
+      throw new Error('Tệp không hợp lệ hoặc không thuộc thư mục screenshots.')
+    }
     try {
       if (existsSync(filePath)) {
         await fs.unlink(filePath)
@@ -107,13 +110,16 @@ export class ScreenshotService {
    * Xóa hàng loạt tệp ảnh chụp màn hình
    */
   async deleteMultipleScreenshots(filePaths: string[]): Promise<boolean> {
+    if (!Array.isArray(filePaths)) return false
     try {
       await Promise.all(
-        filePaths.map(async (filePath) => {
-          if (existsSync(filePath)) {
-            await fs.unlink(filePath).catch(() => {})
-          }
-        })
+        filePaths
+          .filter(fp => this.isSafeScreenshotPath(fp))
+          .map(async (filePath) => {
+            if (existsSync(filePath)) {
+              await fs.unlink(filePath).catch(() => {})
+            }
+          })
       )
       return true
     } catch (e) {
@@ -143,7 +149,7 @@ export class ScreenshotService {
    */
   async openScreenshotsFolder(gameDir?: string): Promise<boolean> {
     try {
-      const resolvedDir = await this.resolveGameDir(gameDir)
+      const resolvedDir = await resolveGameDir(gameDir)
       if (!resolvedDir) return false
 
       const screenshotsDir = path.join(resolvedDir, 'screenshots')

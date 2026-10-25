@@ -1,11 +1,13 @@
 import { useEffect, useState, useCallback } from 'react'
 import type { LauncherProfile, LauncherSettings, PrepareGameProgress, PreparedProfileState } from '../../shared/types'
 import { launcherClient } from '../services/launcherClient'
+import { useToast } from '../components/ui/Toast'
 
 export function usePrepareGame(
   activeProfile: LauncherProfile | null,
   settings: LauncherSettings
 ) {
+  const { showToast } = useToast()
   const [prepareState, setPrepareState] = useState<PreparedProfileState | null>(null)
   const [progress, setProgress] = useState<PrepareGameProgress | null>(null)
   const [isPreparing, setIsPreparing] = useState(false)
@@ -21,8 +23,10 @@ export function usePrepareGame(
       setPrepareState(state)
     } catch (e) {
       console.error('[Prepare Hook] Check prepared profile failed:', e)
+      const message = e instanceof Error ? e.message : 'Lỗi không xác định'
+      showToast('error', `Không thể kiểm tra trạng thái game: ${message}`)
     }
-  }, [activeProfile?.id, activeProfile?.minecraftVersion, settings])
+  }, [activeProfile?.id, activeProfile?.minecraftVersion, settings, showToast])
 
   useEffect(() => {
     void checkStatus()
@@ -61,9 +65,11 @@ export function usePrepareGame(
       await launcherClient.prepareGame(activeProfile, settings, forceRepair)
     } catch (e) {
       console.error('[Prepare Hook] Start prepare failed:', e)
+      const message = e instanceof Error ? e.message : 'Lỗi không xác định'
+      showToast('error', `Chuẩn bị game thất bại: ${message}`)
       setIsPreparing(false)
     }
-  }, [activeProfile, settings])
+  }, [activeProfile, settings, showToast])
 
   // 4. Cancel prepare
   const cancelPrepare = useCallback(async () => {
@@ -74,8 +80,10 @@ export function usePrepareGame(
       void checkStatus()
     } catch (e) {
       console.error('[Prepare Hook] Cancel prepare failed:', e)
+      const message = e instanceof Error ? e.message : 'Lỗi không xác định'
+      showToast('error', `Không thể hủy chuẩn bị game: ${message}`)
     }
-  }, [checkStatus])
+  }, [checkStatus, showToast])
 
   // 5. Auto prepare if enabled in settings (longer debounce; low-end skips via effective settings)
   useEffect(() => {

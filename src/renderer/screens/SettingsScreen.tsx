@@ -332,9 +332,9 @@ export const SettingsScreen = ({
 
       <div className="space-y-4">
         {/* ── SECTION 0: Ultra Low-End Potato PC Quick Boost ─────────────── */}
-        <div className="p-4 rounded-2xl border border-emerald-500/40 bg-gradient-to-r from-emerald-950/50 via-zinc-900/90 to-teal-950/40 shadow-md flex items-center justify-between gap-4">
+        <div className="p-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 shadow-md flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner">
+            <div className="h-11 w-11 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner">
               <Zap size={22} className="fill-current text-emerald-400" />
             </div>
             <div>
@@ -364,7 +364,7 @@ export const SettingsScreen = ({
         </div>
 
         {/* ── SECTION: UI Graphic & Effects Quality (Performance) ───────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl cv-auto">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -440,7 +440,7 @@ export const SettingsScreen = ({
                       document.documentElement.setAttribute('data-ui-quality', targetQuality)
                     }}
                     className={cn(
-                      'p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-sm',
+                      'p-3 rounded-md border transition-all cursor-pointer flex flex-col justify-between gap-2 shadow-sm',
                       isSelected
                         ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/40'
                         : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700'
@@ -481,7 +481,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 1: JVM Optimizer Presets ───────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl cv-auto">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Zap className="h-5 w-5 text-primary" />
@@ -501,7 +501,7 @@ export const SettingsScreen = ({
                     key={preset.id}
                     onClick={() => handleChange('jvmPreset', preset.id)}
                     className={cn(
-                      'p-3 rounded-xl border transition-all cursor-pointer flex flex-col justify-between gap-1.5 shadow-sm',
+                      'p-3 rounded-md border transition-all cursor-pointer flex flex-col justify-between gap-1.5 shadow-sm',
                       isSelected
                         ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/40'
                         : 'border-zinc-800/80 bg-zinc-900/60 hover:bg-zinc-900 hover:border-zinc-700'
@@ -566,7 +566,7 @@ export const SettingsScreen = ({
                 </button>
 
                 {showFlagsList && (
-                  <div className="mt-2 p-3 rounded-xl border border-zinc-800 bg-zinc-950 font-mono text-[11px] text-zinc-300 max-h-40 overflow-y-auto space-y-1">
+                  <div className="mt-2 p-3 rounded-md border border-zinc-800 bg-zinc-950 font-mono text-[11px] text-zinc-300 max-h-40 overflow-y-auto space-y-1">
                     {selectedPreset.flags.map((flag, idx) => (
                       <div key={idx} className="text-cyan-400/90">
                         {flag}
@@ -595,7 +595,7 @@ export const SettingsScreen = ({
             <div
               onClick={() => handleChange('enableDedicatedGpu', !formData.enableDedicatedGpu)}
               className={cn(
-                'p-3 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3',
+                'p-3 rounded-md border transition-all cursor-pointer flex items-center justify-between gap-3',
                 formData.enableDedicatedGpu
                   ? 'bg-primary/10 border-primary/40 text-foreground'
                   : 'bg-zinc-900/80 border-zinc-800 text-muted-foreground hover:bg-zinc-900'
@@ -624,7 +624,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 2: RAM Memory ──────────────────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Cpu className="h-5 w-5 text-primary" />
@@ -647,7 +647,7 @@ export const SettingsScreen = ({
                 <span className="text-xs font-semibold text-zinc-300">
                   RAM tối đa cấp cho game
                 </span>
-                <span className="text-xs font-mono font-bold px-2 py-0.5 bg-primary/15 border border-primary/30 rounded-lg text-primary">
+                <span className="text-xs font-mono font-bold px-2 py-0.5 bg-primary/15 border border-primary/30 rounded-md text-primary">
                   {((formData.defaultMaxMemoryMb || 4096) / 1024).toFixed(1)} GB ({formData.defaultMaxMemoryMb} MB)
                 </span>
               </div>
@@ -660,7 +660,7 @@ export const SettingsScreen = ({
                 onChange={(e) =>
                   handleChange('defaultMaxMemoryMb', parseInt(e.target.value) || 1024)
                 }
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer bg-zinc-800 accent-primary"
+                className="w-full h-2 rounded-md appearance-none cursor-pointer bg-zinc-800 accent-primary"
               />
               <div className="flex justify-between text-[10px] text-muted-foreground font-mono">
                 <span>1 GB</span>
@@ -673,7 +673,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 3: Java Runtime ────────────────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Layers className="h-5 w-5 text-primary" />
@@ -685,7 +685,7 @@ export const SettingsScreen = ({
               size="sm"
               disabled={javaScanning || isInstallingJava || !activeProfile}
               onClick={() => void refreshJava(true)}
-              className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5"
+              className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', javaScanning && 'animate-spin')} />
               {javaScanning ? 'Đang kiểm tra & tải Java...' : 'Tìm Java trên máy'}
@@ -709,14 +709,14 @@ export const SettingsScreen = ({
             </div>
 
             {javaSelection?.warning && (
-              <div className="flex items-start gap-2 rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
+              <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
                 <ShieldAlert className="h-4 w-4 mt-0.5 shrink-0" />
                 <span>{javaSelection.warning}</span>
               </div>
             )}
 
             {!javaSelection?.found && javaSelection?.message && (
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-md border border-rose-500/30 bg-rose-500/5 p-3 text-xs text-rose-200">
                 <div className="flex items-start gap-2 min-w-0">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-rose-400" />
                   <span>{javaSelection.message}</span>
@@ -748,7 +748,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 4: Storage & Cache Cleaner ─────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-2xl">
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div className="space-y-0.5">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -766,7 +766,7 @@ export const SettingsScreen = ({
                 size="sm"
                 disabled={isScanningCache}
                 onClick={handleScanCache}
-                className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1"
+                className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isScanningCache && 'animate-spin')} />
                 Quét
@@ -791,7 +791,7 @@ export const SettingsScreen = ({
                   return (
                     <div
                       key={item.key}
-                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between gap-1.5"
+                      className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between gap-1.5"
                     >
                       <div>
                         <p className="text-xs font-bold text-foreground truncate">{item.label}</p>

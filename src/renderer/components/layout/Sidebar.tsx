@@ -203,7 +203,7 @@ export function Sidebar({
       {/* Logo */}
       <div className="px-5 py-5 select-none" style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}>
         <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl border border-primary/30 bg-primary/15 text-primary shrink-0 overflow-hidden">
+          <div className="flex h-9 w-9 items-center justify-center rounded-md border border-primary/30 bg-primary/15 text-primary shrink-0 overflow-hidden">
             <img src="./logo.png" alt="LetCuteMC Logo" className="h-full w-full object-cover" />
           </div>
           <div className="min-w-0">
@@ -221,7 +221,7 @@ export function Sidebar({
       <div className="px-3 pb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-xl border border-zinc-800/80 bg-zinc-900/85 p-2.5 transition-all hover:bg-zinc-900 hover:border-primary/40 hover:text-accent-foreground group shadow-sm">
+            <div className="flex w-full cursor-pointer items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/85 p-2.5 transition-all hover:bg-zinc-900 hover:border-primary/40 hover:text-accent-foreground group shadow-sm">
               <div className="flex flex-col gap-0.5 overflow-hidden">
                 <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
                 <span className="truncate text-sm font-semibold text-sidebar-foreground">
@@ -231,7 +231,7 @@ export function Sidebar({
               <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
             </div>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="center" className="w-[220px] dropdown-panel rounded-2xl p-1.5 z-50">
+          <DropdownMenuContent align="center" className="w-[220px] dropdown-panel rounded-md p-1.5 z-50">
             <DropdownMenuLabel className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Danh sách Cấu hình</DropdownMenuLabel>
             <DropdownMenuSeparator />
             {profiles.length > 0 ? profiles.map((p) => (
@@ -264,7 +264,7 @@ export function Sidebar({
             <Button
               onClick={() => setNavView('main')}
               variant="sidebar"
-              className="group relative flex w-full items-center gap-2.5 mb-2 bg-zinc-900/90 border border-zinc-800 hover:border-primary/40 text-primary font-bold text-xs rounded-xl h-9 shadow-sm"
+              className="group relative flex w-full items-center gap-2.5 mb-2 bg-zinc-900/90 border border-zinc-800 hover:border-primary/40 text-primary font-bold text-xs rounded-md h-9 shadow-sm"
             >
               <ArrowLeft className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
               <span>Quay lại Menu chính</span>
@@ -396,12 +396,12 @@ export function Sidebar({
 
       {/* Unified Play & Account Card */}
       <div className="">
-        <div className="rounded-xl  p-3 space-y-3">
+        <div className="rounded-md  p-3 space-y-3">
           {/* Account Info Header */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <div
-                className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent p-1.5 rounded-lg transition duration-150"
+                className="flex items-center gap-3 cursor-pointer hover:bg-sidebar-accent p-1.5 rounded-md transition duration-150"
                 title="Đổi tài khoản"
               >
                 <div className="h-9 w-9 shrink-0 overflow-hidden rounded-xs bg-zinc-800 border border-zinc-700 shadow-sm flex items-center justify-center">
@@ -448,7 +448,7 @@ export function Sidebar({
               sideOffset={8}
               collisionPadding={8}
               avoidCollisions={false}
-              className="w-56 dropdown-panel rounded-2xl p-1.5 z-50"
+              className="w-56 dropdown-panel rounded-md p-1.5 z-50"
             >
               <DropdownMenuLabel>Tài khoản của bạn</DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -503,7 +503,7 @@ export function Sidebar({
                   disabled={isBusy || isStarting || isPreparing}
                   onClick={handlePlay}
                   variant={isFailed ? "danger" : "primary"}
-                  className="w-full h-10 rounded-xl font-bold text-xs"
+                  className="w-full h-10 rounded-md font-bold text-xs"
                 >
                   {isBusy && !isRunning ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -528,7 +528,7 @@ export function Sidebar({
                 <Button
                   disabled
                   variant="outline"
-                  className="w-full h-10 rounded-xl font-bold text-xs bg-muted text-muted-foreground border border-dashed border-border cursor-not-allowed select-none"
+                  className="w-full h-10 rounded-md font-bold text-xs bg-muted text-muted-foreground border border-dashed border-border cursor-not-allowed select-none"
                 >
                   CẦN ĐĂNG NHẬP
                 </Button>
@@ -537,7 +537,7 @@ export function Sidebar({
                   disabled={isBusy || isStarting || isPreparing}
                   onClick={handlePlay}
                   variant={isFailed ? "danger" : "primary"}
-                  className="w-full h-10 rounded-xl font-bold text-xs"
+                  className="w-full h-10 rounded-md font-bold text-xs"
                 >
                   {isBusy && !isRunning ? (
                     <Loader2 size={14} className="animate-spin" />
@@ -593,7 +593,7 @@ export function Sidebar({
             <Button
               disabled
               variant="outline"
-              className="w-full h-10 rounded-xl font-bold text-xs bg-muted text-muted-foreground cursor-not-allowed select-none"
+              className="w-full h-10 rounded-md font-bold text-xs bg-muted text-muted-foreground cursor-not-allowed select-none"
             >
               CHƯA CHỌN CẤU HÌNH
             </Button>

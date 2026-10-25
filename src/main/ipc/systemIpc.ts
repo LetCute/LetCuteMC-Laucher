@@ -87,10 +87,9 @@ export function registerSystemIpc(): void {
       throw new Error('Đường dẫn phiên bản không hợp lệ.')
     }
     const pathMod = await import('node:path')
-    const normalized = pathMod.normalize(versionPath).toLowerCase()
-    // Path safety check: ensure the target is actually inside a "versions" folder and not root/system
-    if (!normalized.includes(`${pathMod.sep}versions${pathMod.sep}`) && !normalized.endsWith(`${pathMod.sep}versions`)) {
-      throw new Error('Chỉ được phép xóa thư mục phiên bản hợp lệ trong versions.')
+    const parentDir = pathMod.basename(pathMod.dirname(versionPath)).toLowerCase()
+    if (parentDir !== 'versions') {
+      throw new Error('Chỉ được phép xóa thư mục phiên bản hợp lệ nằm trong versions.')
     }
     const fs = await import('node:fs/promises')
     await fs.rm(versionPath, { recursive: true, force: true })
@@ -120,18 +119,20 @@ export function registerSystemIpc(): void {
   // Native Dialogs
   handleIpc('dialog:open-file', async (filters?: { name: string; extensions: string[] }[]) => {
     const w = BrowserWindow.getAllWindows()[0]
-    const res = await dialog.showOpenDialog(w, {
+    const openOpts: Electron.OpenDialogOptions = {
       properties: ['openFile'],
       filters: filters ?? [{ name: 'All Files', extensions: ['*'] }],
-    })
+    }
+    const res = w ? await dialog.showOpenDialog(w, openOpts) : await dialog.showOpenDialog(openOpts)
     return res.canceled ? null : res.filePaths[0] ?? null
   })
   handleIpc('dialog:save-file', async (options?: { defaultPath?: string; filters?: { name: string; extensions: string[] }[] }) => {
     const w = BrowserWindow.getAllWindows()[0]
-    const res = await dialog.showSaveDialog(w, {
+    const saveOpts: Electron.SaveDialogOptions = {
       defaultPath: options?.defaultPath,
       filters: options?.filters ?? [{ name: 'Zip Archive', extensions: ['zip'] }, { name: 'All Files', extensions: ['*'] }],
-    })
+    }
+    const res = w ? await dialog.showSaveDialog(w, saveOpts) : await dialog.showSaveDialog(saveOpts)
     return res.canceled ? null : res.filePath ?? null
   })
 

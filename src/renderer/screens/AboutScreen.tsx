@@ -131,14 +131,14 @@ export function AboutScreen() {
   return (
     <div className="px-6 pt-2 pb-8 max-w-5xl mx-auto flex flex-col gap-5 select-none">
       {/* Hero Header Banner */}
-      <div className="p-5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 relative overflow-hidden shadow-md">
+      <div className="p-5 rounded-md border border-zinc-800/80 bg-zinc-900/85 relative overflow-hidden shadow-md">
         {/* Glow Ambient */}
         <div className="absolute -right-10 -top-10 w-48 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
 
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 relative z-10">
           <div className="flex items-center gap-4">
-            <div className="h-16 w-16 rounded-2xl bg-primary/20 border border-primary/40 flex items-center justify-center p-2 shrink-0 shadow-inner">
+            <div className="h-16 w-16 rounded-md bg-primary/20 border border-primary/40 flex items-center justify-center p-2 shrink-0 shadow-inner">
               <img src="./logo.png" alt="LetCuteMC Logo" loading="lazy" decoding="async" className="h-full w-full object-contain" />
             </div>
 
@@ -162,7 +162,7 @@ export function AboutScreen() {
             <Button
               variant="outline"
               size="sm"
-              className="h-8 px-3 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-white hover:bg-zinc-800 gap-1.5 flex-1 md:flex-initial"
+              className="h-8 px-3 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5 flex-1 md:flex-initial"
               onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
             >
               <HelpCircle size={13} />
@@ -198,11 +198,11 @@ export function AboutScreen() {
           </div>
 
           {/* Category Tabs */}
-          <div className="flex items-center gap-1 p-1 bg-zinc-950/80 border border-zinc-800/80 rounded-xl">
+          <div className="flex items-center gap-1 p-1 bg-zinc-950/80 border border-zinc-800/80 rounded-md">
             <button
               onClick={() => setActiveCategory('all')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all',
                 activeCategory === 'all'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -213,7 +213,7 @@ export function AboutScreen() {
             <button
               onClick={() => setActiveCategory('engine')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all',
                 activeCategory === 'engine'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -224,7 +224,7 @@ export function AboutScreen() {
             <button
               onClick={() => setActiveCategory('management')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all',
                 activeCategory === 'management'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -235,7 +235,7 @@ export function AboutScreen() {
             <button
               onClick={() => setActiveCategory('studio')}
               className={cn(
-                'px-2.5 py-1 text-xs font-semibold rounded-lg transition-all',
+                'px-2.5 py-1 text-xs font-semibold rounded-md transition-all',
                 activeCategory === 'studio'
                   ? 'bg-primary text-primary-foreground shadow-sm'
                   : 'text-muted-foreground hover:text-foreground'
@@ -253,11 +253,11 @@ export function AboutScreen() {
             return (
               <div
                 key={item.id}
-                className="p-3.5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group cv-auto"
+                className="p-3.5 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group cv-auto"
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
-                    <div className={cn('h-9 w-9 rounded-xl border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', item.iconColor)}>
+                    <div className={cn('h-9 w-9 rounded-md border flex items-center justify-center shrink-0 transition-transform group-hover:scale-105', item.iconColor)}>
                       <Icon size={18} />
                     </div>
                     <span className="text-[9px] font-bold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700 shrink-0">
@@ -293,7 +293,7 @@ export function AboutScreen() {
       </div>
 
       {/* Bottom Section: Unified Developer & Donation Footer Card */}
-      <div className="p-5 rounded-2xl border border-zinc-800/80 bg-zinc-900/85 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden cv-auto">
+      <div className="p-5 rounded-md border border-zinc-800/80 bg-zinc-900/85 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden cv-auto">
         {/* Glow ambient */}
         <div className="absolute right-0 bottom-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -305,7 +305,7 @@ export function AboutScreen() {
               alt="LetCute Avatar"
               loading="lazy"
               decoding="async"
-              className="h-12 w-12 rounded-xl object-contain drop-shadow-md border border-primary/30 p-1 bg-zinc-950 shrink-0"
+              className="h-12 w-12 rounded-md object-contain drop-shadow-md border border-primary/30 p-1 bg-zinc-950 shrink-0"
             />
             <div className="space-y-0.5 min-w-0">
               <div className="flex items-center gap-2">
@@ -331,8 +331,8 @@ export function AboutScreen() {
         </div>
 
         {/* Right Side: Sleek & Compact Donate Box */}
-        <div className="md:w-80 p-3 rounded-xl border border-zinc-800 bg-zinc-950/70 flex items-center gap-3.5 shrink-0 shadow-inner">
-          <div className="p-1 bg-white rounded-lg shadow-md shrink-0 transition-transform hover:scale-105">
+        <div className="md:w-80 p-3 rounded-md border border-zinc-800 bg-zinc-950/70 flex items-center gap-3.5 shrink-0 shadow-inner">
+          <div className="p-1 bg-white rounded-md shadow-md shrink-0 transition-transform hover:scale-105">
             <img
               src="./assets/qr_donate.png"
               alt="QR Donate"

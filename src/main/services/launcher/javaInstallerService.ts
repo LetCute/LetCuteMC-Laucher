@@ -7,6 +7,7 @@ import http from 'http';
 import https from 'https';
 import { URL } from 'url';
 import { getLauncherDataDirectory } from '../system/storageService';
+import { isWindows, JAVA_EXE, getPlatformOS, getPlatformArchiveExtension } from '../../utils/platform.js';
 
 const execFileAsync = promisify(execFile);
 
@@ -16,13 +17,11 @@ interface JavaInstallProgress {
   message: string;
 }
 
-const JAVA_EXE = process.platform === 'win32' ? 'java.exe' : 'java';
 const activeInstalls = new Map<number, Promise<{ success: boolean; javaPath: string; message: string }>>();
 
 function getJavaDownloadInfo(version: number) {
-  const p = process.platform;
-  const osPart = p === 'win32' ? 'windows' : p === 'darwin' ? 'mac' : 'linux';
-  const ext = p === 'win32' ? 'zip' : 'tar.gz';
+  const osPart = getPlatformOS();
+  const ext = getPlatformArchiveExtension();
   
   const urls: Record<number, Record<string, string>> = {
     25: {
@@ -250,7 +249,7 @@ export async function autoInstallJava(
       }
 
       // Set execute permission on Mac/Linux
-      if (process.platform !== 'win32') {
+      if (!isWindows) {
         try {
           await fsPromises.chmod(javaPath, 0o755);
         } catch (e) {

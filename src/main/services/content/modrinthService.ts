@@ -129,12 +129,19 @@ export async function installModrinthModpack(versionId: string, profileName: str
 }
 
 export async function installLocalModrinthModpack(mrpackPath: string, profileName: string, gameDataDir: string): Promise<string> {
-  const taskId = taskManagerService.createTask(`Cài đặt Modpack từ tệp: ${profileName}`, 'install-modpack')
+  if (!mrpackPath || typeof mrpackPath !== 'string' || !mrpackPath.toLowerCase().endsWith('.mrpack')) {
+    throw new Error('Tệp không đúng định dạng .mrpack.')
+  }
+  if (!profileName || typeof profileName !== 'string' || !profileName.trim()) {
+    throw new Error('Tên profile không được để trống.')
+  }
+  const cleanProfileName = profileName.trim()
+  const taskId = taskManagerService.createTask(`Cài đặt Modpack từ tệp: ${cleanProfileName}`, 'install-modpack')
   
   // Run async
   Promise.resolve().then(async () => {
     try {
-      await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, false)
+      await _installMrpack(mrpackPath, cleanProfileName, gameDataDir, taskId, false)
     } catch (e: any) {
       try {
         taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')

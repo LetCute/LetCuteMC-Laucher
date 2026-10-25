@@ -1,13 +1,12 @@
 import fs from 'node:fs/promises'
 import { existsSync } from 'node:fs'
 import * as path from 'node:path'
-import * as util from 'node:util'
 import * as zlib from 'node:zlib'
 import { promisify } from 'node:util'
 import { shell } from 'electron'
 // adm-zip and prismarine-nbt are lazy-loaded to reduce cold-start time
 import type { MinecraftWorld, WorldBackupItem, WorldDifficulty, WorldGameType } from '../../../shared/types'
-import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+import { resolveGameDir } from '../launcher/minecraftDirectoryService'
 
 const gzipAsync = promisify(zlib.gzip)
 
@@ -48,20 +47,23 @@ function sanitizeFolderName(name: string): string {
   return name.replace(/[<>:"/\\|?*]/g, '_').trim()
 }
 
-export class WorldService {
-  private async resolveGameDir(gameDir?: string): Promise<string> {
-    if (gameDir && existsSync(gameDir)) {
-      return gameDir
-    }
-    const detected = await detectMinecraftDirectory()
-    return detected.path || ''
+function assertValidWorldFolderName(folderName: string): string {
+  if (!folderName || typeof folderName !== 'string') {
+    throw new Error('Tên thư mục thế giới không hợp lệ.')
   }
+  const clean = folderName.trim()
+  if (!clean || clean === '.' || clean === '..' || clean.includes('..') || clean.includes('/') || clean.includes('\\') || path.isAbsolute(clean)) {
+    throw new Error('Tên thư mục thế giới chứa ký tự không hợp lệ.')
+  }
+  return clean
+}
 
+export class WorldService {
   /**
    * Quét toàn bộ thế giới trong thư mục saves (Async)
    */
   async scanWorlds(gameDir?: string): Promise<MinecraftWorld[]> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) return []
 
     const savesDir = path.join(resolvedDir, 'saves')
@@ -182,12 +184,13 @@ export class WorldService {
    * Tạo bản sao lưu (Backup) dạng tệp ZIP
    */
   async backupWorld(gameDir: string | undefined, folderName: string): Promise<{ success: boolean; backupPath: string; fileName: string; sizeBytes: number; message?: string }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const cleanFolder = assertValidWorldFolderName(folderName)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
-    const worldPath = path.join(resolvedDir, 'saves', folderName)
+    const worldPath = path.join(resolvedDir, 'saves', cleanFolder)
     if (!existsSync(worldPath)) {
-      throw new Error(`Thư mục thế giới "${folderName}" không tồn tại.`)
+      throw new Error(`Thư mục thế giới "${cleanFolder}" không tồn tại.`)
     }
 
     const backupsDir = path.join(resolvedDir, 'backups')
@@ -196,7 +199,7 @@ export class WorldService {
     }
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-    const fileName = `${sanitizeFolderName(folderName)}_${timestamp}.zip`
+    const fileName = `${sanitizeFolderName(cleanFolder)}_${timestamp}.zip`
     const backupPath = path.join(backupsDir, fileName)
 
     try {
@@ -222,7 +225,7 @@ export class WorldService {
    * Lấy danh sách các bản backup
    */
   async listWorldBackups(gameDir: string | undefined, folderName?: string): Promise<WorldBackupItem[]> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) return []
 
     const backupsDir = path.join(resolvedDir, 'backups')
@@ -264,7 +267,7 @@ export class WorldService {
    * Khôi phục thế giới từ bản sao lưu
    */
   async restoreWorldBackup(gameDir: string | undefined, backupFilePath: string, targetFolderName?: string): Promise<{ success: boolean; folderName: string }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
     if (!existsSync(backupFilePath)) throw new Error('Tệp sao lưu không tồn tại.')
 
@@ -299,8 +302,13 @@ export class WorldService {
    * Xóa bản sao lưu
    */
   async deleteWorldBackup(backupFilePath: string): Promise<boolean> {
-    if (existsSync(backupFilePath)) {
-      await fs.unlink(backupFilePath)
+    if (!backupFilePath || typeof backupFilePath !== 'string') return false
+    const normalized = path.normalize(backupFilePath)
+    if (!normalized.toLowerCase().endsWith('.zip') || !normalized.split(path.sep).includes('backups')) {
+      throw new Error('Đường dẫn không hợp lệ hoặc không thuộc thư mục backups.')
+    }
+    if (existsSync(normalized)) {
+      await fs.unlink(normalized)
       return true
     }
     return false
@@ -310,11 +318,12 @@ export class WorldService {
    * Xuất thế giới ra tệp ZIP
    */
   async exportWorldZip(gameDir: string | undefined, folderName: string, destinationZipPath: string): Promise<boolean> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const cleanFolder = assertValidWorldFolderName(folderName)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
-    const worldPath = path.join(resolvedDir, 'saves', folderName)
-    if (!existsSync(worldPath)) throw new Error(`Không tìm thấy thư mục thế giới "${folderName}".`)
+    const worldPath = path.join(resolvedDir, 'saves', cleanFolder)
+    if (!existsSync(worldPath)) throw new Error(`Không tìm thấy thư mục thế giới "${cleanFolder}".`)
 
     try {
       const AdmZip = await getAdmZip()
@@ -332,7 +341,7 @@ export class WorldService {
    * Nhập thế giới từ tệp ZIP
    */
   async importWorldZip(gameDir: string | undefined, sourceZipPath: string): Promise<{ success: boolean; folderName: string; name: string }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
     if (!existsSync(sourceZipPath)) throw new Error('Tệp ZIP không tồn tại.')
 
@@ -416,17 +425,18 @@ export class WorldService {
    * Nhân bản thế giới
    */
   async duplicateWorld(gameDir: string | undefined, folderName: string, newWorldName?: string): Promise<{ success: boolean; newFolderName: string }> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const cleanFolder = assertValidWorldFolderName(folderName)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
     const savesDir = path.join(resolvedDir, 'saves')
-    const sourcePath = path.join(savesDir, folderName)
+    const sourcePath = path.join(savesDir, cleanFolder)
     if (!existsSync(sourcePath)) throw new Error('Không tìm thấy thế giới gốc.')
 
-    let newFolderName = `${folderName}_copy`
+    let newFolderName = `${cleanFolder}_copy`
     let counter = 1
     while (existsSync(path.join(savesDir, newFolderName))) {
-      newFolderName = `${folderName}_copy_${counter}`
+      newFolderName = `${cleanFolder}_copy_${counter}`
       counter++
     }
 
@@ -454,10 +464,11 @@ export class WorldService {
    * Đổi tên thế giới trong level.dat
    */
   async renameWorld(gameDir: string | undefined, folderName: string, newLevelName: string): Promise<boolean> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const cleanFolder = assertValidWorldFolderName(folderName)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
-    const levelDatPath = path.join(resolvedDir, 'saves', folderName, 'level.dat')
+    const levelDatPath = path.join(resolvedDir, 'saves', cleanFolder, 'level.dat')
     if (!existsSync(levelDatPath)) throw new Error('Không tìm thấy tệp level.dat.')
 
     try {
@@ -490,10 +501,11 @@ export class WorldService {
    * Xóa thế giới
    */
   async deleteWorld(gameDir: string | undefined, folderName: string): Promise<boolean> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const cleanFolder = assertValidWorldFolderName(folderName)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) throw new Error('Không tìm thấy thư mục game.')
 
-    const worldPath = path.join(resolvedDir, 'saves', folderName)
+    const worldPath = path.join(resolvedDir, 'saves', cleanFolder)
     if (existsSync(worldPath)) {
       await fs.rm(worldPath, { recursive: true, force: true })
       return true
@@ -505,11 +517,12 @@ export class WorldService {
    * Mở thư mục thế giới trong Explorer
    */
   async openWorldFolder(gameDir: string | undefined, folderName?: string): Promise<boolean> {
-    const resolvedDir = await this.resolveGameDir(gameDir)
+    const resolvedDir = await resolveGameDir(gameDir)
     if (!resolvedDir) return false
 
-    const targetPath = folderName
-      ? path.join(resolvedDir, 'saves', folderName)
+    const cleanFolder = folderName ? assertValidWorldFolderName(folderName) : undefined
+    const targetPath = cleanFolder
+      ? path.join(resolvedDir, 'saves', cleanFolder)
       : path.join(resolvedDir, 'saves')
 
     if (!existsSync(targetPath)) {

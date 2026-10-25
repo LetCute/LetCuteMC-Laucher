@@ -1,6 +1,44 @@
 import { useEffect, useRef, useState } from 'react'
 import { SkinViewer, IdleAnimation } from 'skinview3d'
 
+// WebGL 2.0 §3.7.6 prohibits UNPACK_FLIP_Y_WEBGL and UNPACK_PREMULTIPLY_ALPHA_WEBGL for 3D textures.
+// Three.js (bundled in skinview3d) can leave these flags enabled from 2D skin textures when initializing 3D texture targets.
+function ensureWebGL2Safe3DTextures() {
+  if (typeof window === 'undefined' || !window.WebGL2RenderingContext) return
+  const proto = WebGL2RenderingContext.prototype as any
+  if (proto.__safe3DTexturesPatched) return
+  proto.__safe3DTexturesPatched = true
+
+  const origTexImage3D = proto.texImage3D
+  proto.texImage3D = function (this: WebGL2RenderingContext, ...args: any[]) {
+    const flipY = this.getParameter(this.UNPACK_FLIP_Y_WEBGL)
+    const premult = this.getParameter(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL)
+    if (flipY) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false)
+    if (premult) this.pixelStorei(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+    try {
+      return (origTexImage3D as any).apply(this, args)
+    } finally {
+      if (flipY) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true)
+      if (premult) this.pixelStorei(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    }
+  }
+
+  const origTexSubImage3D = proto.texSubImage3D
+  proto.texSubImage3D = function (this: WebGL2RenderingContext, ...args: any[]) {
+    const flipY = this.getParameter(this.UNPACK_FLIP_Y_WEBGL)
+    const premult = this.getParameter(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL)
+    if (flipY) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, false)
+    if (premult) this.pixelStorei(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false)
+    try {
+      return (origTexSubImage3D as any).apply(this, args)
+    } finally {
+      if (flipY) this.pixelStorei(this.UNPACK_FLIP_Y_WEBGL, true)
+      if (premult) this.pixelStorei(this.UNPACK_PREMULTIPLY_ALPHA_WEBGL, true)
+    }
+  }
+}
+ensureWebGL2Safe3DTextures()
+
 export type SkinModel = 'default' | 'slim'
 
 /** Local default skins bundled in public/skins/ */
@@ -140,8 +178,11 @@ export function LazySkinViewer3D(props: SkinViewer3DProps) {
   useEffect(() => {
     if (!containerRef.current) return
     const observer = new IntersectionObserver(
-      ([entry]) => {
-        setInView(entry.isIntersecting)
+      (entries) => {
+        const item = entries[0]
+        if (item) {
+          setInView(item.isIntersecting)
+        }
       },
       { rootMargin: '100px' }
     )

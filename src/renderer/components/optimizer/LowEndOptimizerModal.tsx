@@ -240,7 +240,7 @@ export const LowEndOptimizerModal = ({
           <>
             {/* Status overview */}
             <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
+              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
                 <span className="text-[11px] text-muted-foreground">Tầm nhìn (Render Distance)</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-base font-bold text-foreground">
@@ -251,7 +251,7 @@ export const LowEndOptimizerModal = ({
                 <span className="text-[10px] text-emerald-400 mt-1">Gợi ý máy yếu: 4 - 6 chunks</span>
               </div>
 
-              <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
+              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
                 <span className="text-[11px] text-muted-foreground">Sinh Mipmap (VRAM Load)</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-base font-bold text-foreground">
@@ -266,7 +266,7 @@ export const LowEndOptimizerModal = ({
                 <span className="text-[10px] text-emerald-400 mt-1">Gợi ý: Cấp 0 (Tắt sinh mipmap)</span>
               </div>
 
-              <div className="p-3 rounded-xl border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
+              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
                 <span className="text-[11px] text-muted-foreground">Đồ họa & Mây</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
                   <span className="text-base font-bold text-foreground">
@@ -291,7 +291,7 @@ export const LowEndOptimizerModal = ({
                 <div
                   onClick={() => setSelectedLevel('ultra_potato')}
                   className={cn(
-                    'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
+                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
                     selectedLevel === 'ultra_potato'
                       ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/30'
                       : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
@@ -343,7 +343,7 @@ export const LowEndOptimizerModal = ({
                 <div
                   onClick={() => setSelectedLevel('balanced_low')}
                   className={cn(
-                    'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
+                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
                     selectedLevel === 'balanced_low'
                       ? 'border-teal-500/60 bg-teal-500/10 ring-1 ring-teal-500/30'
                       : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
@@ -369,7 +369,7 @@ export const LowEndOptimizerModal = ({
                 <div
                   onClick={() => setSelectedLevel('high_quality')}
                   className={cn(
-                    'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
+                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
                     selectedLevel === 'high_quality'
                       ? 'border-sky-500/60 bg-sky-500/10 ring-1 ring-sky-500/30'
                       : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
@@ -395,7 +395,7 @@ export const LowEndOptimizerModal = ({
                 <div
                   onClick={() => setSelectedLevel('ultra_quality')}
                   className={cn(
-                    'p-3.5 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
+                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
                     selectedLevel === 'ultra_quality'
                       ? 'border-violet-500/60 bg-violet-500/10 ring-1 ring-violet-500/30'
                       : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
@@ -461,8 +461,8 @@ export const LowEndOptimizerModal = ({
 
               {/* Vanilla Warning Banner */}
               {isVanilla ? (
-                <div className="p-3.5 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-xs shadow-sm">
-                  <div className="h-8 w-8 rounded-lg bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
+                <div className="p-3.5 rounded-md border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-xs shadow-sm">
+                  <div className="h-8 w-8 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
                     <AlertCircle size={17} />
                   </div>
                   <div className="space-y-1">
@@ -481,7 +481,7 @@ export const LowEndOptimizerModal = ({
                   <div
                     key={mod.id}
                     className={cn(
-                      'p-2.5 rounded-xl border flex items-center justify-between gap-2 transition',
+                      'p-2.5 rounded-md border flex items-center justify-between gap-2 transition',
                       mod.installed
                         ? 'border-emerald-500/30 bg-zinc-950/70'
                         : 'border-zinc-800/80 bg-zinc-950/50'
@@ -490,7 +490,7 @@ export const LowEndOptimizerModal = ({
                     <div className="flex items-center gap-2 min-w-0">
                       <div
                         className={cn(
-                          'h-7 w-7 rounded-lg flex items-center justify-center shrink-0 border',
+                          'h-7 w-7 rounded-md flex items-center justify-center shrink-0 border',
                           mod.installed
                             ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                             : 'bg-zinc-800 text-zinc-400 border-zinc-700'

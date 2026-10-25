@@ -319,6 +319,42 @@ export function getLaunchState(): LaunchJobState {
 }
 
 export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchResult> {
+  if (!input || typeof input !== 'object') {
+    return {
+      ok: false,
+      jobId: null,
+      message: 'Dữ liệu khởi động không hợp lệ.',
+    }
+  }
+  if (!input.version || typeof input.version !== 'string' || !input.version.trim()) {
+    return {
+      ok: false,
+      jobId: null,
+      message: 'Phiên bản Minecraft không hợp lệ.',
+    }
+  }
+  if (!input.gameDir || typeof input.gameDir !== 'string' || !input.gameDir.trim()) {
+    return {
+      ok: false,
+      jobId: null,
+      message: 'Thư mục game không hợp lệ.',
+    }
+  }
+  if (input.minMemoryMb && (typeof input.minMemoryMb !== 'number' || isNaN(input.minMemoryMb) || input.minMemoryMb < 512)) {
+    return {
+      ok: false,
+      jobId: null,
+      message: 'RAM tối thiểu phải từ 512 MB.',
+    }
+  }
+  if (input.maxMemoryMb && input.minMemoryMb && input.maxMemoryMb < input.minMemoryMb) {
+    return {
+      ok: false,
+      jobId: null,
+      message: 'RAM tối đa không được nhỏ hơn RAM tối thiểu.',
+    }
+  }
+
   try {
     const store = await getProfiles()
     const p = store.profiles.find(p => p.id === input.profileId)

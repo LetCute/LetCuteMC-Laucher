@@ -22,10 +22,8 @@ async function pathExists(targetPath: string): Promise<boolean> {
 }
 
 function assertPathInsideGameDir(gameDir: string, targetPath: string): void {
-  const normalizedGameDir = path.normalize(gameDir).toLowerCase()
-  const normalizedTargetPath = path.normalize(targetPath).toLowerCase()
-
-  if (!normalizedTargetPath.startsWith(normalizedGameDir)) {
+  const rel = path.relative(path.resolve(gameDir), path.resolve(targetPath))
+  if (rel.startsWith('..') || path.isAbsolute(rel)) {
     throw new Error(`Security error: path ${targetPath} is outside gameDir ${gameDir}`)
   }
 }
@@ -460,21 +458,40 @@ async function copyFileOrFolder(source: string, dest: string): Promise<void> {
 }
 
 export async function importGameContent(input: ImportGameContentInput): Promise<GameContentItem> {
+  if (!input || typeof input !== 'object') {
+    throw new Error('Dữ liệu nhập nội dung không hợp lệ.')
+  }
+
   const { gameDir, sourcePath, type } = input
 
-  if (!(await pathExists(sourcePath))) {
-    throw new Error(`Source path not found: ${sourcePath}`)
+  if (!gameDir || typeof gameDir !== 'string' || !gameDir.trim()) {
+    throw new Error('Thư mục game không hợp lệ.')
   }
+  if (!sourcePath || typeof sourcePath !== 'string' || !(await pathExists(sourcePath))) {
+    throw new Error(`Đường dẫn nguồn không tồn tại: ${sourcePath}`)
+  }
+
+  const lowerSource = sourcePath.toLowerCase()
+  const sourceStat = await fs.stat(sourcePath)
 
   let targetDir: string
   if (type === 'mod') {
+    if (!lowerSource.endsWith('.jar')) {
+      throw new Error('Mod phải là tệp định dạng .jar.')
+    }
     targetDir = path.join(gameDir, 'mods')
   } else if (type === 'resource_pack') {
+    if (!lowerSource.endsWith('.zip') && !sourceStat.isDirectory()) {
+      throw new Error('Resource Pack phải là tệp .zip hoặc thư mục.')
+    }
     targetDir = path.join(gameDir, 'resourcepacks')
   } else if (type === 'shader_pack') {
+    if (!lowerSource.endsWith('.zip')) {
+      throw new Error('Shader Pack phải là tệp định dạng .zip.')
+    }
     targetDir = path.join(gameDir, 'shaderpacks')
   } else {
-    throw new Error(`Unknown content type: ${type}`)
+    throw new Error(`Loại nội dung không được hỗ trợ: ${type}`)
   }
 
   await fs.mkdir(targetDir, { recursive: true })

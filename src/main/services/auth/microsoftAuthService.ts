@@ -199,7 +199,10 @@ async function authenticateMinecraftWithMsAccessToken(
   }
 
   const xblToken = xblData.Token
-  const uhs = xblData.DisplayClaims.xui[0].uhs
+  const uhs = xblData.DisplayClaims?.xui?.[0]?.uhs
+  if (!uhs) {
+    throw new Error('Xbox Live Auth phản hồi thiếu thông tin User Hash (uhs).')
+  }
 
   // Step 2: XSTS Auth
   const xstsRes = await fetch('https://xsts.auth.xboxlive.com/xsts/authorize', {

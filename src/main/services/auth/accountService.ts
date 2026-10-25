@@ -1,7 +1,7 @@
 import fsPromises from 'node:fs/promises'
 import crypto from 'node:crypto'
 import { safeStorage } from 'electron'
-import type { AccountState, AccountItem } from '../../../shared/types'
+import type { AccountState, AccountItem, MicrosoftAccount } from '../../../shared/types'
 import { getAccountConfigPath, ensureLauncherDataDirectory } from '../system/storageService.js'
 
 /** Single-flight MS token refresh — avoids TOO_MANY_REQUESTS on spam load */
@@ -77,45 +77,69 @@ export async function getAccountState(): Promise<AccountState> {
   }
   try {
     const raw = await fsPromises.readFile(filePath, 'utf-8')
-    const parsed = JSON.parse(raw) as any
+    let parsed: unknown
+    try {
+      parsed = JSON.parse(raw)
+    } catch {
+      console.error('[AccountService] File tài khoản bị hỏng, không thể parse JSON. Khôi phục mặc định.')
+      const defaultLocalUuid = generateOfflineUuid('Player')
+      return {
+        activeAccountId: 'local_Player',
+        accounts: [{
+          id: 'local_Player',
+          type: 'local',
+          username: 'Player',
+          uuid: defaultLocalUuid,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }]
+      }
+    }
+
+    if (typeof parsed !== 'object' || parsed === null) {
+      throw new Error('Dữ liệu tài khoản không hợp lệ.')
+    }
+
+    const data = parsed as Record<string, unknown>
 
     // MIGRATION: Check if this is the old schema
-    if (parsed.accounts === undefined) {
+    if (data.accounts === undefined) {
       const accounts: AccountItem[] = []
       let activeAccountId: string | null = null
 
-      if (parsed.localAccount) {
-        const username = parsed.localAccount.username || 'Player'
+      const legacyLocal = data.localAccount as Record<string, unknown> | undefined
+      if (legacyLocal && typeof legacyLocal === 'object') {
+        const username = (typeof legacyLocal.username === 'string' ? legacyLocal.username : '') || 'Player'
         const localId = `local_${username.toLowerCase()}`
         accounts.push({
           id: localId,
           type: 'local',
           username: username,
           uuid: generateOfflineUuid(username),
-          createdAt: parsed.localAccount.createdAt || new Date().toISOString(),
-          updatedAt: parsed.localAccount.updatedAt || new Date().toISOString(),
+          createdAt: (typeof legacyLocal.createdAt === 'string' ? legacyLocal.createdAt : '') || new Date().toISOString(),
+          updatedAt: (typeof legacyLocal.updatedAt === 'string' ? legacyLocal.updatedAt : '') || new Date().toISOString(),
         })
-        if (parsed.mode === 'local') {
+        if (data.mode === 'local') {
           activeAccountId = localId
         }
       }
 
-      if (parsed.microsoftAccount) {
-        const msAccount = parsed.microsoftAccount
-        const msId = msAccount.id || msAccount.uuid
+      const legacyMs = data.microsoftAccount as Record<string, unknown> | undefined
+      if (legacyMs && typeof legacyMs === 'object') {
+        const msId = (typeof legacyMs.id === 'string' ? legacyMs.id : '') || (typeof legacyMs.uuid === 'string' ? legacyMs.uuid : '')
         accounts.push({
           id: msId,
           type: 'microsoft',
-          username: msAccount.username,
-          uuid: msAccount.uuid,
-          avatarUrl: msAccount.avatarUrl,
-          accessToken: msAccount.accessToken,
-          refreshToken: msAccount.refreshToken,
-          expiresAt: msAccount.expiresAt,
-          createdAt: msAccount.createdAt || new Date().toISOString(),
-          updatedAt: msAccount.updatedAt || new Date().toISOString(),
+          username: typeof legacyMs.username === 'string' ? legacyMs.username : '',
+          uuid: typeof legacyMs.uuid === 'string' ? legacyMs.uuid : '',
+          avatarUrl: typeof legacyMs.avatarUrl === 'string' ? legacyMs.avatarUrl : undefined,
+          accessToken: typeof legacyMs.accessToken === 'string' ? legacyMs.accessToken : undefined,
+          refreshToken: typeof legacyMs.refreshToken === 'string' ? legacyMs.refreshToken : undefined,
+          expiresAt: typeof legacyMs.expiresAt === 'string' ? legacyMs.expiresAt : undefined,
+          createdAt: (typeof legacyMs.createdAt === 'string' ? legacyMs.createdAt : '') || new Date().toISOString(),
+          updatedAt: (typeof legacyMs.updatedAt === 'string' ? legacyMs.updatedAt : '') || new Date().toISOString(),
         })
-        if (parsed.mode === 'microsoft') {
+        if (data.mode === 'microsoft') {
           activeAccountId = msId
         }
       }
@@ -135,14 +159,21 @@ export async function getAccountState(): Promise<AccountState> {
       }
 
       const migratedState: AccountState = {
-        activeAccountId: activeAccountId || accounts[0].id,
+        activeAccountId: activeAccountId || (accounts.length > 0 ? accounts[0].id : null),
         accounts
       }
       await saveAccountState(migratedState)
       return migratedState
     }
 
-    const state = parsed as AccountState
+    // Validate new schema shape
+    if (!Array.isArray(data.accounts)) {
+      throw new Error('Dữ liệu tài khoản thiếu trường accounts.')
+    }
+    const state: AccountState = {
+      activeAccountId: typeof data.activeAccountId === 'string' ? data.activeAccountId : null,
+      accounts: data.accounts as AccountItem[],
+    }
     // Decrypt tokens for runtime in-memory use
     for (const acc of state.accounts) {
       if (acc.type === 'microsoft') {
@@ -151,7 +182,8 @@ export async function getAccountState(): Promise<AccountState> {
       }
     }
     return state
-  } catch {
+  } catch (error) {
+    console.error('[AccountService] Lỗi đọc file tài khoản, khôi phục mặc định:', error instanceof Error ? error.message : error)
     const defaultLocalUuid = generateOfflineUuid('Player')
     return {
       activeAccountId: 'local_Player',
@@ -229,6 +261,14 @@ export async function addLocalAccount(
 }
 
 export async function renameAccountLocally(accountId: string, newName: string): Promise<AccountState> {
+  const cleanUsername = (newName || '').trim()
+  if (cleanUsername.length < 3 || cleanUsername.length > 16) {
+    throw new Error('Tên tài khoản phải từ 3 đến 16 ký tự.')
+  }
+  if (!/^[a-zA-Z0-9_]+$/.test(cleanUsername)) {
+    throw new Error('Tên tài khoản chỉ được chứa chữ cái, chữ số và dấu gạch dưới.')
+  }
+
   const state = await getAccountState()
 
   const accIndex = state.accounts.findIndex(a => a.id === accountId)
@@ -236,8 +276,13 @@ export async function renameAccountLocally(accountId: string, newName: string): 
     throw new Error('Không tìm thấy tài khoản để đổi tên.')
   }
 
+  if (state.accounts[accIndex].type !== 'local') {
+    throw new Error('Chỉ có thể đổi tên hiển thị của tài khoản offline.')
+  }
+
   // Update username
-  state.accounts[accIndex].username = newName
+  state.accounts[accIndex].username = cleanUsername
+  state.accounts[accIndex].updatedAt = new Date().toISOString()
 
   // Note: For local accounts, we don't change the ID (it stays local_oldname) 
   // because changing the ID would break activeAccountId and local caches.
@@ -248,6 +293,10 @@ export async function renameAccountLocally(accountId: string, newName: string): 
 }
 
 export async function saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState> {
+  if (!accountId || typeof accountId !== 'string') {
+    throw new Error('Mã tài khoản không hợp lệ.')
+  }
+
   const state = await getAccountState()
 
   const accIndex = state.accounts.findIndex(a => a.id === accountId)
@@ -257,7 +306,9 @@ export async function saveLocalSkin(accountId: string, skinUrl: string | null, s
 
   const acc = state.accounts[accIndex]
   if (skinUrl !== undefined) acc.skinUrl = skinUrl || undefined
-  if (skinModel !== undefined) acc.skinModel = skinModel || undefined
+  if (skinModel !== undefined) {
+    acc.skinModel = skinModel === 'slim' ? 'slim' : skinModel === 'default' ? 'default' : undefined
+  }
   if (capeUrl !== undefined) acc.capeUrl = capeUrl || undefined
 
   acc.updatedAt = new Date().toISOString()
@@ -312,7 +363,7 @@ export async function removeAccount(
 }
 
 export async function saveMicrosoftAccount(
-  account: any
+  account: MicrosoftAccount
 ): Promise<AccountState> {
   if (!account.username || !account.uuid || !account.accessToken) {
     throw new Error('Thông tin tài khoản Microsoft thiếu các trường bắt buộc.')

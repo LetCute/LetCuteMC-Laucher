@@ -67,7 +67,7 @@ export function DropZone({ accept, onDropFiles, children, className, label }: Dr
     >
       {children}
       {active && (
-        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-xl border-2 border-dashed border-primary bg-primary/10 backdrop-blur-[1px]">
+        <div className="pointer-events-none absolute inset-0 z-20 flex items-center justify-center rounded-md border-2 border-dashed border-primary bg-primary/10 backdrop-blur-[1px]">
           <div className="flex flex-col items-center gap-2 text-primary">
             <Upload className="h-8 w-8" />
             <p className="text-sm font-semibold">{label ?? `Thả file .${accept.join(' / .')}`}</p>

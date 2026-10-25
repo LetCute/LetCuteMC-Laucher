@@ -38,10 +38,10 @@ export function LaunchProgressInline({ progress }: LaunchProgressInlineProps) {
   if (!shouldShowDetails) return null;
 
   return (
-    <div className="mt-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-5">
+    <div className="mt-6 rounded-md border border-zinc-800 bg-zinc-950/70 p-5">
       <div className="mb-4 flex items-start justify-between gap-4">
         <div>
-          <p className="text-sm font-semibold text-zinc-100">
+          <p className="text-sm font-semibold text-zinc-200">
             {progress.title}
           </p>
           <p className="mt-1 text-sm text-zinc-400">
@@ -63,29 +63,29 @@ export function LaunchProgressInline({ progress }: LaunchProgressInlineProps) {
 
       {progress.stage === 'downloading_java' && (
         <div className="mt-4 grid grid-cols-3 gap-3">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               Downloaded
             </p>
-            <p className="mt-1 text-sm font-medium text-zinc-100">
+            <p className="mt-1 text-sm font-medium text-zinc-200">
               {formatBytes(progress.currentBytes)}
             </p>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               Total
             </p>
-            <p className="mt-1 text-sm font-medium text-zinc-100">
+            <p className="mt-1 text-sm font-medium text-zinc-200">
               {formatBytes(progress.totalBytes)}
             </p>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">
               Speed
             </p>
-            <p className="mt-1 text-sm font-medium text-zinc-100">
+            <p className="mt-1 text-sm font-medium text-zinc-200">
               {formatSpeed(progress.speedBytesPerSecond)}
             </p>
           </div>
@@ -94,16 +94,16 @@ export function LaunchProgressInline({ progress }: LaunchProgressInlineProps) {
 
       {(progress.stage === 'extracting_java' || progress.stage === 'verifying_java') && (
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Stage</p>
-            <p className="mt-1 text-sm font-medium text-zinc-100">
+            <p className="mt-1 text-sm font-medium text-zinc-200">
               {progress.stage === 'extracting_java' ? 'Extracting' : 'Verifying'}
             </p>
           </div>
 
-          <div className="rounded-xl border border-zinc-800 bg-zinc-900 p-3">
+          <div className="rounded-md border border-zinc-800 bg-zinc-900 p-3">
             <p className="text-xs uppercase tracking-wide text-zinc-500">Status</p>
-            <p className="mt-1 text-sm font-medium text-zinc-100">
+            <p className="mt-1 text-sm font-medium text-zinc-200">
               {progress.message}
             </p>
           </div>

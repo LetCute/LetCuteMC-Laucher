@@ -88,7 +88,7 @@ export const ModDependencyModal: React.FC<ModDependencyModalProps> = ({
             {/* Fix Notification */}
             {fixResult && (
               <div
-                className={`p-3.5 rounded-xl border flex items-start gap-3 text-sm ${
+                className={`p-3.5 rounded-md border flex items-start gap-3 text-sm ${
                   fixResult.success
                     ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-300'
                     : 'bg-amber-500/10 border-amber-500/30 text-amber-300'
@@ -116,8 +116,8 @@ export const ModDependencyModal: React.FC<ModDependencyModalProps> = ({
 
             {/* Status Banner */}
             {!hasMissing ? (
-              <div className="p-4 rounded-xl border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3.5">
-                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-lg shrink-0">
+              <div className="p-4 rounded-md border border-emerald-500/30 bg-emerald-500/10 flex items-center gap-3.5">
+                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-md shrink-0">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div>
@@ -129,8 +129,8 @@ export const ModDependencyModal: React.FC<ModDependencyModalProps> = ({
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-500/10 flex items-center gap-3.5">
-                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-lg shrink-0">
+              <div className="p-4 rounded-md border border-amber-500/30 bg-amber-500/10 flex items-center gap-3.5">
+                <div className="p-2 bg-amber-500/20 text-amber-400 rounded-md shrink-0">
                   <AlertCircle className="h-5 w-5" />
                 </div>
                 <div>
@@ -155,7 +155,7 @@ export const ModDependencyModal: React.FC<ModDependencyModalProps> = ({
                   {missingDeps.map((dep, idx) => (
                     <div
                       key={idx}
-                      className="p-3 rounded-xl border border-zinc-800 bg-zinc-900/60 flex items-center justify-between gap-3"
+                      className="p-3 rounded-md border border-zinc-800 bg-zinc-900/60 flex items-center justify-between gap-3"
                     >
                       <div className="flex flex-col gap-0.5">
                         <div className="flex items-center gap-2">
