@@ -129,8 +129,9 @@ export const LowEndOptimizerModal = ({
       } else {
         showToast('error', res.message || 'Không thể áp dụng cài đặt.')
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi xảy ra.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi xảy ra.'
+      showToast('error', message)
     } finally {
       setApplying(false)
     }
@@ -152,8 +153,9 @@ export const LowEndOptimizerModal = ({
       } else {
         showToast('error', res.message || `Không thể cài đặt mod ${name}.`)
       }
-    } catch (err: any) {
-      showToast('error', err?.message || `Có lỗi khi cài đặt mod ${name}.`)
+    } catch (err) {
+      const message = err instanceof Error ? err.message : `Có lỗi khi cài đặt mod ${name}.`
+      showToast('error', message)
     } finally {
       setInstallingModSlug(null)
     }
@@ -174,8 +176,9 @@ export const LowEndOptimizerModal = ({
       } else {
         showToast('error', res.message || 'Không thể tải toàn bộ mod.')
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi khi cài đặt các mod.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi khi cài đặt các mod.'
+      showToast('error', message)
     } finally {
       setInstallingAll(false)
     }

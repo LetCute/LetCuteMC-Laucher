@@ -116,9 +116,10 @@ export class LogService {
       } else {
         return await fs.readFile(filePath, 'utf-8')
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[LogService] Error reading log file:', err)
-      throw new Error(`Không thể đọc file: ${err?.message || err}`)
+      const message = err instanceof Error ? err.message : String(err)
+      throw new Error(`Không thể đọc file: ${message}`)
     }
   }
 
@@ -156,11 +157,12 @@ export class LogService {
           error: data?.error || 'Dịch vụ mclo.gs từ chối tải lên',
         }
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[LogService] Error uploading to mclo.gs:', err)
+      const message = err instanceof Error ? err.message : String(err)
       return {
         success: false,
-        error: `Không thể kết nối đến mclo.gs: ${err?.message || err}`,
+        error: `Không thể kết nối đến mclo.gs: ${message}`,
       }
     }
   }

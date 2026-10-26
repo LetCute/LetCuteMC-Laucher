@@ -442,7 +442,7 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
     const { serverListService } = await import('../media/serverListService.js')
     // Run and wait to ensure servers.dat is written before game launch
     await serverListService.injectServersToProfile(input.profileId, 1, input.version)
-      .catch((err: any) => console.error('[LaunchManager] Failed to inject servers:', err))
+      .catch((err) => console.error('[LaunchManager] Failed to inject servers:', err))
   } catch (err) {
     console.error('[LaunchManager] Failed to load serverListService:', err)
   }

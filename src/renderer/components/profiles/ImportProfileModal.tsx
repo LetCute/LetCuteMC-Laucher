@@ -56,13 +56,14 @@ export function ImportProfileModal({
       if (data.valid && data.manifest) {
         setCustomName(data.manifest.name)
       }
-    } catch (err: any) {
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Không thể đọc tệp gói cấu hình.'
       setPreviewInfo({
         valid: false,
         fileName: '',
         filePath,
         fileSizeBytes: 0,
-        error: err?.message || 'Không thể đọc tệp gói cấu hình.',
+        error: message,
       })
     } finally {
       setIsLoading(false)
@@ -86,8 +87,9 @@ export function ImportProfileModal({
       } else {
         showToast('error', res.error || 'Nhập cấu hình thất bại.')
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi xảy ra khi nhập cấu hình.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi nhập cấu hình.'
+      showToast('error', message)
     } finally {
       setIsImporting(false)
     }

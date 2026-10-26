@@ -238,9 +238,10 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
       } else if (res.crashReports[0]) {
         setSelectedFile(res.crashReports[0])
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error loading log files:', e)
-      showToast('error', `Không thể tải danh sách tệp log: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Không thể tải danh sách tệp log: ${message}`)
     } finally {
       setIsLoadingFiles(false)
     }
@@ -334,8 +335,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
     try {
       await navigator.clipboard.writeText(rawLogContent)
       showToast('success', 'Đã sao chép toàn bộ nội dung Log vào Clipboard!')
-    } catch (e: any) {
-      showToast('error', `Lỗi sao chép: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Lỗi sao chép: ${message}`)
     }
   }
 
@@ -355,8 +357,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
       } else {
         showToast('error', res.error || 'Tải lên mclo.gs thất bại')
       }
-    } catch (e: any) {
-      showToast('error', `Lỗi tải lên: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Lỗi tải lên: ${message}`)
     } finally {
       setIsUploading(false)
     }
@@ -383,8 +386,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
         showToast('success', `Đã xóa ${res.count} tệp log cũ, giải phóng ${formatBytes(res.freedBytes)}!`)
         await loadFiles()
       }
-    } catch (e: any) {
-      showToast('error', `Lỗi dọn dẹp: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Lỗi dọn dẹp: ${message}`)
     }
   }
 
@@ -406,8 +410,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
         showToast('success', `Đã xóa "${selectedFile.fileName}"`)
         await loadFiles()
       }
-    } catch (e: any) {
-      showToast('error', `Xóa tệp thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xóa tệp thất bại: ${message}`)
     }
   }
 

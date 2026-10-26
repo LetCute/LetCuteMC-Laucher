@@ -3,7 +3,6 @@ import { createWriteStream } from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 // adm-zip is lazy-loaded to reduce cold-start time
-import crypto from 'node:crypto'
 import { Readable } from 'node:stream'
 import { pipeline } from 'node:stream/promises'
 import type { ModrinthSearchResult, ModrinthVersion } from '../../../shared/types'
@@ -114,9 +113,9 @@ export async function installModrinthModpack(versionId: string, profileName: str
       }
       
       await _installMrpack(mrpackPath, profileName, gameDataDir, taskId, true, iconUrl, versionInfo.loaders)
-    } catch (e: any) {
+    } catch (e) {
       try {
-        taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+        taskManagerService.failTask(taskId, e instanceof Error ? e.message : 'Lỗi không xác định')
       } catch (failErr) {
         console.error('[Modrinth] Failed to update task status:', failErr)
       }
@@ -142,9 +141,9 @@ export async function installLocalModrinthModpack(mrpackPath: string, profileNam
   Promise.resolve().then(async () => {
     try {
       await _installMrpack(mrpackPath, cleanProfileName, gameDataDir, taskId, false)
-    } catch (e: any) {
+    } catch (e) {
       try {
-        taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+        taskManagerService.failTask(taskId, e instanceof Error ? e.message : 'Lỗi không xác định')
       } catch (failErr) {
         console.error('[Modrinth] Failed to update task status:', failErr)
       }
@@ -288,8 +287,9 @@ async function _installMrpack(
       taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt Fabric cho ${minecraftVersion}...`)
       try {
         const fabList = await getFabricVersions()
-        if (fabList.length > 0) {
-          finalMinecraftVersion = await installFabric(minecraftVersion, fabList[0].version, mcRootDir)
+        const latestFabric = fabList[0]
+        if (latestFabric) {
+          finalMinecraftVersion = await installFabric(minecraftVersion, latestFabric.version, mcRootDir)
           await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
           taskManagerService.updateTaskProgress(taskId, 30, 'Cài đặt Fabric thành công.')
         }
@@ -328,10 +328,8 @@ async function _installMrpack(
            taskManagerService.updateTaskProgress(taskId, mappedPercent, `Tiến trình tải: ${prog.current}/${prog.total} (${prog.percent}%)`)
         }
       },
-      onLog: (level, msg) => {
-        if (level === 'error') {
-           // We could log error but we let the throw handle it
-        }
+      onLog: (_level, _msg) => {
+        // We let errors be handled by the try/catch
       }
     })
   }
@@ -404,6 +402,8 @@ export async function uninstallStoreItem(projectId: string, gameDir: string): Pr
   if (itemIndex === -1) return false
 
   const item = installations[itemIndex]
+  if (!item) return false
+
   for (const file of item.files) {
     const fullPath = path.join(gameDir, file)
     await fs.unlink(fullPath).catch(() => {})
@@ -422,9 +422,9 @@ export async function installModrinthMod(versionId: string, gameDir: string): Pr
     try {
       await _installModrinthModRecursive(versionId, gameDir, taskId, new Set(), 0)
       taskManagerService.completeTask(taskId, 'Cài đặt Mod hoàn tất.', { gameDir })
-    } catch (e: any) {
+    } catch (e) {
       try {
-        taskManagerService.failTask(taskId, e.message || 'Lỗi không xác định')
+        taskManagerService.failTask(taskId, e instanceof Error ? e.message : 'Lỗi không xác định')
       } catch (failErr) {
         console.error('[Modrinth] Failed to update task status:', failErr)
       }
@@ -518,8 +518,10 @@ async function _installModrinthModRecursive(
   const existingIdx = installations.findIndex(i => i.projectId === versionInfo.project_id)
   if (existingIdx !== -1) {
     const old = installations[existingIdx]
-    for (const f of old.files) {
-      await fs.unlink(path.join(gameDir, f)).catch(() => {})
+    if (old) {
+      for (const f of old.files) {
+        await fs.unlink(path.join(gameDir, f)).catch(() => {})
+      }
     }
     installations.splice(existingIdx, 1)
   }

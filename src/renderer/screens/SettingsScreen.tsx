@@ -223,8 +223,9 @@ export const SettingsScreen = ({
       } else {
         showToast('error', res.message || `Cài đặt Java ${requiredMajor} thất bại.`)
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi khi tự động cài đặt Java.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi khi tự động cài đặt Java.'
+      showToast('error', message)
     } finally {
       setIsInstallingJava(false)
     }
@@ -273,8 +274,9 @@ export const SettingsScreen = ({
       } else {
         showToast('error', res.error || 'Dọn dẹp cache thất bại.')
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi khi dọn dẹp.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi khi dọn dẹp.'
+      showToast('error', message)
     } finally {
       setIsCleaningCache(false)
     }

@@ -1,6 +1,5 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import crypto from 'node:crypto'
 // adm-zip is lazy-loaded to reduce cold-start time
 import type {
   ExportProfilePackageOptions,
@@ -153,11 +152,12 @@ export class ProfilePackageService {
         outputPath: options.destinationPath,
         fileSizeBytes: stat.size,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[ProfilePackageService] Export error:', err)
+      const message = err instanceof Error ? err.message : String(err)
       return {
         success: false,
-        error: err?.message || 'Có lỗi xảy ra khi đóng gói cấu hình.',
+        error: message || 'Có lỗi xảy ra khi đóng gói cấu hình.',
       }
     }
   }
@@ -202,14 +202,15 @@ export class ProfilePackageService {
         filePath: packageFilePath,
         fileSizeBytes: stat.size,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[ProfilePackageService] Read package info error:', err)
+      const message = err instanceof Error ? err.message : String(err)
       return {
         valid: false,
         fileName: path.basename(packageFilePath),
         filePath: packageFilePath,
         fileSizeBytes: 0,
-        error: err?.message || 'Không thể đọc tệp gói cấu hình.',
+        error: message || 'Không thể đọc tệp gói cấu hình.',
       }
     }
   }
@@ -292,11 +293,12 @@ export class ProfilePackageService {
         success: true,
         profile: newProfile,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[ProfilePackageService] Import package error:', err)
+      const message = err instanceof Error ? err.message : String(err)
       return {
         success: false,
-        error: err?.message || 'Có lỗi xảy ra khi nhập gói cấu hình.',
+        error: message || 'Có lỗi xảy ra khi nhập gói cấu hình.',
       }
     }
   }

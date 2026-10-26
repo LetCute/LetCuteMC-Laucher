@@ -82,8 +82,9 @@ export function ExportProfileModal({ isOpen, onClose, profile }: ExportProfileMo
       } else {
         showToast('error', result.error || 'Xuất gói cấu hình thất bại.')
       }
-    } catch (err: any) {
-      showToast('error', err?.message || 'Có lỗi xảy ra khi xuất gói.')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Có lỗi xảy ra khi xuất gói.'
+      showToast('error', message)
     } finally {
       setIsExporting(false)
     }

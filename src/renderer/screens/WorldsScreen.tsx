@@ -172,9 +172,10 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
     try {
       const items = await launcherClient.scanWorlds(gameDir)
       setWorlds(items)
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error loading worlds:', e)
-      showToast('error', `Không thể tải danh sách thế giới: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Không thể tải danh sách thế giới: ${message}`)
     } finally {
       setIsLoading(false)
     }
@@ -231,8 +232,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
           )
         )
       }
-    } catch (e: any) {
-      showToast('error', `Sao lưu thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Sao lưu thất bại: ${message}`)
     } finally {
       setBackingUpMap((prev) => ({ ...prev, [world.folderName]: false }))
     }
@@ -253,8 +255,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
       if (ok) {
         showToast('success', `Đã xuất thế giới ra tệp ZIP thành công!`)
       }
-    } catch (e: any) {
-      showToast('error', `Xuất thế giới thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xuất thế giới thất bại: ${message}`)
     }
   }
 
@@ -273,8 +276,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         showToast('success', `Đã nhập thế giới "${res.name}" thành công!`)
         await loadWorlds()
       }
-    } catch (e: any) {
-      showToast('error', `Nhập thế giới thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Nhập thế giới thất bại: ${message}`)
     } finally {
       setIsImporting(false)
     }
@@ -289,8 +293,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         showToast('success', `Đã nhân bản thế giới thành công!`)
         await loadWorlds()
       }
-    } catch (e: any) {
-      showToast('error', `Nhân bản thế giới thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Nhân bản thế giới thất bại: ${message}`)
     }
   }
 
@@ -315,8 +320,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         )
         setRenameTarget(null)
       }
-    } catch (e: any) {
-      showToast('error', `Đổi tên thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Đổi tên thất bại: ${message}`)
     } finally {
       setIsRenaming(false)
     }
@@ -338,8 +344,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         showToast('success', `Đã xóa thế giới "${world.name}"`)
         setWorlds((prev) => prev.filter((w) => w.folderName !== world.folderName))
       }
-    } catch (e: any) {
-      showToast('error', `Xóa thế giới thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xóa thế giới thất bại: ${message}`)
     }
   }
 
@@ -376,8 +383,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         setActiveBackupsWorld(null)
         await loadWorlds()
       }
-    } catch (e: any) {
-      showToast('error', `Khôi phục thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Khôi phục thất bại: ${message}`)
     }
   }
 
@@ -396,8 +404,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
           )
         )
       }
-    } catch (e: any) {
-      showToast('error', `Xóa bản sao lưu thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xóa bản sao lưu thất bại: ${message}`)
     }
   }
 

@@ -579,8 +579,9 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
                   showToast('info', `Đã thêm vào Tiến trình...`);
                   await window.launcherApi.installLocalModrinthModpack(state.filePath, importProfileName);
                 }
-              } catch (e: any) {
-                showToast('error', `Lỗi: ${e.message}`);
+              } catch (e) {
+                const message = e instanceof Error ? e.message : String(e);
+                showToast('error', `Lỗi: ${message}`);
               } finally {
                 setLoading(false);
               }

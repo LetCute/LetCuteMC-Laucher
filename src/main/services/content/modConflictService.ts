@@ -280,17 +280,19 @@ export class ModConflictService {
 
     // ── RULE 3: Duplicate Mod JAR files (Critical) ─────────────────────────
     for (const [modId, files] of modIdMap.entries()) {
-      if (files.length > 1 && modId !== 'unknown' && modId.length > 2) {
+      const firstFile = files[0]
+      const secondFile = files[1]
+      if (files.length > 1 && modId !== 'unknown' && modId.length > 2 && firstFile && secondFile) {
         conflicts.push({
           id: `conflict-duplicate-${modId}`,
           severity: 'critical',
           type: 'duplicate_mod',
-          title: `Phát hiện mod bị trùng lặp tệp: ${files[0].fileName}`,
+          title: `Phát hiện mod bị trùng lặp tệp: ${firstFile.fileName}`,
           description: `Có ${files.length} tệp mod cùng ID '${modId}' trong thư mục mods (${files.map((f) => f.fileName).join(', ')}). Sẽ gây lỗi trùng lặp Mixin và class khi nạp.`,
           involvedMods: files.map((f) => ({ fileName: f.fileName, modId, name: f.fileName })),
           recommendedAction: 'disable_mod',
-          actionLabel: `Tắt tệp trùng (${files[1].fileName})`,
-          targetFileName: files[1].fileName,
+          actionLabel: `Tắt tệp trùng (${secondFile.fileName})`,
+          targetFileName: secondFile.fileName,
         })
       }
     }
@@ -476,11 +478,11 @@ export class ModConflictService {
         message: 'Hành động không xác định.',
         resolvedConflicts: [],
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Resolve conflict error:', err)
       return {
         success: false,
-        message: err?.message || 'Có lỗi xảy ra khi xử lý xung đột.',
+        message: err instanceof Error ? err.message : 'Có lỗi xảy ra khi xử lý xung đột.',
         resolvedConflicts: [],
       }
     }

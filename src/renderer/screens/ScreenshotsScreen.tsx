@@ -100,9 +100,10 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
       const items = await launcherClient.scanScreenshots(gameDir)
       setScreenshots(items)
       setSelectedIds(new Set())
-    } catch (e: any) {
+    } catch (e) {
       console.error('Error loading screenshots:', e)
-      showToast('error', `Không thể tải danh sách ảnh: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Không thể tải danh sách ảnh: ${message}`)
     } finally {
       setIsLoading(false)
     }
@@ -149,8 +150,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
       } else {
         showToast('error', 'Không thể sao chép ảnh vào Clipboard.')
       }
-    } catch (e: any) {
-      showToast('error', `Lỗi sao chép: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Lỗi sao chép: ${message}`)
     } finally {
       setIsCopying(false)
     }
@@ -194,8 +196,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
           }
         }
       }
-    } catch (e: any) {
-      showToast('error', `Xóa ảnh thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xóa ảnh thất bại: ${message}`)
     }
   }
 
@@ -222,8 +225,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
         setScreenshots((prev) => prev.filter((s) => !selectedIds.has(s.id)))
         setSelectedIds(new Set())
       }
-    } catch (e: any) {
-      showToast('error', `Xóa ảnh thất bại: ${e?.message || e}`)
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e)
+      showToast('error', `Xóa ảnh thất bại: ${message}`)
     }
   }
 

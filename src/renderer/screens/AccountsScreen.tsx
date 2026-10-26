@@ -267,8 +267,9 @@ export const AccountsScreen = ({
           setPendingCapeFile(null)
           setSelectedCapeUrl(null)
         }
-      } catch (err: any) {
-        showToast('error', `Lỗi tải thông tin Mojang: ${err.message}`)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        showToast('error', `Lỗi tải thông tin Mojang: ${message}`)
         const acc = accountState.accounts.find(a => a.id === accountId)
         setPendingSkinFile(acc?.skinUrl || null)
         setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
@@ -336,8 +337,9 @@ export const AccountsScreen = ({
       if (renameTargetType === 'microsoft') {
         try {
           await window.launcherApi.changeMojangName(renameTargetToken, trimmed)
-        } catch (err: any) {
-          if (err.message?.includes('TOKEN_EXPIRED') || err.message?.includes('401')) {
+        } catch (err) {
+          const errMessage = err instanceof Error ? err.message : String(err)
+          if (errMessage.includes('TOKEN_EXPIRED') || errMessage.includes('401')) {
             showToast('info', 'Đang tự động gia hạn phiên đăng nhập...')
             const newState = await window.launcherApi.refreshMicrosoftAccount(renameTargetId)
             const newAcc = newState.accounts.find((a: any) => a.id === renameTargetId)
@@ -346,7 +348,7 @@ export const AccountsScreen = ({
             } else {
               throw new Error('Gia hạn thất bại.')
             }
-          } else if (err.message?.includes('NAME_UNAVAILABLE')) {
+          } else if (errMessage.includes('NAME_UNAVAILABLE')) {
             throw new Error('Tên này đã được sử dụng hoặc bạn đang bị giới hạn.')
           } else {
             throw err
@@ -397,8 +399,9 @@ export const AccountsScreen = ({
       } else {
         throw new Error('Không thể nạp skin này')
       }
-    } catch (err: any) {
-      showToast('error', err.message || 'Lỗi tải ảnh từ thư viện NameMC')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lỗi tải ảnh từ thư viện NameMC'
+      showToast('error', message)
     } finally {
       setIsImportingNamemc(false)
     }
@@ -474,8 +477,9 @@ export const AccountsScreen = ({
       }
 
       throw new Error('Không tìm thấy skin. Vui lòng kiểm tra lại tên người chơi hoặc link NameMC.')
-    } catch (err: any) {
-      showToast('error', err.message || 'Lỗi nạp skin từ NameMC')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lỗi nạp skin từ NameMC'
+      showToast('error', message)
     } finally {
       setIsImportingNamemc(false)
     }
@@ -500,8 +504,9 @@ export const AccountsScreen = ({
       } else {
         showToast('error', `Không tìm thấy người chơi "${galleryQuery.trim()}" trên NameMC / Mojang.`)
       }
-    } catch (err: any) {
-      showToast('error', err.message || 'Lỗi tìm kiếm người chơi')
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Lỗi tìm kiếm người chơi'
+      showToast('error', message)
     } finally {
       setIsSearchingPlayer(false)
     }
@@ -560,8 +565,9 @@ export const AccountsScreen = ({
       try {
         const updated = await window.launcherApi.saveLocalSkin(skinModalTargetId, pendingSkinFile, pendingSkinModel, pendingCapeFile)
         onAccountStateChange(updated)
-      } catch (e: any) {
-        showToast('error', `Lỗi khi lưu skin local: ${e.message}`)
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e)
+        showToast('error', `Lỗi khi lưu skin local: ${message}`)
       }
       showToast('success', 'Đã cập nhật ngoại hình Local!')
       closeSkinModal()

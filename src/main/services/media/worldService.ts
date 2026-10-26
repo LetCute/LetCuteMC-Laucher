@@ -215,9 +215,10 @@ export class WorldService {
         fileName,
         sizeBytes: stat.size,
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error creating world backup:', e)
-      throw new Error(`Lỗi khi tạo bản sao lưu: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Lỗi khi tạo bản sao lưu: ${message}`)
     }
   }
 
@@ -292,9 +293,10 @@ export class WorldService {
         success: true,
         folderName: targetFolder,
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error restoring backup:', e)
-      throw new Error(`Khôi phục thế giới thất bại: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Khôi phục thế giới thất bại: ${message}`)
     }
   }
 
@@ -331,9 +333,10 @@ export class WorldService {
       zip.addLocalFolder(worldPath)
       zip.writeZip(destinationZipPath)
       return true
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error exporting world zip:', e)
-      throw new Error(`Xuất thế giới thất bại: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Xuất thế giới thất bại: ${message}`)
     }
   }
 
@@ -415,9 +418,10 @@ export class WorldService {
         folderName: targetFolderName,
         name: worldName,
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error importing world zip:', e)
-      throw new Error(`Nhập thế giới thất bại: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Nhập thế giới thất bại: ${message}`)
     }
   }
 
@@ -454,9 +458,10 @@ export class WorldService {
         success: true,
         newFolderName,
       }
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error duplicating world:', e)
-      throw new Error(`Nhân bản thế giới thất bại: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Nhân bản thế giới thất bại: ${message}`)
     }
   }
 
@@ -491,9 +496,10 @@ export class WorldService {
       await fs.writeFile(levelDatPath, gzipped)
 
       return true
-    } catch (e: any) {
+    } catch (e) {
       console.error('[WorldService] Error renaming world in level.dat:', e)
-      throw new Error(`Đổi tên thế giới thất bại: ${e?.message || e}`)
+      const message = e instanceof Error ? e.message : String(e)
+      throw new Error(`Đổi tên thế giới thất bại: ${message}`)
     }
   }
 

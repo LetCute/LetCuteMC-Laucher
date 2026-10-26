@@ -187,8 +187,10 @@ export class ModUpdaterService {
           const matched = searchRes.hits.find(
             (h) => h.slug.toLowerCase() === mod.modId.toLowerCase() || h.project_id === mod.modId
           ) || searchRes.hits[0]
-          projectId = matched.project_id
-          projectIconUrl = matched.icon_url || null
+          if (matched) {
+            projectId = matched.project_id
+            projectIconUrl = matched.icon_url || null
+          }
         }
       }
 
@@ -304,14 +306,14 @@ export class ModUpdaterService {
         oldFileName: item.fileName,
         newFileName: item.newFileName,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(`Failed to update mod ${item.modName}:`, err)
       return {
         success: false,
         modId: item.modId,
         oldFileName: item.fileName,
         newFileName: item.newFileName,
-        error: err?.message || 'Lỗi khi tải bản cập nhật.',
+        error: err instanceof Error ? err.message : 'Lỗi khi tải bản cập nhật.',
       }
     }
   }

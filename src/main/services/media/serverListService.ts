@@ -303,9 +303,10 @@ export class ServerListService {
           // Giữ lại toàn bộ server do người dùng tự thêm
           return true
         })
-      } catch (err: any) {
-        if (err.code !== 'ENOENT') {
-          console.warn('[ServerListService] Error reading servers.dat, re-initializing:', err.message)
+      } catch (err) {
+        const code = (err as NodeJS.ErrnoException)?.code
+        if (code !== 'ENOENT') {
+          console.warn('[ServerListService] Error reading servers.dat, re-initializing:', err instanceof Error ? err.message : String(err))
         }
       }
 

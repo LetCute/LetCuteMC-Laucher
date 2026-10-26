@@ -72,7 +72,8 @@ async function fetchModrinthJson<T>(endpoint: string): Promise<T | null> {
         res.on('end', () => {
           try {
             resolve(JSON.parse(data))
-          } catch {
+          } catch (err) {
+            console.warn('[OptimizerService] Failed to parse JSON response:', err instanceof Error ? err.message : String(err))
             resolve(null)
           }
         })
@@ -462,14 +463,14 @@ export class OptimizerService {
         sodiumConfigUpdated,
         message: `Đã áp dụng thành công ${changesApplied.length} tùy chỉnh tối ưu cho Minecraft!`,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[OptimizerService] Optimize video settings error:', err)
       return {
         success: false,
         optionsPath,
         changesApplied: [],
         sodiumConfigUpdated: false,
-        message: err?.message || 'Có lỗi khi lưu tùy chọn đồ họa.',
+        message: err instanceof Error ? err.message : 'Có lỗi khi lưu tùy chọn đồ họa.',
       }
     }
   }
@@ -586,8 +587,9 @@ export class OptimizerService {
           oldLogsSet.add(file)
           try {
             oldLogsSize += fs.statSync(file).size
-          } catch {
+          } catch (err) {
             // File might have been deleted/locked during scan, skip
+            console.debug?.('[OptimizerService] Skip inaccessible log file:', file, err)
           }
         }
       }
@@ -603,8 +605,9 @@ export class OptimizerService {
           crashReportsSet.add(file)
           try {
             crashReportsSize += fs.statSync(file).size
-          } catch {
+          } catch (err) {
             // File might have been deleted/locked during scan, skip
+            console.debug?.('[OptimizerService] Skip inaccessible crash dump:', file, err)
           }
         }
       }
@@ -617,8 +620,9 @@ export class OptimizerService {
           crashReportsSet.add(file)
           try {
             crashReportsSize += fs.statSync(file).size
-          } catch {
+          } catch (err) {
             // File might have been deleted/locked during scan, skip
+            console.debug?.('[OptimizerService] Skip inaccessible crash report:', file, err)
           }
         }
       }
@@ -633,8 +637,9 @@ export class OptimizerService {
             tempCacheSet.add(file)
             try {
               tempCacheSize += fs.statSync(file).size
-            } catch {
+            } catch (err) {
               // File might have been deleted/locked during scan, skip
+              console.debug?.('[OptimizerService] Skip inaccessible cache file:', file, err)
             }
           }
         }
@@ -660,8 +665,9 @@ export class OptimizerService {
               tempCacheSet.add(file)
               try {
                 tempCacheSize += fs.statSync(file).size
-              } catch {
+              } catch (err) {
                 // File might have been deleted/locked during scan, skip
+                console.debug?.('[OptimizerService] Skip inaccessible launcher cache file:', file, err)
               }
             }
           }
@@ -737,8 +743,9 @@ export class OptimizerService {
                 freedBytes += stat.size
                 freedCount++
               }
-            } catch {
+            } catch (err) {
               // Bỏ qua các file đang bị tiến trình khác chiếm dụng/khóa
+              console.warn('[OptimizerService] Không thể dọn dẹp file:', filePath, err instanceof Error ? err.message : String(err))
             }
           }
         }
@@ -749,13 +756,13 @@ export class OptimizerService {
         freedBytes,
         freedCount,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[OptimizerService] Clean cache error:', err)
       return {
         success: false,
         freedBytes: 0,
         freedCount: 0,
-        error: err?.message || 'Có lỗi khi dọn dẹp bộ nhớ đệm.',
+        error: err instanceof Error ? err.message : 'Có lỗi khi dọn dẹp bộ nhớ đệm.',
       }
     }
   }
@@ -824,12 +831,12 @@ export class OptimizerService {
         fileName,
         message: `Đã cài đặt thành công mod ${fileName}!`,
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error('[OptimizerService] Install essential mod error:', err)
       return {
         success: false,
         modId: modSlug,
-        message: err?.message || `Có lỗi khi cài đặt mod ${modSlug}.`,
+        message: err instanceof Error ? err.message : `Có lỗi khi cài đặt mod ${modSlug}.`,
       }
     }
   }
@@ -900,8 +907,9 @@ export class OptimizerService {
             const stat = fs.statSync(fullPath)
             size += stat.size
             files.push(fullPath)
-          } catch {
+          } catch (err) {
             // File inaccessible, skip
+            console.debug?.('[OptimizerService] Skip inaccessible file:', fullPath, err)
           }
         } else if (entry.isDirectory() && currentDepth < maxDepth) {
           // Tránh duyệt sâu vào các thư mục game nhạy cảm như thế giới lưu (saves), mods chính
