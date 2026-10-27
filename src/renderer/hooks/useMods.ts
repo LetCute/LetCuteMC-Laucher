@@ -93,6 +93,7 @@ export function useMods({ gameDir, minecraftVersion }: UseModsProps) {
       while (idx < queue.length) {
         if (metaGen.current !== gen) return
         const item = queue[idx++]
+        if (!item) continue
         try {
           const meta: GameContentMetadata = await queryCache.get(
             `mod-meta:${item.path}`,

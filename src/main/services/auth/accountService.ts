@@ -36,8 +36,8 @@ function decryptSecret(val?: string): string | undefined {
 export function generateOfflineUuid(username: string): string {
   const input = `OfflinePlayer:${username}`
   const hash = crypto.createHash('md5').update(input, 'utf8').digest()
-  hash[6] = (hash[6] & 0x0f) | 0x30
-  hash[8] = (hash[8] & 0x3f) | 0x80
+  hash[6] = ((hash[6] ?? 0) & 0x0f) | 0x30
+  hash[8] = ((hash[8] ?? 0) & 0x3f) | 0x80
   const hex = hash.toString('hex')
   return [
     hex.slice(0, 8),
@@ -159,7 +159,7 @@ export async function getAccountState(): Promise<AccountState> {
       }
 
       const migratedState: AccountState = {
-        activeAccountId: activeAccountId || (accounts.length > 0 ? accounts[0].id : null),
+        activeAccountId: activeAccountId || accounts[0]?.id || null,
         accounts
       }
       await saveAccountState(migratedState)
@@ -271,18 +271,18 @@ export async function renameAccountLocally(accountId: string, newName: string): 
 
   const state = await getAccountState()
 
-  const accIndex = state.accounts.findIndex(a => a.id === accountId)
-  if (accIndex === -1) {
+  const acc = state.accounts.find(a => a.id === accountId)
+  if (!acc) {
     throw new Error('Không tìm thấy tài khoản để đổi tên.')
   }
 
-  if (state.accounts[accIndex].type !== 'local') {
+  if (acc.type !== 'local') {
     throw new Error('Chỉ có thể đổi tên hiển thị của tài khoản offline.')
   }
 
   // Update username
-  state.accounts[accIndex].username = cleanUsername
-  state.accounts[accIndex].updatedAt = new Date().toISOString()
+  acc.username = cleanUsername
+  acc.updatedAt = new Date().toISOString()
 
   // Note: For local accounts, we don't change the ID (it stays local_oldname) 
   // because changing the ID would break activeAccountId and local caches.
@@ -299,12 +299,10 @@ export async function saveLocalSkin(accountId: string, skinUrl: string | null, s
 
   const state = await getAccountState()
 
-  const accIndex = state.accounts.findIndex(a => a.id === accountId)
-  if (accIndex === -1) {
+  const acc = state.accounts.find(a => a.id === accountId)
+  if (!acc) {
     throw new Error('Không tìm thấy tài khoản để lưu skin.')
   }
-
-  const acc = state.accounts[accIndex]
   if (skinUrl !== undefined) acc.skinUrl = skinUrl || undefined
   if (skinModel !== undefined) {
     acc.skinModel = skinModel === 'slim' ? 'slim' : skinModel === 'default' ? 'default' : undefined
@@ -342,7 +340,7 @@ export async function removeAccount(
   state.accounts.splice(index, 1)
 
   if (state.activeAccountId === accountId) {
-    if (state.accounts.length > 0) {
+    if (state.accounts.length > 0 && state.accounts[0]) {
       state.activeAccountId = state.accounts[0].id
     } else {
       const defaultLocalUuid = generateOfflineUuid('Player')

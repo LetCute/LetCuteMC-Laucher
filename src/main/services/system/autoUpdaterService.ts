@@ -92,7 +92,7 @@ export async function quitAndInstallUpdate() {
 
 function sendUpdateEvent(type: string, message: string, data?: any) {
   const wins = BrowserWindow.getAllWindows()
-  if (wins.length > 0) {
+  if (wins.length > 0 && wins[0]) {
     wins[0].webContents.send('auto-update:status', { type, message, data })
   }
 }

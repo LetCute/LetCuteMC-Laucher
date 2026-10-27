@@ -33,6 +33,7 @@ function registerEventBusListeners(): void {
 export async function initDiscordRpc(): Promise<void> {
   registerEventBusListeners()
   const settings = await getSettings()
+  if (!settings.enableDiscordRpc) return
 
   if (rpcClient) return
 

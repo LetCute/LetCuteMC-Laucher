@@ -136,12 +136,12 @@ export function extractBaseMinecraftVersion(version: string): string {
   const clean = version.replace(/^(?:fabric|quilt|neoforge|forge)-loader-[^-]+-/i, '')
   // Match version format like 26.2-fabric0.19.3 -> 26.2
   const matchLoaderSuffix = clean.match(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge)/i)
-  if (matchLoaderSuffix) return matchLoaderSuffix[1]
+  if (matchLoaderSuffix?.[1]) return matchLoaderSuffix[1]
   // Match standard 1.x or 1.x.y version
   const match = clean.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
-  if (match) return match[1]
+  if (match?.[1]) return match[1]
   const matchGeneral = clean.match(/^(\d+\.\d+(?:\.\d+)?)/)
-  if (matchGeneral) return matchGeneral[1]
+  if (matchGeneral?.[1]) return matchGeneral[1]
   return clean
 }
 
@@ -296,8 +296,8 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         if (depIdMatch && depIdMatch[1]) {
           dependencies.push({
             modId: depIdMatch[1],
-            versionRange: rangeMatch ? rangeMatch[1] : undefined,
-            optional: mandatoryMatch ? mandatoryMatch[1].toLowerCase() === 'false' : false,
+            versionRange: rangeMatch?.[1] ? rangeMatch[1] : undefined,
+            optional: mandatoryMatch?.[1] ? mandatoryMatch[1].toLowerCase() === 'false' : false,
           })
         }
       }
@@ -306,9 +306,9 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
         fileName: path.basename(jarPath),
         filePath: jarPath,
         loader: isNeo ? 'neoforge' : 'forge',
-        modId: modIdMatch ? modIdMatch[1] : path.basename(jarPath, '.jar'),
-        name: nameMatch ? nameMatch[1] : (modIdMatch ? modIdMatch[1] : path.basename(jarPath, '.jar')),
-        version: verMatch ? verMatch[1] : 'unknown',
+        modId: modIdMatch?.[1] ? modIdMatch[1] : path.basename(jarPath, '.jar'),
+        name: nameMatch?.[1] ? nameMatch[1] : (modIdMatch?.[1] ? modIdMatch[1] : path.basename(jarPath, '.jar')),
+        version: verMatch?.[1] ? verMatch[1] : 'unknown',
         provides: [],
         dependencies,
       }

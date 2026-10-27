@@ -120,7 +120,7 @@ export function ProfileModal({
         if (modLoader === 'neoforge') versions = await window.launcherApi.getNeoForgeVersions()
 
         setLoaderVersions(versions)
-        if (versions.length > 0) {
+        if (versions.length > 0 && versions[0]) {
           setSelectedLoaderVersion(versions[0].version)
         }
       } catch (e) {
@@ -257,7 +257,7 @@ export function ProfileModal({
                     else if (val === 'old_alpha') firstList = versionCatalog?.oldAlpha ?? []
                     else firstList = versionCatalog?.releases ?? []
 
-                    if (firstList.length > 0) {
+                    if (firstList.length > 0 && firstList[0]) {
                       const nextVer = firstList[0].id
                       setFormData(p => ({
                         ...p,

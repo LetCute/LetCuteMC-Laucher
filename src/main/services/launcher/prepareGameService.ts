@@ -102,10 +102,10 @@ export async function checkPreparedProfile(
   const versionCheckDir = isModpackProfile ? gameDir : mcRootDir
   
   const cached = await getPreparedProfiles()
+  const record = cached[profile.id]
 
-  if (cached[profile.id]) {
+  if (record) {
     // Quick validation: kiểm tra version JSON và JAR tại đường dẫn đúng
-    const record = cached[profile.id]
     
     // Tìm file JSON ở gameDir hoặc mcRootDir
     let jsonPath = path.join(versionCheckDir, 'versions', profile.minecraftVersion, `${profile.minecraftVersion}.json`)

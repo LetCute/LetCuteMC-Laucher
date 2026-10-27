@@ -97,7 +97,7 @@ async function discoverDiskProfiles(existingProfiles: LauncherProfile[]): Promis
           if (versionFolders.length > 0) {
             // Prefer version with loader if present, or first found
             const loaderVer = versionFolders.find(v => v.includes('fabric') || v.includes('forge') || v.includes('neoforge') || v.includes('quilt'));
-            detectedVersion = loaderVer || versionFolders[0];
+            detectedVersion = loaderVer || versionFolders[0] || '1.20.1';
           }
         } catch {
           // ignore
@@ -143,10 +143,10 @@ export async function getProfiles(): Promise<ProfilesStore> {
   }
 
   let activeProfileId = raw.activeProfileId ?? null;
-  if (!activeProfileId && migratedProfiles.length > 0) {
+  if (!activeProfileId && migratedProfiles.length > 0 && migratedProfiles[0]) {
     activeProfileId = migratedProfiles[0].id;
   } else if (activeProfileId && !migratedProfiles.some(p => p.id === activeProfileId)) {
-    activeProfileId = migratedProfiles.length > 0 ? migratedProfiles[0].id : null;
+    activeProfileId = migratedProfiles[0]?.id ?? null;
   }
 
   let store: ProfilesStore = {
@@ -233,6 +233,7 @@ export async function updateProfile(
   }
 
   const existing = store.profiles[index];
+  if (!existing) throw new Error('Profile không tìm thấy');
   let finalGameDir = input.gameDir !== undefined ? input.gameDir : existing.gameDir;
   if (!finalGameDir || finalGameDir.trim() === '') {
     finalGameDir = getLauncherDataDirectory();
@@ -260,9 +261,8 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   await ensureLauncherDataDirectory();
   const store = await getProfiles();
   const index = store.profiles.findIndex(p => p.id === profileId);
-  if (index === -1) return false;
-
   const profile = store.profiles[index];
+  if (index === -1 || !profile) return false;
   const { getLauncherDataDirectory } = await import('../system/storageService.js');
   const rootDir = getLauncherDataDirectory();
 

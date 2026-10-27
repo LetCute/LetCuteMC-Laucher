@@ -28,8 +28,7 @@ import type {
   LauncherProfile,
   JavaRuntimeSelectionResult,
   LauncherSettings,
-  AccountState,
-  LaunchInput
+  AccountState
 } from '@/shared/types'
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'

@@ -7,7 +7,6 @@ import { useToast } from '../components/ui/Toast'
 import { useConfirm } from '../components/ui/ConfirmDialogContext'
 import { Badge } from '../components/ui/Badge'
 import type { ModrinthVersion, ModrinthSearchResult, StoreInstallation, LauncherProfile } from '../../shared/types'
-import { Select } from '../components/ui/Select'
 import { ModrinthIcon } from '@/components/icons/ModrinthIcon'
 
 interface StoreScreenProps {
@@ -30,9 +29,9 @@ function extractMcVersion(versionStr: string): string {
   if (!versionStr) return ''
   const clean = versionStr.replace(/^(?:fabric|quilt|neoforge|forge)-loader-[^-]+-/i, '')
   const matchSuffix = clean.match(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge)/i)
-  if (matchSuffix) return matchSuffix[1]
+  if (matchSuffix?.[1]) return matchSuffix[1]
   const match = clean.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
-  if (match) return match[1]
+  if (match?.[1]) return match[1]
   return clean
 }
 
@@ -569,7 +568,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
                 if (state.mode === 'link') {
                   let versionId = importInputValue;
                   const match = importInputValue.match(/version\/([a-zA-Z0-9]+)/);
-                  if (match) {
+                  if (match?.[1]) {
                     versionId = match[1];
                   }
                   showToast('info', `Đã thêm vào Tiến trình...`);

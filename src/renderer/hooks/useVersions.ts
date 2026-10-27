@@ -57,7 +57,7 @@ export function getEstimatedJavaVersion(versionId: string): string {
   }
 
   const match = versionId.match(/^1\.(\d+)(?:\.(\d+))?/)
-  if (match) {
+  if (match && match[1]) {
     const minor = parseInt(match[1], 10)
     const patch = parseInt(match[2] || '0', 10)
     if (minor >= 26) return 'Java 25'

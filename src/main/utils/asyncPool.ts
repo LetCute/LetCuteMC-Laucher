@@ -13,7 +13,10 @@ export async function asyncPool<T, R>(
   async function worker() {
     while (currentIndex < items.length) {
       const idx = currentIndex++
-      results[idx] = await task(items[idx])
+      const item = items[idx]
+      if (item !== undefined) {
+        results[idx] = await task(item)
+      }
     }
   }
 

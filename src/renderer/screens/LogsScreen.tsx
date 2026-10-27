@@ -44,7 +44,7 @@ function formatBytes(bytes: number): string {
   const k = 1024
   const sizes = ['B', 'KB', 'MB', 'GB', 'TB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
-  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i]}`
+  return `${(bytes / Math.pow(k, i)).toFixed(1)} ${sizes[i] || 'B'}`
 }
 
 function formatDateTime(timestamp: number): string {
@@ -153,7 +153,7 @@ function parseLogLines(rawText: string): ParsedLogLine[] {
 
   for (let i = 0; i < lines.length; i++) {
     const raw = lines[i]
-    if (!raw.trim()) continue
+    if (!raw || !raw.trim()) continue
 
     const match = raw.match(logRegex)
     if (match) {
@@ -173,7 +173,7 @@ function parseLogLines(rawText: string): ParsedLogLine[] {
         thread,
         level,
         logger,
-        message,
+        message: message || '',
       })
     } else {
       // Dòng phụ / Stack Trace

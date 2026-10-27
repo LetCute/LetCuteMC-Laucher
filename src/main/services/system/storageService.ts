@@ -175,10 +175,10 @@ export async function ensureGameDirectoryStructure(gameDir: string, mcVersion?: 
 export function getMinecraftLangCode(version?: string): string {
   if (!version) return 'vi_vn'
   const match = version.match(/(?:^|[^\d])(1\.\d+|2\d+\.\d+)/)
-  if (match) {
+  if (match && match[1]) {
     const parts = match[1].split('.')
-    const major = parseInt(parts[0], 10)
-    const minor = parseInt(parts[1], 10)
+    const major = parseInt(parts[0] ?? '', 10)
+    const minor = parseInt(parts[1] ?? '', 10)
     if (major === 1 && minor < 13) {
       return 'vi_VN'
     }

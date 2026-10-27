@@ -174,7 +174,7 @@ export class ServerListService {
 
         let online = 0
         let max = 0
-        if (playersMatch) {
+        if (playersMatch && playersMatch[1] && playersMatch[2]) {
           online = parseInt(playersMatch[1], 10)
           max = parseInt(playersMatch[2], 10)
         } else {

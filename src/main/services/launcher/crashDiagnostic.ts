@@ -46,9 +46,9 @@ export async function diagnoseAndRecoverCrash(
   if (await pathExists(crashDir)) {
     const crashEntries = await fs.readdir(crashDir).catch(() => [])
     const crashFiles = crashEntries.filter((f) => f.endsWith('.txt') || f.endsWith('.log'))
-    if (crashFiles.length > 0) {
-      crashFiles.sort()
-      latestCrashFile = path.join(crashDir, crashFiles[crashFiles.length - 1])
+    const lastCrashFile = crashFiles.sort()[crashFiles.length - 1]
+    if (lastCrashFile) {
+      latestCrashFile = path.join(crashDir, lastCrashFile)
       const stat = await fs.stat(latestCrashFile).catch(() => null)
       if (stat && Date.now() - stat.mtimeMs < 120000) {
         crashReportContent = await fs.readFile(latestCrashFile, 'utf8').catch(() => '')

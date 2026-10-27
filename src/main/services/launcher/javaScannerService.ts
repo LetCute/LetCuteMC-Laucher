@@ -1,6 +1,5 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
-import os from 'node:os'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import type {
@@ -440,8 +439,10 @@ async function mapPool<T, R>(
   async function run(): Promise<void> {
     while (next < items.length) {
       const i = next++
+      const item = items[i]
+      if (item === undefined) continue
       try {
-        results[i] = { status: 'fulfilled', value: await worker(items[i]) }
+        results[i] = { status: 'fulfilled', value: await worker(item) }
       } catch (reason) {
         results[i] = { status: 'rejected', reason }
       }
@@ -477,10 +478,11 @@ export function fallbackRequiredJavaFromMinecraftVersion(version: string): numbe
 
   // Year-based snapshot-ish ids (2025 / 26.1)
   const yearMatch = clean.match(/^(20)?(\d{2,4})(?:\.(\d+))?$/)
-  if (yearMatch && !clean.startsWith('1.')) {
+  if (yearMatch && yearMatch[2] && !clean.startsWith('1.')) {
+    const y2 = yearMatch[2]
     const year = yearMatch[1]
-      ? Number(yearMatch[1] + yearMatch[2])
-      : Number(yearMatch[2].length <= 2 ? `20${yearMatch[2]}` : yearMatch[2])
+      ? Number(yearMatch[1] + y2)
+      : Number(y2.length <= 2 ? `20${y2}` : y2)
     if (Number.isFinite(year)) {
       if (year >= 2026 || year === 26) return 25
       if (year === 2025) return 21
@@ -504,7 +506,7 @@ export function fallbackRequiredJavaFromMinecraftVersion(version: string): numbe
 
 export function extractMinecraftVersion(version: string): string | null {
   const yearMatch = version.match(/\b(20\d{2}|2[5-9]\.\d+)\b/)
-  if (yearMatch) return yearMatch[1]
+  if (yearMatch?.[1]) return yearMatch[1]
   const legacyMatch = version.match(/1\.\d+(?:\.\d+)?/)
   return legacyMatch?.[0] ?? null
 }

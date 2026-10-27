@@ -1,4 +1,3 @@
-import { BrowserWindow } from 'electron'
 import { handleIpc } from './ipcHelper'
 import type {
   LaunchInput,
@@ -11,7 +10,6 @@ import type {
   LauncherLogLevel,
 } from '../../shared/types'
 import {
-  startLaunchJob,
   safeStartLaunchJob,
   cancelLaunchJob,
   getLaunchState,

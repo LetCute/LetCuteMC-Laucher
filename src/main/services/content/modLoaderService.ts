@@ -27,8 +27,9 @@ export async function getForgeVersions(): Promise<ModLoaderVersion[]> {
     const versionMap = new Map<string, { latest?: string; recommended?: string }>()
     for (const [key, forgeVer] of Object.entries(data.promos)) {
       const match = key.match(/^(.+)-(latest|recommended)$/)
-      if (!match) continue
-      const [, mcVer, type] = match
+      if (!match || !match[1] || !match[2]) continue
+      const mcVer = match[1]
+      const type = match[2]
       if (!versionMap.has(mcVer)) versionMap.set(mcVer, {})
       const entry = versionMap.get(mcVer)!
       if (type === 'latest') entry.latest = forgeVer
@@ -56,8 +57,8 @@ export async function getForgeVersions(): Promise<ModLoaderVersion[]> {
 
     // Sort giảm dần theo MC version
     results.sort((a, b) => {
-      const mcA = a.version.split('-')[0]
-      const mcB = b.version.split('-')[0]
+      const mcA = a.version.split('-')[0] ?? ''
+      const mcB = b.version.split('-')[0] ?? ''
       return compareMcVersions(mcB, mcA)
     })
 

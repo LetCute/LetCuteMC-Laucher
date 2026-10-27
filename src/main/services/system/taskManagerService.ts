@@ -1,5 +1,5 @@
 import { BrowserWindow } from 'electron'
-import type { BackgroundTask, BackgroundTaskStatus } from '../../../shared/types.js'
+import type { BackgroundTask } from '../../../shared/types.js'
 
 export class TaskManagerService {
   private tasks: Map<string, BackgroundTask> = new Map()

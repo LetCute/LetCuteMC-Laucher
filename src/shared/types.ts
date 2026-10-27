@@ -1069,11 +1069,11 @@ export function formatVersionDisplay(versionStr?: string): string {
     .replace(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge).*/i, '$1')
 
   const matchStandard = baseVer.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
-  if (matchStandard) {
+  if (matchStandard && matchStandard[1]) {
     baseVer = matchStandard[1]
   } else {
     const matchGen = baseVer.match(/^(\d+(?:\.\d+)+)/)
-    if (matchGen) baseVer = matchGen[1]
+    if (matchGen && matchGen[1]) baseVer = matchGen[1]
   }
 
   if (isFabric) return `Fabric ${baseVer}`

@@ -14,7 +14,7 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 let scanner;
 try {
   scanner = require(
-    path.join(root, "dist-electron/main/services/javaScannerService.js"),
+    path.join(root, "dist-electron/main/services/launcher/javaScannerService.js"),
   );
 } catch {
   console.error("Build main first: npm run build:main");

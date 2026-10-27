@@ -90,9 +90,9 @@ export class LanDiscoveryService extends EventEmitter {
     const motdMatch = content.match(/\[MOTD\]([\s\S]*?)\[\/MOTD\]/i)
     const adMatch = content.match(/\[AD\](\d+)\[\/AD\]/i)
 
-    if (!adMatch) return
+    if (!adMatch || !adMatch[1]) return
 
-    const motd = motdMatch ? motdMatch[1] : 'Minecraft LAN World'
+    const motd = motdMatch?.[1] ?? 'Minecraft LAN World'
     const port = parseInt(adMatch[1], 10)
     const key = `${ipAddress}:${port}`
 

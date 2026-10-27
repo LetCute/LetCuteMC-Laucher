@@ -1,7 +1,7 @@
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { ModConflictService } from './modConflictService'
-import { getMinecraftLangCode, applyDefaultGameOptions } from '../system/storageService'
+import { applyDefaultGameOptions } from '../system/storageService'
 
 export interface PreLaunchCheckResult {
   ok: boolean

@@ -107,6 +107,7 @@ export async function downloadTasks(
       }
 
       const currentUrl = urlCandidates[candidateIdx]
+      if (!currentUrl) continue
       let retries = 2
 
       while (retries >= 0 && !success) {
