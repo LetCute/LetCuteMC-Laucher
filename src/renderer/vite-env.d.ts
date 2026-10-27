@@ -131,17 +131,17 @@ declare global {
       renameAccountLocally(accountId: string, newName: string): Promise<AccountState>
       saveLocalSkin(accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null): Promise<AccountState>
       saveMicrosoftAccount(account: MicrosoftAccount): Promise<AccountState>
-      loginMicrosoft(): Promise<MicrosoftAccount>
+loginMicrosoft(): Promise<AccountState>
       refreshMicrosoftAccount(accountId?: string): Promise<AccountState>
-      
+
       // Mojang API
-      getMojangProfile(accessToken: string): Promise<import('../shared/types').MojangProfile>
+      getMojangProfile(target: string): Promise<import('../shared/types').MojangProfile>
       fetchMojangTexture(url: string): Promise<string | null>
       lookupPlayerSkin(usernameOrUuid: string): Promise<{ url: string; model: 'default' | 'slim'; username: string; uuid?: string; capeUrl?: string } | null>
-      uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
-      changeMojangCape(accessToken: string, capeId: string): Promise<void>
-      checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }>
-      changeMojangName(accessToken: string, newName: string): Promise<void>
+      uploadMojangSkin(target: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void>
+      changeMojangCape(target: string, capeId: string): Promise<void>
+      checkMojangNameChange(target: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }>
+      changeMojangName(target: string, newName: string): Promise<void>
 
       // New non-blocking launch API
       startLaunch(input: LaunchInput): Promise<StartLaunchResult>

@@ -1,5 +1,5 @@
 import { handleIpc } from './ipcHelper'
-import type { MicrosoftAccount } from '../../shared/types'
+import type { AccountItem } from '../../shared/types'
 import {
   getAccountState,
   selectAccount,
@@ -9,6 +9,8 @@ import {
   refreshMicrosoftAccountToken,
   renameAccountLocally,
   saveLocalSkin,
+  sanitizeAccountState,
+  getValidAccessToken,
 } from '../services/auth/accountService'
 import { loginWithMicrosoft } from '../services/auth/microsoftAuthService'
 import {
@@ -50,17 +52,30 @@ function setCachedTexture(key: string, data: string): void {
 }
 
 export function registerAccountIpc(): void {
-  handleIpc('account:get', getAccountState)
-  handleIpc('account:select', (accountId: string) => selectAccount(accountId))
-  handleIpc('account:add-local', (username: string) => addLocalAccount(username))
-  handleIpc('account:rename-locally', (accountId: string, newName: string) => renameAccountLocally(accountId, newName))
-  handleIpc('account:save-local-skin', (accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null) => {
-    return saveLocalSkin(accountId, skinUrl, skinModel, capeUrl)
+  handleIpc('account:get', async () => sanitizeAccountState(await getAccountState()))
+  handleIpc('account:select', async (accountId: string) => sanitizeAccountState(await selectAccount(accountId)))
+  handleIpc('account:add-local', async (username: string) => sanitizeAccountState(await addLocalAccount(username)))
+  handleIpc('account:rename-locally', async (accountId: string, newName: string) =>
+    sanitizeAccountState(await renameAccountLocally(accountId, newName))
+  )
+  handleIpc(
+    'account:save-local-skin',
+    async (accountId: string, skinUrl: string | null, skinModel: string | null, capeUrl: string | null) => {
+      return sanitizeAccountState(await saveLocalSkin(accountId, skinUrl, skinModel, capeUrl))
+    }
+  )
+  handleIpc('account:remove', async (accountId: string) => sanitizeAccountState(await removeAccount(accountId)))
+  handleIpc('account:save-microsoft', async (account: AccountItem) =>
+    sanitizeAccountState(await saveMicrosoftAccount(account))
+  )
+  handleIpc('account:login-microsoft', async () => {
+    const msAccount = await loginWithMicrosoft()
+    const updated = await saveMicrosoftAccount(msAccount)
+    return sanitizeAccountState(updated)
   })
-  handleIpc('account:remove', (accountId: string) => removeAccount(accountId))
-  handleIpc('account:save-microsoft', (account: MicrosoftAccount) => saveMicrosoftAccount(account))
-  handleIpc('account:login-microsoft', () => loginWithMicrosoft())
-  handleIpc('account:refresh-microsoft', (accountId: string) => refreshMicrosoftAccountToken(accountId))
+  handleIpc('account:refresh-microsoft', async (accountId: string) =>
+    sanitizeAccountState(await refreshMicrosoftAccountToken(accountId))
+  )
 
   // Skin and texture utilities
   handleIpc('mojang:fetch-texture', async (url: string) => {
@@ -183,11 +198,34 @@ export function registerAccountIpc(): void {
   })
 
   // Mojang API endpoints
-  handleIpc('mojang:get-profile', (accessToken: string) => fetchMojangProfile(accessToken))
-  handleIpc('mojang:upload-skin', (accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim') =>
-    uploadMojangSkin(accessToken, Buffer.from(fileBuffer), variant)
-  )
-  handleIpc('mojang:change-cape', (accessToken: string, capeId: string) => changeMojangCape(accessToken, capeId))
-  handleIpc('mojang:check-name-change', (accessToken: string) => checkMojangNameChange(accessToken))
-  handleIpc('mojang:change-name', (accessToken: string, newName: string) => changeMojangName(accessToken, newName))
+  async function resolveAccessToken(target: string): Promise<string> {
+    if (!target) throw new Error('Missing account identifier or token.')
+    const state = await getAccountState()
+    const found = state.accounts.find(a => a.id === target)
+    if (found) {
+      return getValidAccessToken(found.id)
+    }
+    return target
+  }
+
+  handleIpc('mojang:get-profile', async (target: string) => {
+    const token = await resolveAccessToken(target)
+    return fetchMojangProfile(token)
+  })
+  handleIpc('mojang:upload-skin', async (target: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim') => {
+    const token = await resolveAccessToken(target)
+    return uploadMojangSkin(token, Buffer.from(fileBuffer), variant)
+  })
+  handleIpc('mojang:change-cape', async (target: string, capeId: string) => {
+    const token = await resolveAccessToken(target)
+    return changeMojangCape(token, capeId)
+  })
+  handleIpc('mojang:check-name-change', async (target: string) => {
+    const token = await resolveAccessToken(target)
+    return checkMojangNameChange(token)
+  })
+  handleIpc('mojang:change-name', async (target: string, newName: string) => {
+    const token = await resolveAccessToken(target)
+    return changeMojangName(token, newName)
+  })
 }

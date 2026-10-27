@@ -87,6 +87,10 @@ function createWindow(): void {
     e.preventDefault()
   })
 
+  mainWindow.webContents.on('will-attach-webview', (e) => {
+    e.preventDefault()
+  })
+
   // While MC runs: X / close → hide to background (keep process alive to detect MC exit)
   mainWindow.on('close', (e) => {
     if (!shouldKeepAliveForGame()) return

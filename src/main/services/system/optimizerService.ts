@@ -25,27 +25,36 @@ const USER_AGENT = 'LetCuteMC-Launcher/1.0 (contact@letcute.com)'
 function downloadFile(url: string, destination: string): Promise<void> {
   return new Promise((resolve, reject) => {
     const file = createWriteStream(destination)
+    let finished = false
+    const cleanup = (err: Error) => {
+      if (finished) return
+      finished = true
+      file.destroy()
+      fs.unlink(destination, () => {})
+      reject(err)
+    }
+
     https.get(url, { headers: { 'User-Agent': USER_AGENT } }, (res) => {
       if (res.statusCode === 301 || res.statusCode === 302) {
         const redirect = res.headers.location
         if (redirect) {
-          file.close()
+          file.destroy()
+          fs.unlink(destination, () => {})
           return downloadFile(redirect, destination).then(resolve).catch(reject)
         }
       }
       if (res.statusCode !== 200) {
-        file.close()
-        return reject(new Error(`HTTP ${res.statusCode}`))
+        return cleanup(new Error(`HTTP ${res.statusCode}`))
       }
+      res.on('error', cleanup)
+      file.on('error', cleanup)
       res.pipe(file)
       file.on('finish', () => {
-        file.close()
-        resolve()
+        if (finished) return
+        finished = true
+        file.close(() => resolve())
       })
-    }).on('error', (err) => {
-      file.close()
-      reject(err)
-    })
+    }).on('error', cleanup)
   })
 }
 
@@ -821,7 +830,7 @@ export class OptimizerService {
         }
       }
 
-      const fileName = primaryFile.filename || `${modSlug}.jar`
+      const fileName = path.basename(primaryFile.filename || `${modSlug}.jar`)
       const destPath = path.join(modsDir, fileName)
       await downloadFile(primaryFile.url, destPath)
 

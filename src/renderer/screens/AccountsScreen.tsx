@@ -126,7 +126,6 @@ export const AccountsScreen = ({
   const [renameTargetId, setRenameTargetId] = useState('')
   const [renameTargetName, setRenameTargetName] = useState('')
   const [renameTargetType, setRenameTargetType] = useState<'local' | 'microsoft'>('local')
-  const [renameTargetToken, setRenameTargetToken] = useState('')
 
   const [isFetchingMojang, setIsFetchingMojang] = useState(false)
   const [isSavingMojang, setIsSavingMojang] = useState(false)
@@ -208,7 +207,7 @@ export const AccountsScreen = ({
   }
 
   // Open the skin change modal for a specific account
-  const openSkinModal = async (accountId: string, accountName: string, accountType: 'local' | 'microsoft', accessToken?: string) => {
+  const openSkinModal = async (accountId: string, accountName: string, accountType: 'local' | 'microsoft') => {
     setSkinModalTargetId(accountId)
     setSkinModalTargetType(accountType)
     setSkinModalTargetName(accountName)
@@ -216,15 +215,14 @@ export const AccountsScreen = ({
     setRenameTargetId(accountId)
     setRenameTargetName(accountName)
     setRenameTargetType(accountType)
-    setRenameTargetToken(accessToken || '')
     setShowSkinModal(true)
     setMojangProfile(null)
 
-    if (accountType === 'microsoft' && accessToken) {
+    if (accountType === 'microsoft') {
       setIsFetchingMojang(true)
       try {
-        const profile = await window.launcherApi.getMojangProfile(accessToken)
-        const allowObj = await window.launcherApi.checkMojangNameChange(accessToken)
+        const profile = await window.launcherApi.getMojangProfile(accountId)
+        const allowObj = await window.launcherApi.checkMojangNameChange(accountId)
         setMojangProfile(profile)
 
         // Name change logic for MS
@@ -336,19 +334,14 @@ export const AccountsScreen = ({
     try {
       if (renameTargetType === 'microsoft') {
         try {
-          await window.launcherApi.changeMojangName(renameTargetToken, trimmed)
-        } catch (err) {
-          const errMessage = err instanceof Error ? err.message : String(err)
-          if (errMessage.includes('TOKEN_EXPIRED') || errMessage.includes('401')) {
-            showToast('info', 'Đang tự động gia hạn phiên đăng nhập...')
-            const newState = await window.launcherApi.refreshMicrosoftAccount(renameTargetId)
-            const newAcc = newState.accounts.find((a: any) => a.id === renameTargetId)
-            if (newAcc?.accessToken) {
-              await window.launcherApi.changeMojangName(newAcc.accessToken, trimmed)
-            } else {
-              throw new Error('Gia hạn thất bại.')
-            }
-          } else if (errMessage.includes('NAME_UNAVAILABLE')) {
+        await window.launcherApi.changeMojangName(renameTargetId, trimmed)
+      } catch (err) {
+        const errMessage = err instanceof Error ? err.message : String(err)
+        if (errMessage.includes('TOKEN_EXPIRED') || errMessage.includes('401')) {
+          showToast('info', 'Đang tự động gia hạn phiên đăng nhập...')
+          await window.launcherApi.refreshMicrosoftAccount(renameTargetId)
+          await window.launcherApi.changeMojangName(renameTargetId, trimmed)
+        } else if (errMessage.includes('NAME_UNAVAILABLE')) {
             throw new Error('Tên này đã được sử dụng hoặc bạn đang bị giới hạn.')
           } else {
             throw err
@@ -523,7 +516,7 @@ export const AccountsScreen = ({
 
     if (skinModalTargetType === 'microsoft') {
       const acc = accountState.accounts.find(a => a.id === skinModalTargetId)
-      if (!acc || acc.type !== 'microsoft' || !acc.accessToken) return
+      if (!acc || acc.type !== 'microsoft') return
 
       setIsSavingMojang(true)
       try {
@@ -532,20 +525,20 @@ export const AccountsScreen = ({
         if (pendingSkinFile && pendingSkinFile.startsWith('data:image')) {
           const buffer = dataUrlToArrayBuffer(pendingSkinFile)
           const apiVariant = pendingSkinModel === 'slim' ? 'slim' : 'classic'
-          await window.launcherApi.uploadMojangSkin(acc.accessToken, buffer, apiVariant)
+          await window.launcherApi.uploadMojangSkin(acc.id, buffer, apiVariant)
           profileChanged = true
         }
 
         const currentActiveCapeId = mojangProfile?.capes?.find((c: any) => c.state === 'ACTIVE')?.id || ''
         if (pendingCapeId !== currentActiveCapeId) {
-          await window.launcherApi.changeMojangCape(acc.accessToken, pendingCapeId)
+          await window.launcherApi.changeMojangCape(acc.id, pendingCapeId)
           profileChanged = true
         }
 
         if (profileChanged) {
           showToast('success', 'Đã cập nhật Skin/Cape trên Mojang!')
           // Cập nhật lại state account trong launcher để card nhân vật đổi ngay lập tức
-          const updatedProfile = await window.launcherApi.getMojangProfile(acc.accessToken)
+          const updatedProfile = await window.launcherApi.getMojangProfile(acc.id)
           const activeSkin = updatedProfile?.skins?.find((s: any) => s.state === 'ACTIVE')
           const activeCape = updatedProfile?.capes?.find((c: any) => c.state === 'ACTIVE')
           const newSkinUrl = activeSkin ? (await window.launcherApi.fetchMojangTexture(activeSkin.url)) || activeSkin.url : null
@@ -660,7 +653,7 @@ export const AccountsScreen = ({
                   </div>
 
                   <div className="flex gap-2 justify-center w-full mt-4 pt-3 border-t border-border/50">
-                    <Button size="sm" variant="outline" className="h-7 px-3 hover:bg-primary/10 hover:text-primary hover:border-primary/30" title="Sửa thông tin" onClick={(e) => { e.stopPropagation(); openSkinModal(acc.id, acc.username, acc.type, (acc as any).accessToken); }}>
+                    <Button size="sm" variant="outline" className="h-7 px-3 hover:bg-primary/10 hover:text-primary hover:border-primary/30" title="Sửa thông tin" onClick={(e) => { e.stopPropagation(); openSkinModal(acc.id, acc.username, acc.type); }}>
                       <Pencil size={14} />
                     </Button>
                     <Button size="sm" variant="outline" className="h-7 px-3 text-destructive hover:bg-destructive/10 hover:border-destructive/30" title="Xóa tài khoản" onClick={(e) => { e.stopPropagation(); handleRemoveAccount(acc.id, acc.username); }}>

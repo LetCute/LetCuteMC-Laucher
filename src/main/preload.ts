@@ -330,7 +330,7 @@ const launcherApi = {
     return ipcRenderer.invoke('account:save-microsoft', account)
   },
 
-  loginMicrosoft(): Promise<any> {
+  loginMicrosoft(): Promise<AccountState> {
     return ipcRenderer.invoke('account:login-microsoft')
   },
 
@@ -338,8 +338,8 @@ const launcherApi = {
     return ipcRenderer.invoke('account:refresh-microsoft', accountId)
   },
 
-  getMojangProfile(accessToken: string): Promise<any> {
-    return ipcRenderer.invoke('mojang:get-profile', accessToken)
+  getMojangProfile(target: string): Promise<any> {
+    return ipcRenderer.invoke('mojang:get-profile', target)
   },
 
   fetchMojangTexture(url: string): Promise<string | null> {
@@ -350,20 +350,20 @@ const launcherApi = {
     return ipcRenderer.invoke('account:lookup-player-skin', usernameOrUuid)
   },
 
-  uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
-    return ipcRenderer.invoke('mojang:upload-skin', accessToken, fileBuffer, variant)
+  uploadMojangSkin(target: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
+    return ipcRenderer.invoke('mojang:upload-skin', target, fileBuffer, variant)
   },
 
-  changeMojangCape(accessToken: string, capeId: string): Promise<void> {
-    return ipcRenderer.invoke('mojang:change-cape', accessToken, capeId)
+  changeMojangCape(target: string, capeId: string): Promise<void> {
+    return ipcRenderer.invoke('mojang:change-cape', target, capeId)
   },
 
-  checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
-    return ipcRenderer.invoke('mojang:check-name-change', accessToken)
+  checkMojangNameChange(target: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
+    return ipcRenderer.invoke('mojang:check-name-change', target)
   },
 
-  changeMojangName(accessToken: string, newName: string): Promise<void> {
-    return ipcRenderer.invoke('mojang:change-name', accessToken, newName)
+  changeMojangName(target: string, newName: string): Promise<void> {
+    return ipcRenderer.invoke('mojang:change-name', target, newName)
   },
 
   searchModrinth(query: string, projectType: string, offset?: number, gameVersion?: string, loader?: string): Promise<any> {

@@ -83,8 +83,10 @@ export class ScreenshotService {
     if (!filePath || typeof filePath !== 'string') return false
     const ext = path.extname(filePath).toLowerCase()
     if (!['.png', '.jpg', '.jpeg', '.webp'].includes(ext)) return false
-    const parts = path.normalize(filePath).split(path.sep)
-    return parts.includes('screenshots')
+    const normalized = path.normalize(path.resolve(filePath))
+    const parts = normalized.split(path.sep).map(p => p.toLowerCase())
+    const idx = parts.lastIndexOf('screenshots')
+    return idx > 0 && parts.length === idx + 2
   }
 
   /**

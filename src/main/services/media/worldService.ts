@@ -286,8 +286,25 @@ export class WorldService {
         await fs.rm(targetPath, { recursive: true, force: true })
       }
       await fs.mkdir(targetPath, { recursive: true })
-
-      zip.extractAllTo(targetPath, true)
+      const normalizedTarget = path.resolve(targetPath)
+      const entries = zip.getEntries()
+      for (const entry of entries) {
+        const destFilePath = path.resolve(targetPath, entry.entryName)
+        if (!destFilePath.startsWith(normalizedTarget + path.sep) && destFilePath !== normalizedTarget) {
+          continue
+        }
+        if (entry.isDirectory) {
+          if (!existsSync(destFilePath)) {
+            await fs.mkdir(destFilePath, { recursive: true })
+          }
+        } else {
+          const destFileDir = path.dirname(destFilePath)
+          if (!existsSync(destFileDir)) {
+            await fs.mkdir(destFileDir, { recursive: true })
+          }
+          await fs.writeFile(destFilePath, entry.getData())
+        }
+      }
 
       return {
         success: true,
@@ -376,7 +393,8 @@ export class WorldService {
       const targetPath = path.join(savesDir, targetFolderName)
       await fs.mkdir(targetPath, { recursive: true })
 
-      // Nếu level.dat nằm ở thư mục con trong zip:
+      const normalizedTarget = path.resolve(targetPath)
+    // Nếu level.dat nằm ở thư mục con trong zip:
       const levelDatDir = path.dirname(levelDatEntry.entryName)
       if (levelDatDir && levelDatDir !== '.') {
         // Trích xuất các tệp thuộc thư mục con đó
@@ -384,7 +402,10 @@ export class WorldService {
         for (const entry of entries) {
           if (entry.entryName.startsWith(prefix) && !entry.isDirectory) {
             const relPath = entry.entryName.slice(prefix.length)
-            const destFilePath = path.join(targetPath, relPath)
+            const destFilePath = path.resolve(targetPath, relPath)
+          if (!destFilePath.startsWith(normalizedTarget + path.sep)) {
+            continue
+          }
             const destFileDir = path.dirname(destFilePath)
             if (!existsSync(destFileDir)) {
               await fs.mkdir(destFileDir, { recursive: true })

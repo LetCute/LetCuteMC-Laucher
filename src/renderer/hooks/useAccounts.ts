@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
-import type { AccountState, MicrosoftAccount } from '@/shared/types'
+import type { AccountState } from '@/shared/types'
 import { launcherClient } from '../services/launcherClient'
 import { useToast } from '../components/ui/Toast'
 
@@ -112,11 +112,12 @@ export function useAccounts(options?: UseAccountsOptions) {
     setIsLoggingIn(true)
     try {
       options?.appendLog?.('info', 'Bắt đầu đăng nhập tài khoản Microsoft...')
-      const msAccount: MicrosoftAccount = await launcherClient.loginMicrosoft()
-      const updated = await launcherClient.saveMicrosoftAccount(msAccount)
+      const updated = await launcherClient.loginMicrosoft()
       setAccountState(updated)
-      options?.appendLog?.('success', `Đăng nhập Microsoft thành công: ${msAccount.username}`)
-      showToast('success', `Đăng nhập Microsoft thành công: ${msAccount.username}`)
+      const msAccount = updated.accounts.find((a) => a.id === updated.activeAccountId)
+      const username = msAccount?.username || 'Microsoft'
+      options?.appendLog?.('success', `Đăng nhập Microsoft thành công: ${username}`)
+      showToast('success', `Đăng nhập Microsoft thành công: ${username}`)
       return updated
     } catch (e) {
       console.error('Microsoft login failed:', e)

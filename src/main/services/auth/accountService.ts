@@ -1,7 +1,7 @@
 import fsPromises from 'node:fs/promises'
 import crypto from 'node:crypto'
 import { safeStorage } from 'electron'
-import type { AccountState, AccountItem, MicrosoftAccount } from '../../../shared/types'
+import type { AccountState, AccountItem } from '../../../shared/types'
 import { getAccountConfigPath, ensureLauncherDataDirectory } from '../system/storageService.js'
 
 /** Single-flight MS token refresh — avoids TOO_MANY_REQUESTS on spam load */
@@ -46,6 +46,18 @@ export function generateOfflineUuid(username: string): string {
     hex.slice(16, 20),
     hex.slice(20)
   ].join('-')
+}
+
+export function sanitizeAccountItem(acc: AccountItem): AccountItem {
+  const { accessToken: _a, refreshToken: _r, ...safeAcc } = acc
+  return safeAcc
+}
+
+export function sanitizeAccountState(state: AccountState): AccountState {
+  return {
+    activeAccountId: state.activeAccountId,
+    accounts: state.accounts.map(sanitizeAccountItem),
+  }
 }
 
 async function pathExists(p: string): Promise<boolean> {
@@ -361,25 +373,28 @@ export async function removeAccount(
 }
 
 export async function saveMicrosoftAccount(
-  account: MicrosoftAccount
+  account: AccountItem
 ): Promise<AccountState> {
-  if (!account.username || !account.uuid || !account.accessToken) {
-    throw new Error('Thông tin tài khoản Microsoft thiếu các trường bắt buộc.')
-  }
   const state = await getAccountState()
   const msId = account.id || account.uuid
-
   const existingIndex = state.accounts.findIndex(a => a.id === msId)
+  const existing = existingIndex !== -1 ? state.accounts[existingIndex] : undefined
+  const accessToken = account.accessToken || existing?.accessToken
+
+  if (!account.username || !account.uuid || !accessToken) {
+    throw new Error('Thông tin tài khoản Microsoft thiếu các trường bắt buộc.')
+  }
+
   const newAccount: AccountItem = {
     id: msId,
     type: 'microsoft',
     username: account.username,
     uuid: account.uuid,
-    avatarUrl: account.avatarUrl,
-    accessToken: account.accessToken,
-    refreshToken: account.refreshToken,
-    expiresAt: account.expiresAt,
-    createdAt: account.createdAt || new Date().toISOString(),
+    avatarUrl: account.avatarUrl ?? existing?.avatarUrl,
+    accessToken,
+    refreshToken: account.refreshToken || existing?.refreshToken,
+    expiresAt: account.expiresAt || existing?.expiresAt,
+    createdAt: account.createdAt || existing?.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
 
@@ -395,6 +410,17 @@ export async function saveMicrosoftAccount(
   state.activeAccountId = msId
   await saveAccountState(state)
   return state
+}
+
+/** Get a valid decrypted access token for Microsoft API operations, refreshing if expired. */
+export async function getValidAccessToken(accountId?: string): Promise<string> {
+  const refreshedState = await refreshMicrosoftAccountToken(accountId)
+  const id = accountId || refreshedState.activeAccountId
+  const acc = refreshedState.accounts.find(a => a.id === id)
+  if (!acc || acc.type !== 'microsoft' || !acc.accessToken) {
+    throw new Error('Tài khoản Microsoft không hợp lệ hoặc thiếu access token.')
+  }
+  return acc.accessToken
 }
 
 /** Refresh MS token only when needed (launch / explicit). Single-flight. */

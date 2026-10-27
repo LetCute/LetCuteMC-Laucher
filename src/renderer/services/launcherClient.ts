@@ -273,7 +273,7 @@ export const launcherClient = {
     return getApi().saveMicrosoftAccount(account)
   },
 
-  loginMicrosoft(): Promise<MicrosoftAccount> {
+  loginMicrosoft(): Promise<AccountState> {
     return getApi().loginMicrosoft()
   },
 
@@ -283,8 +283,8 @@ export const launcherClient = {
 
   // ── Mojang API ─────────────────────────────────────────────────────────────
 
-  getMojangProfile(accessToken: string): Promise<import('../../shared/types').MojangProfile> {
-    return getApi().getMojangProfile(accessToken)
+  getMojangProfile(target: string): Promise<import('../../shared/types').MojangProfile> {
+    return getApi().getMojangProfile(target)
   },
 
   fetchMojangTexture(url: string): Promise<string | null> {
@@ -295,20 +295,20 @@ export const launcherClient = {
     return getApi().lookupPlayerSkin(usernameOrUuid)
   },
 
-  uploadMojangSkin(accessToken: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
-    return getApi().uploadMojangSkin(accessToken, fileBuffer, variant)
+  uploadMojangSkin(target: string, fileBuffer: ArrayBuffer, variant: 'classic' | 'slim'): Promise<void> {
+    return getApi().uploadMojangSkin(target, fileBuffer, variant)
   },
 
-  changeMojangCape(accessToken: string, capeId: string): Promise<void> {
-    return getApi().changeMojangCape(accessToken, capeId)
+  changeMojangCape(target: string, capeId: string): Promise<void> {
+    return getApi().changeMojangCape(target, capeId)
   },
 
-  checkMojangNameChange(accessToken: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
-    return getApi().checkMojangNameChange(accessToken)
+  checkMojangNameChange(target: string): Promise<{ createdAt: string; nameChangeAllowed: boolean }> {
+    return getApi().checkMojangNameChange(target)
   },
 
-  changeMojangName(accessToken: string, newName: string): Promise<void> {
-    return getApi().changeMojangName(accessToken, newName)
+  changeMojangName(target: string, newName: string): Promise<void> {
+    return getApi().changeMojangName(target, newName)
   },
 
   // ── New non-blocking launch API ────────────────────────────────────────────

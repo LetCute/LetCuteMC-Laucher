@@ -1,19 +1,20 @@
 import http from 'node:http'
+import crypto from 'node:crypto'
 import { shell } from 'electron'
+import type { AccountItem } from '../../../shared/types'
 
-export interface MicrosoftAccount {
-  id: string
-  username: string
-  uuid: string
-  avatarUrl?: string
-  accessToken: string
-  refreshToken?: string
-  expiresAt?: string
-  createdAt: string
-  updatedAt: string
-}
+export type MicrosoftAccount = AccountItem
 
 const CLIENT_ID = 'c36a9fb6-4f2a-41ff-90bd-ae7cc92031eb'
+
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+}
 
 function formatUuid(uuid: string): string {
   if (uuid.length === 32) {
@@ -22,10 +23,15 @@ function formatUuid(uuid: string): string {
   return uuid
 }
 
-export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
+export async function loginWithMicrosoft(): Promise<AccountItem> {
   return new Promise((resolve, reject) => {
     const port = 53248
     const redirectUri = `http://127.0.0.1:${port}`
+
+    // RFC 7636 PKCE & CSRF state
+    const codeVerifier = crypto.randomBytes(32).toString('base64url')
+    const codeChallenge = crypto.createHash('sha256').update(codeVerifier).digest('base64url')
+    const authState = crypto.randomBytes(16).toString('hex')
 
     const cleanup = () => {
       clearTimeout(timeoutTimer)
@@ -49,10 +55,31 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
         return
       }
 
+      if (req.method !== 'GET') {
+        res.writeHead(405)
+        res.end()
+        return
+      }
+
       const code = urlObj.searchParams.get('code')
       const error = urlObj.searchParams.get('error')
+      const state = urlObj.searchParams.get('state')
 
       if (code) {
+        if (state !== authState) {
+          res.writeHead(400, { 'Content-Type': 'text/html; charset=utf-8' })
+          res.end(`
+            <html>
+              <body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #111; color: #eee;">
+                <h2 style="color: #ea4335;">Lỗi xác thực</h2>
+                <p>Mã trạng thái (state) không hợp lệ hoặc đã bị can thiệp.</p>
+              </body>
+            </html>
+          `)
+          cleanup()
+          reject(new Error('OAuth state verification failed: potential CSRF detected.'))
+          return
+        }
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(`
           <html>
@@ -73,16 +100,17 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
           </html>
         `)
         cleanup()
-        authenticateMinecraftWithCode(code, redirectUri)
+        authenticateMinecraftWithCode(code, redirectUri, codeVerifier)
           .then(resolve)
           .catch(reject)
       } else if (error) {
+        const safeError = escapeHtml(error)
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(`
           <html>
             <body style="font-family: sans-serif; text-align: center; padding-top: 50px; background: #111; color: #eee;">
               <h2 style="color: #ea4335;">Đăng nhập thất bại</h2>
-              <p>Lỗi: ${error}</p>
+              <p>Lỗi: ${safeError}</p>
             </body>
           </html>
         `)
@@ -96,7 +124,7 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
     })
 
     server.listen(port, '127.0.0.1', () => {
-      const authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=XboxLive.signin%20offline_access`
+      const authUrl = `https://login.live.com/oauth20_authorize.srf?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=XboxLive.signin%20offline_access&state=${authState}&code_challenge=${codeChallenge}&code_challenge_method=S256`
       void shell.openExternal(authUrl)
     })
 
@@ -107,7 +135,7 @@ export async function loginWithMicrosoft(): Promise<MicrosoftAccount> {
   })
 }
 
-export async function refreshMicrosoftToken(refreshToken: string): Promise<MicrosoftAccount> {
+export async function refreshMicrosoftToken(refreshToken: string): Promise<AccountItem> {
   const port = 53248
   const redirectUri = `http://127.0.0.1:${port}`
 
@@ -138,12 +166,13 @@ export async function refreshMicrosoftToken(refreshToken: string): Promise<Micro
   return authenticateMinecraftWithMsAccessToken(tokenData.access_token, tokenData.refresh_token)
 }
 
-async function authenticateMinecraftWithCode(code: string, redirectUri: string): Promise<MicrosoftAccount> {
+async function authenticateMinecraftWithCode(code: string, redirectUri: string, codeVerifier: string): Promise<AccountItem> {
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
     code,
     grant_type: 'authorization_code',
     redirect_uri: redirectUri,
+    code_verifier: codeVerifier,
   })
 
   const tokenRes = await fetch('https://login.live.com/oauth20_token.srf', {
@@ -169,7 +198,7 @@ async function authenticateMinecraftWithCode(code: string, redirectUri: string):
 async function authenticateMinecraftWithMsAccessToken(
   msAccessToken: string,
   msRefreshToken: string
-): Promise<MicrosoftAccount> {
+): Promise<AccountItem> {
   // Step 1: Xbox Live Auth
   const xblRes = await fetch('https://user.auth.xboxlive.com/user/authenticate', {
     method: 'POST',
@@ -278,6 +307,7 @@ async function authenticateMinecraftWithMsAccessToken(
 
   return {
     id: profileData.id,
+    type: 'microsoft',
     username: profileData.name,
     uuid: formatUuid(profileData.id),
     accessToken: mcAccessToken,

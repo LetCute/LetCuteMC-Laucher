@@ -300,19 +300,25 @@ async function _installMrpack(
   }
 
   
-  // 6. Download mods to profileGameDir (thư mục mods/ nằm trong profile riêng)
+  const normalizedProfileDir = path.resolve(profileGameDir)
+    // 6. Download mods to profileGameDir (thư mục mods/ nằm trong profile riêng)
   if (indexData.files && indexData.files.length > 0) {
     taskManagerService.updateTaskProgress(taskId, 35, `Bắt đầu tải ${indexData.files.length} tệp mods/resourcepacks...`)
+    
     
     const tasks = indexData.files
       .filter((file: any) => file.env?.client !== 'unsupported')
       .map((file: any, i: number) => {
         // url is typically in an array 'downloads'
         const downloadUrl = (file.downloads && file.downloads[0]) ? file.downloads[0] : null
+        const destPath = path.resolve(profileGameDir, file.path)
+        if (!destPath.startsWith(normalizedProfileDir + path.sep)) {
+          throw new Error(`Phát hiện đường dẫn tệp không an toàn trong mrpack: ${file.path}`)
+        }
         return {
           id: `file_${i}`,
           url: downloadUrl,
-          destinationPath: path.join(profileGameDir, file.path),
+          destinationPath: destPath,
           sha1: file.hashes?.sha1,
           size: file.fileSize,
           label: path.basename(file.path)
@@ -347,7 +353,11 @@ async function _installMrpack(
         const relativePath = file.path.substring(folderName.length + 1)
         if (!relativePath) break
 
-        const destPath = path.join(profileGameDir, relativePath)
+        const destPath = path.resolve(profileGameDir, relativePath)
+          if (!destPath.startsWith(normalizedProfileDir + path.sep)) {
+            console.warn(`[ModrinthService] Bỏ qua tệp override không hợp lệ: ${file.path}`)
+            break
+          }
         if (file.type === 'Directory') {
           await fs.mkdir(destPath, { recursive: true })
         } else {
@@ -469,7 +479,8 @@ async function _installModrinthModRecursive(
   const targetDir = path.join(gameDir, folderName)
   await fs.mkdir(targetDir, { recursive: true })
 
-  const destFile = path.join(targetDir, primaryFile.filename)
+  const safeFilename = path.basename(primaryFile.filename)
+  const destFile = path.join(targetDir, safeFilename)
   taskManagerService.updateTaskProgress(taskId, 50, `Đang tải ${primaryFile.filename}...`)
   
   // ponytail: stream download to disk
@@ -533,7 +544,7 @@ async function _installModrinthModRecursive(
     title: projectInfo.title,
     versionName: versionInfo.name,
     installedAt: new Date().toISOString(),
-    files: [path.join(folderName, primaryFile.filename).replace(/\\/g, '/')]
+    files: [path.join(folderName, safeFilename).replace(/\\/g, '/')]
   })
 
   await saveStoreInstallations(gameDir, installations)
