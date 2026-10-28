@@ -119,7 +119,7 @@ app.whenReady().then(() => {
   createWindow()
 
   void Promise.all([
-    import('./ipc'),
+    import('./ipc/index'),
     import('./services/launcher/launchManager'),
   ]).then(([{ registerIpcHandlers }, launchManager]) => {
     registerIpcHandlers()

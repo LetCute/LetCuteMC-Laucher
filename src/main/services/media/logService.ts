@@ -104,6 +104,9 @@ export class LogService {
    * Đọc nội dung file log hoặc crash report (tự động giải nén .gz nếu cần, non-blocking)
    */
   async readLogFile(filePath: string): Promise<string> {
+    if (!this.isSafeLogPath(filePath)) {
+      throw new Error('Tệp không hợp lệ hoặc không thuộc thư mục logs/crash-reports.')
+    }
     if (!existsSync(filePath)) {
       throw new Error(`Tệp log không tồn tại: ${filePath}`)
     }
@@ -172,8 +175,12 @@ export class LogService {
     const lower = filePath.toLowerCase()
     const validExt = lower.endsWith('.log') || lower.endsWith('.log.gz') || lower.endsWith('.txt')
     if (!validExt) return false
-    const parts = path.normalize(filePath).split(path.sep)
-    return parts.includes('logs') || parts.includes('crash-reports')
+    const normalized = path.normalize(path.resolve(filePath))
+    const parts = normalized.split(path.sep).map(p => p.toLowerCase())
+    const logsIdx = parts.lastIndexOf('logs')
+    const crashIdx = parts.lastIndexOf('crash-reports')
+    const idx = Math.max(logsIdx, crashIdx)
+    return idx > 0 && parts.length === idx + 2
   }
 
   /**

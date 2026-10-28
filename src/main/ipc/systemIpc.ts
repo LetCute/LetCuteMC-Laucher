@@ -79,15 +79,25 @@ export function registerSystemIpc(): void {
   // Version Folder management
   handleIpc('versions:open-folder', async (versionPath: string) => {
     if (!versionPath || typeof versionPath !== 'string') return false
-    await shell.openPath(versionPath)
-    return true
+    try {
+      const fs = await import('node:fs/promises')
+      const pathMod = await import('node:path')
+      const stat = await fs.stat(versionPath)
+      if (!stat.isDirectory()) return false
+      const parentDir = pathMod.basename(pathMod.dirname(pathMod.resolve(versionPath))).toLowerCase()
+      if (parentDir !== 'versions') return false
+      await shell.openPath(versionPath)
+      return true
+    } catch {
+      return false
+    }
   })
   handleIpc('versions:delete', async (versionPath: string) => {
     if (!versionPath || typeof versionPath !== 'string') {
       throw new Error('Đường dẫn phiên bản không hợp lệ.')
     }
     const pathMod = await import('node:path')
-    const parentDir = pathMod.basename(pathMod.dirname(versionPath)).toLowerCase()
+    const parentDir = pathMod.basename(pathMod.dirname(pathMod.resolve(versionPath))).toLowerCase()
     if (parentDir !== 'versions') {
       throw new Error('Chỉ được phép xóa thư mục phiên bản hợp lệ nằm trong versions.')
     }

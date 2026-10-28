@@ -42,7 +42,9 @@ export function handleIpcSafe<TArgs extends unknown[], TResult>(
       return { success: true, data: result }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Unknown IPC error'
-      const code = (error as any)?.code as string | undefined
+      const code = error instanceof Error && 'code' in error && typeof (error as Error & { code?: unknown }).code === 'string'
+        ? (error as Error & { code: string }).code
+        : undefined
       console.error(`[IPC Error] Channel "${channel}":`, message)
       return { success: false, error: message, code }
     }
@@ -53,7 +55,7 @@ export function handleIpcSafe<TArgs extends unknown[], TResult>(
  * Throttle helper for IPC event emitters (worker progress, logs).
  * Returns a function that only forwards calls at most once per `intervalMs`.
  */
-export function createIpcThrottle<T extends (...args: any[]) => void>(
+export function createIpcThrottle<T extends (...args: unknown[]) => void>(
   fn: T,
   intervalMs: number = 120
 ): T {
@@ -89,7 +91,7 @@ export function createIpcThrottle<T extends (...args: any[]) => void>(
  * Deduplicate concurrent identical async calls by key.
  * If a request with the same key is already in-flight, return the existing Promise.
  */
-export function dedupAsync<TArgs extends any[], TResult>(
+export function dedupAsync<TArgs extends unknown[], TResult>(
   fn: (...args: TArgs) => Promise<TResult>,
   keyFn?: (...args: TArgs) => string
 ): (...args: TArgs) => Promise<TResult> {

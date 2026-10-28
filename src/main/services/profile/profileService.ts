@@ -267,14 +267,17 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   const rootDir = getLauncherDataDirectory();
 
   if (profile.gameDir && profile.gameDir.toLowerCase() !== rootDir.toLowerCase()) {
-    const isProfilesDir = profile.gameDir.toLowerCase().includes(`${path.sep}profiles${path.sep}`) || profile.gameDir.toLowerCase().includes('/profiles/');
-    if (isProfilesDir) {
-      const fs = await import('node:fs/promises');
-      await fs.rm(profile.gameDir, { recursive: true, force: true }).catch((err) => {
-        console.error('Lỗi khi xóa thư mục cấu hình:', err);
-      });
+      const profilesDir = path.resolve(rootDir, 'profiles');
+      const targetDir = path.resolve(profile.gameDir);
+      const rel = path.relative(profilesDir, targetDir);
+      const isProfilesDir = Boolean(rel && !rel.startsWith('..') && !path.isAbsolute(rel));
+      if (isProfilesDir) {
+        const fs = await import('node:fs/promises');
+        await fs.rm(targetDir, { recursive: true, force: true }).catch((err) => {
+          console.error('Lỗi khi xóa thư mục cấu hình:', err);
+        });
+      }
     }
-  }
 
   store.profiles.splice(index, 1);
   if (store.activeProfileId === profileId) store.activeProfileId = null;

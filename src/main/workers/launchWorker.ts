@@ -26,7 +26,12 @@ import { writeErrorLog } from '../services/media/errorLogService'
 import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
 import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
 
-const parentPort = (process as any).parentPort
+interface UtilityProcessParentPort {
+  postMessage(message: unknown): void
+  on(event: 'message', listener: (e: { data?: WorkerInputMessage } | WorkerInputMessage) => void): void
+}
+
+const parentPort = (process as NodeJS.Process & { parentPort?: UtilityProcessParentPort }).parentPort
 if (!parentPort) {
   throw new Error('launchWorker must run inside a utilityProcess.')
 }
@@ -219,8 +224,14 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     }
 
     // Filter incompatible JVM flags
-    if (javaResult.majorVersion < 24 && (resolved as any).arguments?.jvm) {
-      ;(resolved as any).arguments.jvm = (resolved as any).arguments.jvm.filter((arg: any) => {
+    interface VersionWithArgs {
+      arguments?: {
+        jvm?: Array<string | { rules?: unknown[]; value: string | string[] }>
+      }
+    }
+    const resolvedVersion = resolved as unknown as VersionWithArgs
+    if (javaResult.majorVersion < 24 && resolvedVersion.arguments?.jvm) {
+      resolvedVersion.arguments.jvm = resolvedVersion.arguments.jvm.filter((arg) => {
         if (typeof arg === 'string') return !arg.includes('UseCompactObjectHeaders')
         if (arg && typeof arg === 'object' && Array.isArray(arg.value)) {
           arg.value = arg.value.filter((v: string) => !v.includes('UseCompactObjectHeaders'))
@@ -261,7 +272,7 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       maxMemory: input.maxMemoryMb,
       extraJVMArgs: customArgs,
       server: input.serverAddress ? { ip: input.serverAddress } : undefined,
-      spawn: (command: string, args?: readonly string[], options?: any) => {
+      spawn: (command: string, args?: readonly string[], options?: Parameters<typeof spawn>[2]) => {
         let filteredArgs = (args || []) as string[]
         if (javaResult.majorVersion <= 21) {
           filteredArgs = filteredArgs.filter((a) => a !== '--sun-misc-unsafe-memory-access=allow')
@@ -336,8 +347,9 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
   }
 }
 
-parentPort.on('message', (e: any) => {
-  const message = (e.data || e) as WorkerInputMessage
+parentPort.on('message', (e) => {
+  const payload = typeof e === 'object' && e !== null && 'data' in e && e.data ? e.data : e
+  const message = payload as WorkerInputMessage
   if (message.type === 'start') {
     void startLaunch(message.jobId, message.input)
   } else if (message.type === 'cancel' && activeJobId === message.jobId) {

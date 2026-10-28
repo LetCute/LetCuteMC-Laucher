@@ -322,8 +322,10 @@ export class WorldService {
    */
   async deleteWorldBackup(backupFilePath: string): Promise<boolean> {
     if (!backupFilePath || typeof backupFilePath !== 'string') return false
-    const normalized = path.normalize(backupFilePath)
-    if (!normalized.toLowerCase().endsWith('.zip') || !normalized.split(path.sep).includes('backups')) {
+    const normalized = path.normalize(path.resolve(backupFilePath))
+    const parts = normalized.split(path.sep).map(p => p.toLowerCase())
+    const idx = parts.lastIndexOf('backups')
+    if (!normalized.toLowerCase().endsWith('.zip') || idx <= 0 || parts.length !== idx + 2) {
       throw new Error('Đường dẫn không hợp lệ hoặc không thuộc thư mục backups.')
     }
     if (existsSync(normalized)) {
