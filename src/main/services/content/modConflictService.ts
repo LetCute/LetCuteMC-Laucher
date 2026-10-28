@@ -46,7 +46,9 @@ export function checkMinecraftVersionMatch(currentMc: string, mcConstraint: stri
       if (validRange && semver.satisfies(coercedMc, validRange, { includePrerelease: true })) {
         return true
       }
-    } catch {}
+    } catch {
+      // Invalid semver range syntax, fallback to prefix matching
+    }
 
     // Prefix match for ranges like ~26.2- or >=26.2
     const cleanPrefix = c.replace(/^[~^>=< ]+/, '').replace(/[-+].*$/, '').trim()

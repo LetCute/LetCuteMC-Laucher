@@ -31,8 +31,8 @@ export class LanDiscoveryService extends EventEmitter {
     try {
       this.socket = dgram.createSocket({ type: 'udp4', reuseAddr: true })
 
-      this.socket.on('error', (err) => {
-        console.warn('[LanDiscovery] Socket error:', err.message)
+      this.socket.on('error', (err: unknown) => {
+        console.warn('[LanDiscovery] Socket error:', err instanceof Error ? err.message : String(err))
       })
 
       this.socket.on('message', (msg, rinfo) => {

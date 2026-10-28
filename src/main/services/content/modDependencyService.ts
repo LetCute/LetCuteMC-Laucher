@@ -184,7 +184,7 @@ export async function parseJarModInfo(jarPath: string): Promise<ScannedModInfo |
       }
 
       // Check nested jars (JiJ - Jar-in-Jar) for provided mods/libraries
-      const nestedJarEntries = zip.getEntries().filter((e: any) => 
+      const nestedJarEntries = zip.getEntries().filter((e) => 
         !e.isDirectory && (e.entryName.startsWith('META-INF/jars/') || e.entryName.startsWith('META-INF/jarjar/')) && e.entryName.endsWith('.jar')
       )
       for (const nestedEntry of nestedJarEntries) {

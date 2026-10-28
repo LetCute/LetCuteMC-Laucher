@@ -98,7 +98,7 @@ export async function downloadTasks(
     const tmpPath = `${task.destinationPath}.tmp`
     const urlCandidates = getUrlCandidates(task.url)
     let success = false
-    let lastError: any = null
+  let lastError: unknown = null
 
     // Try candidates (Official primary -> High speed mirror fallback)
     for (let candidateIdx = 0; candidateIdx < urlCandidates.length && !success; candidateIdx++) {
@@ -169,8 +169,9 @@ export async function downloadTasks(
     }
 
     if (!success) {
-      options.onLog?.('error', `Tải thất bại tệp ${task.label}: ${lastError?.message || 'Lỗi không rõ'}`)
-      throw lastError || new Error(`Failed to download ${task.label}`)
+      const errorMsg = lastError instanceof Error ? lastError.message : String(lastError || 'Lỗi không rõ')
+      options.onLog?.('error', `Tải thất bại tệp ${task.label}: ${errorMsg}`)
+      throw lastError instanceof Error ? lastError : new Error(`Failed to download ${task.label}: ${errorMsg}`)
     }
 
     completed++

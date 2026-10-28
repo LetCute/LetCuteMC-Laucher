@@ -180,7 +180,9 @@ async function collectMissingAssetTasks(indexPath: string, mcRootDir: string): P
           if (typeof item.size === 'number' ? s.size === item.size : s.size > 0) {
             return null
           }
-        } catch {}
+        } catch {
+          // File does not exist yet, queue for download
+        }
         return {
           id: `asset-${item.hash}`,
           label: `Tài nguyên: ${path.basename(key)}`,

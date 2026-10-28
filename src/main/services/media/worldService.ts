@@ -36,10 +36,14 @@ async function getFolderSizeBytes(dirPath: string): Promise<number> {
         try {
           const stat = await fs.stat(fullPath)
           totalSize += stat.size
-        } catch {}
+        } catch (err) {
+          console.debug?.('[WorldService] Skip inaccessible file for size calculation:', fullPath, err)
+        }
       }
     }
-  } catch {}
+  } catch (err) {
+    console.debug?.('[WorldService] Skip inaccessible directory for size calculation:', dirPath, err)
+  }
   return totalSize
 }
 
@@ -131,7 +135,9 @@ export class WorldService {
             try {
               const stat = await fs.stat(levelDatPath)
               lastPlayed = stat.mtimeMs
-            } catch {}
+            } catch (err) {
+              console.debug?.('[WorldService] Failed to stat level.dat for timestamp:', err)
+            }
           }
 
           const versionName = data.Version?.Name || data.Version?.name || data.Bukkit?.version || 'Minecraft'
@@ -144,11 +150,12 @@ export class WorldService {
             try {
               const iconBuf = await fs.readFile(iconPath)
               iconBase64 = `data:image/png;base64,${iconBuf.toString('base64')}`
-            } catch {}
+            } catch (err) {
+              console.debug?.('[WorldService] Failed to read world icon:', err)
+            }
           }
 
           const sizeBytes = await getFolderSizeBytes(worldPath)
-
           // Count backups for this folder
           const backupCount = allBackupFiles.filter(f => f.startsWith(`${folderName}_`) || f.startsWith(`${folderName}.`)).length
 
@@ -254,7 +261,9 @@ export class WorldService {
             sizeBytes: stat.size,
             createdAt: stat.mtimeMs,
           })
-        } catch {}
+        } catch (err) {
+          console.debug?.('[WorldService] Skip inaccessible backup file stat:', filePath, err)
+        }
       }
 
       return backups.sort((a, b) => b.createdAt - a.createdAt)
@@ -433,7 +442,9 @@ export class WorldService {
           if (simplified?.Data?.LevelName) {
             worldName = simplified.Data.LevelName
           }
-        } catch {}
+        } catch (err) {
+          console.debug?.('[WorldService] Failed to read level name from extracted level.dat:', err)
+        }
       }
 
       return {

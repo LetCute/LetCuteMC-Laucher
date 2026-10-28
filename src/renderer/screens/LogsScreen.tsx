@@ -268,10 +268,11 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           setRawLogContent(content)
         }
       })
-      .catch((err) => {
+      .catch((err: unknown) => {
         if (isMounted) {
-          setRawLogContent(`[Lỗi] Không thể đọc nội dung tệp: ${err?.message || err}`)
-          showToast('error', `Lỗi đọc tệp log: ${err?.message || err}`)
+          const msg = err instanceof Error ? err.message : String(err)
+          setRawLogContent(`[Lỗi] Không thể đọc nội dung tệp: ${msg}`)
+          showToast('error', `Lỗi đọc tệp log: ${msg}`)
         }
       })
       .finally(() => {

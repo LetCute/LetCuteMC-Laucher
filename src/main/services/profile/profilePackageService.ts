@@ -287,7 +287,9 @@ export class ProfilePackageService {
       try {
         const { applyDefaultGameOptions } = await import('../system/storageService.js')
         await applyDefaultGameOptions(targetGameDir, manifest.minecraftVersion)
-      } catch {}
+      } catch (err) {
+        console.warn('[ProfilePackageService] Failed to apply default game options:', err instanceof Error ? err.message : String(err))
+      }
 
       return {
         success: true,

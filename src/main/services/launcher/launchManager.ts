@@ -455,16 +455,18 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
 
   currentWorker = utilityProcess.fork(workerPath)
 
-  currentWorker.on('message', (e: any) => {
+  currentWorker.on('message', (e: unknown) => {
     handleWorkerMessage(e as WorkerOutputMessage)
   })
 
-  currentWorker.on('error', (err) => {
+  currentWorker.on('error', (err: unknown) => {
+    const errorObj = err instanceof Error ? err : new Error(String(err))
+    const errorMsg = errorObj.message
     currentState.status = 'failed'
-    currentState.error = err
+    currentState.error = errorMsg
     currentState.endedAt = now()
     if (activeJobId) {
-      taskManagerService.failTask(activeJobId, err)
+      taskManagerService.failTask(activeJobId, errorMsg)
       activeJobId = null
     }
     eventBus.emit('game:crashed', {
@@ -473,9 +475,9 @@ export async function startLaunchJob(input: LaunchInput): Promise<StartLaunchRes
       profileName: currentProfileName,
       versionId: currentVersion,
       gameDir: currentGameDir,
-      error: err,
+      error: errorMsg,
     })
-    void writeErrorLog('launchManager:worker', new Error(err), { jobId, status: currentState.status })
+    void writeErrorLog('launchManager:worker', errorObj, { jobId, status: currentState.status })
     enqueueEvent({ type: 'finished', jobId, state: getLaunchState() })
     currentWorker = null
   })

@@ -37,7 +37,9 @@ export async function loginWithMicrosoft(): Promise<AccountItem> {
       clearTimeout(timeoutTimer)
       try {
         server.close()
-      } catch {}
+      } catch {
+        // Server might already be closed
+      }
     }
 
     const timeoutTimer = setTimeout(() => {

@@ -18,7 +18,7 @@ import { writeErrorLog } from '../services/media/errorLogService'
 import { autoFixModDependencies, inspectModDependencies, detectLoaderFromVersion } from '../services/content/modDependencyService'
 import { initGlobalHttpDispatcher } from '../services/system/httpAgent'
 
-const parentPort = (process as any).parentPort
+const parentPort: Electron.MessagePortMain | undefined = (process as unknown as { parentPort?: Electron.MessagePortMain }).parentPort
 if (!parentPort) {
   throw new Error('prepareWorker must run inside a utilityProcess.')
 }
@@ -216,9 +216,9 @@ async function startPrepare(
   }
 }
 
-parentPort.on('message', (e: any) => {
+parentPort.on('message', (e: { data?: { type?: string; profile?: LauncherProfile; settings?: LauncherSettings; forceRepair?: boolean } }) => {
   const message = e.data
-  if (message.type === 'start') {
+  if (message?.type === 'start' && message.profile && message.settings) {
     void startPrepare(message.profile, message.settings, message.forceRepair)
   }
 })

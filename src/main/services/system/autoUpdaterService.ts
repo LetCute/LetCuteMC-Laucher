@@ -77,9 +77,10 @@ export async function checkForUpdates() {
   }
 
   const autoUpdater = await getAutoUpdater()
-  return autoUpdater.checkForUpdatesAndNotify().catch((err) => {
+  return autoUpdater.checkForUpdatesAndNotify().catch((err: unknown) => {
     console.error('[AutoUpdater] Lỗi khi checkForUpdatesAndNotify:', err)
-    sendUpdateEvent('update-error', 'Lỗi kiểm tra cập nhật.', err.message)
+    const errorMsg = err instanceof Error ? err.message : String(err)
+    sendUpdateEvent('update-error', 'Lỗi kiểm tra cập nhật.', errorMsg)
     return null
   })
 }

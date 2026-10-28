@@ -259,7 +259,9 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
     try {
       const { applyDefaultGameOptions } = await import('../services/system/storageService')
       await applyDefaultGameOptions(input.gameDir, input.version)
-    } catch {}
+    } catch (err) {
+      console.warn('[LaunchWorker] Failed to apply default game options:', err instanceof Error ? err.message : String(err))
+    }
 
     const child = await xmclLaunch({
       gamePath: input.gameDir,

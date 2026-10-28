@@ -56,7 +56,7 @@ export async function getCachedVersionManifest(
   // Fetch online with mirror candidates
   const primaryUrl = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'
   const candidates = getUrlCandidates(primaryUrl)
-  let lastError: any = null
+  let lastError: unknown = null
 
   for (const url of candidates) {
     try {
