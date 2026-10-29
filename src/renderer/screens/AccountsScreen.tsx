@@ -522,7 +522,7 @@ export const AccountsScreen = ({
                   </div>
 
                   <div className="text-center w-full min-w-0 px-4">
-                    <p className="text-sm font-bold truncate transition-colors text-foreground group-[.border-primary\\/50]:text-primary">
+                    <p className="text-sm font-bold truncate transition-colors text-foreground/85 group-[.border-primary\\/50]:text-primary">
                       {acc.username}
                     </p>
                     <p className="text-[10px] text-muted-foreground truncate mt-0.5">

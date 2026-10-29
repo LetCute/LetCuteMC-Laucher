@@ -192,7 +192,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
       <div className="px-6 pt-0 pb-5 flex-shrink-0">
         <div className="flex justify-between items-center w-full">
           <div>
-            <h2 className="text-xl font-bold flex items-center gap-2">
+            <h2 className="text-xl font-bold text-foreground/80 flex items-center gap-2">
               <ModrinthIcon className="h-5 w-5 text-primary" />
               Cửa Hàng Modrinth
             </h2>

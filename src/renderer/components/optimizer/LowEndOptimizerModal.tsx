@@ -1,16 +1,18 @@
 import { useState, useEffect } from 'react'
 import {
   Zap,
-  CheckCircle2,
+  Check,
   RefreshCw,
   Loader2,
   Package,
   Layers,
-  Sliders,
-  Monitor,
+  SlidersHorizontal,
   Download,
   AlertCircle,
-  Sparkles,
+  Gauge,
+  Scale,
+  Eye,
+  Flame,
 } from 'lucide-react'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/button'
@@ -26,6 +28,55 @@ import type {
 import { launcherClient } from '../../services/launcherClient'
 import { useToast } from '../ui/Toast'
 import { cn } from '@/lib/utils'
+
+interface PresetItem {
+  id: LowEndOptimizationLevel
+  title: string
+  subtitle: string
+  badge: string
+  desc: string
+  specs: string
+  icon: typeof Gauge
+}
+
+const PRESETS: PresetItem[] = [
+  {
+    id: 'ultra_potato',
+    title: 'Siêu Nhẹ',
+    subtitle: 'Ultra Potato',
+    badge: 'Máy Yếu',
+    desc: 'Cắt giảm tối đa tải RAM/VRAM, tắt mây và hiệu ứng hạt nặng.',
+    specs: 'Mipmap 0 • Fast • Tắt mây',
+    icon: Gauge,
+  },
+  {
+    id: 'balanced_low',
+    title: 'Cân Bằng',
+    subtitle: 'Balanced Low',
+    badge: 'Máy Trung',
+    desc: 'Cân bằng khung hình ổn định, hiển thị mây và chi tiết cơ bản.',
+    specs: '8 chunks • Mipmap 1 • Fast',
+    icon: Scale,
+  },
+  {
+    id: 'high_quality',
+    title: 'Chất Lượng',
+    subtitle: 'High Quality',
+    badge: 'Máy Khá',
+    desc: 'Tầm nhìn rộng, đồ họa chi tiết và bật toàn bộ hiệu ứng hình ảnh.',
+    specs: '16 chunks • Mipmap 4 • Fancy',
+    icon: Eye,
+  },
+  {
+    id: 'ultra_quality',
+    title: 'Cực Đại',
+    subtitle: 'Ultra Quality',
+    badge: 'Máy Mạnh',
+    desc: 'Thiết lập tối đa đồ họa, tận dụng GPU rời và vi xử lý đa nhân.',
+    specs: '24 chunks • Mipmap 4 • Fancy tối đa',
+    icon: Flame,
+  },
+]
 
 interface LowEndOptimizerModalProps {
   isOpen: boolean
@@ -190,9 +241,9 @@ export const LowEndOptimizerModal = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Tối Ưu Hiệu Năng & Đồ Họa Minecraft"
-      description="Tự động chỉnh options.txt theo từng preset — từ máy siêu yếu đến máy chiến game mạnh"
-      maxWidth="max-w-[780px]"
+      title="Tối Ưu Hiệu Năng & Đồ Họa"
+      description="Cấu hình đồ họa options.txt và cài đặt mod tăng tốc chuyên dụng cho profile"
+      maxWidth="max-w-[760px]"
       footer={
         <div className="flex items-center justify-between w-full">
           <Button
@@ -215,7 +266,7 @@ export const LowEndOptimizerModal = ({
               size="sm"
               disabled={applying || loading}
               onClick={handleApply}
-              className="h-8 px-4 text-xs font-bold gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-md shadow-emerald-500/20"
+              className="h-8 px-4 text-xs font-semibold gap-1.5"
             >
               {applying ? (
                 <>
@@ -224,8 +275,8 @@ export const LowEndOptimizerModal = ({
                 </>
               ) : (
                 <>
-                  <Zap size={14} className="fill-current" />
-                  Áp dụng tối ưu hóa đồ họa
+                  <SlidersHorizontal size={14} />
+                  Áp dụng thiết lập
                 </>
               )}
             </Button>
@@ -241,186 +292,143 @@ export const LowEndOptimizerModal = ({
           </div>
         ) : (
           <>
-            {/* Status overview */}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
-                <span className="text-[11px] text-muted-foreground">Tầm nhìn (Render Distance)</span>
+            {/* Status telemetry */}
+            <div className="grid grid-cols-3 gap-2.5">
+              <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-950/40 flex flex-col justify-between">
+                <span className="text-[11px] text-muted-foreground">Tầm nhìn hiện tại</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
-                  <span className="text-base font-bold text-foreground">
+                  <span className="text-sm font-semibold text-primary font-mono">
                     {status?.currentRenderDistance ?? 12}
                   </span>
-                  <span className="text-xs text-muted-foreground">chunks</span>
+                  <span className="text-[11px] text-muted-foreground">chunks</span>
                 </div>
-                <span className="text-[10px] text-emerald-400 mt-1">Gợi ý máy yếu: 4 - 6 chunks</span>
               </div>
 
-              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
-                <span className="text-[11px] text-muted-foreground">Sinh Mipmap (VRAM Load)</span>
+              <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-950/40 flex flex-col justify-between">
+                <span className="text-[11px] text-muted-foreground">Khử răng cưa Mipmap</span>
                 <div className="flex items-baseline gap-1.5 mt-1">
-                  <span className="text-base font-bold text-foreground">
+                  <span className="text-sm font-semibold text-primary font-mono">
                     Cấp {status?.mipmapLevels ?? 4}
                   </span>
-                  {status?.mipmapLevels === 0 ? (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-medium">Tối ưu</span>
-                  ) : (
-                    <span className="text-[10px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-medium">Nặng</span>
-                  )}
-                </div>
-                <span className="text-[10px] text-emerald-400 mt-1">Gợi ý: Cấp 0 (Tắt sinh mipmap)</span>
-              </div>
-
-              <div className="p-3 rounded-md border border-zinc-800 bg-zinc-950/60 flex flex-col justify-between">
-                <span className="text-[11px] text-muted-foreground">Đồ họa & Mây</span>
-                <div className="flex items-baseline gap-1.5 mt-1">
-                  <span className="text-base font-bold text-foreground">
-                    {status?.fastGraphics ? 'Nhanh (Fast)' : 'Đẹp (Fancy)'}
+                  <span className="text-[11px] text-muted-foreground">
+                    {status?.mipmapLevels === 0 ? '(Đã tắt)' : '(Bật)'}
                   </span>
                 </div>
-                <span className="text-[10px] text-emerald-400 mt-1">
-                  {status?.cloudsEnabled ? 'Mây: Đang bật' : 'Mây: Đã tắt (Nhẹ)'}
-                </span>
+              </div>
+
+              <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-950/40 flex flex-col justify-between">
+                <span className="text-[11px] text-muted-foreground">Đồ họa & Mây</span>
+                <div className="flex items-baseline gap-1.5 mt-1">
+                  <span className="text-sm font-semibold text-primary font-mono">
+                    {status?.fastGraphics ? 'Nhanh (Fast)' : 'Đẹp (Fancy)'}
+                  </span>
+                  <span className="text-[11px] text-muted-foreground">
+                    {status?.cloudsEnabled ? '• Mây bật' : '• Mây tắt'}
+                  </span>
+                </div>
               </div>
             </div>
 
-            {/* Optimization Level Selector */}
+            {/* Presets Grid */}
             <div className="space-y-2">
-              <label className="text-xs font-bold text-foreground uppercase tracking-wider flex items-center gap-1.5">
-                <Sliders size={13} className="text-primary" />
-                Chọn mức độ tối ưu hóa đồ họa
-              </label>
+              <div className="flex items-center justify-between">
+                <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider flex items-center gap-1.5">
+                  <SlidersHorizontal size={13} className="text-primary" />
+                  Cấu hình đồ họa mẫu
+                </span>
+              </div>
 
               <div className="grid grid-cols-2 gap-2.5">
-                {/* Level 1: Ultra Potato */}
-                <div
-                  onClick={() => setSelectedLevel('ultra_potato')}
-                  className={cn(
-                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
-                    selectedLevel === 'ultra_potato'
-                      ? 'border-emerald-500/60 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-                      : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
-                  )}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-emerald-300 flex items-center gap-1.5">
-                        <Zap size={14} className="text-emerald-400" />
-                        🥔 Siêu Nhẹ (Ultra Potato)
-                      </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">
-                        Máy Yếu
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Render {customChunks} chunks, tắt Mipmap, đồ họa Nhanh, tắt Mây. Tiết kiệm tối đa RAM/VRAM.
-                    </p>
-                  </div>
+                {PRESETS.map((preset) => {
+                  const Icon = preset.icon
+                  const isSelected = selectedLevel === preset.id
+                  return (
+                    <div
+                      key={preset.id}
+                      onClick={() => setSelectedLevel(preset.id)}
+                      className={cn(
+                        'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2.5 text-left',
+                        isSelected
+                          ? 'border-primary/70 bg-primary/[0.04] ring-1 ring-primary/30'
+                          : 'border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                      )}
+                    >
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Icon
+                              size={15}
+                              className={cn(
+                                'shrink-0',
+                                isSelected ? 'text-primary' : 'text-zinc-400'
+                              )}
+                            />
+                            <div className="flex items-baseline gap-1.5">
+                              <span
+                                className={cn(
+                                  'text-xs font-semibold',
+                                  isSelected ? 'text-primary' : 'text-zinc-300'
+                                )}
+                              >
+                                {preset.title}
+                              </span>
+                              <span className="text-[10px] text-muted-foreground/80 font-mono">
+                                {preset.subtitle}
+                              </span>
+                            </div>
+                          </div>
 
-                  {selectedLevel === 'ultra_potato' && (
-                    <div className="pt-2 border-t border-emerald-500/20 flex items-center justify-between">
-                      <span className="text-[10px] text-muted-foreground">Tầm nhìn (Chunks):</span>
-                      <div className="flex items-center gap-1">
-                        {[4, 6, 8].map((c) => (
-                          <button
-                            key={c}
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              setCustomChunks(c)
-                            }}
-                            className={cn(
-                              'px-2 py-0.5 rounded text-[10px] font-bold transition',
-                              customChunks === c
-                                ? 'bg-emerald-500 text-zinc-950'
-                                : 'bg-zinc-800 text-zinc-300 hover:bg-zinc-700'
+                          <div className="flex items-center gap-1.5">
+                            <span
+                              className={cn(
+                                'text-[10px] font-medium px-1.5 py-0.5 rounded border',
+                                isSelected
+                                  ? 'bg-primary/15 text-primary border-primary/30'
+                                  : 'bg-zinc-800/80 text-zinc-400 border-zinc-700/60'
+                              )}
+                            >
+                              {preset.badge}
+                            </span>
+                            {isSelected && (
+                              <Check size={13} className="text-primary shrink-0" />
                             )}
-                          >
-                            {c} chunks
-                          </button>
-                        ))}
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-muted-foreground leading-relaxed">
+                          {preset.desc}
+                        </p>
+                      </div>
+
+                      <div className="pt-2 border-t border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500 font-mono">
+                        <span>{preset.specs}</span>
+                        {preset.id === 'ultra_potato' && isSelected && (
+                          <div className="flex items-center gap-1 font-sans">
+                            <span className="text-muted-foreground text-[10px]">Chunks:</span>
+                            {[4, 6, 8].map((c) => (
+                              <button
+                                key={c}
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  setCustomChunks(c)
+                                }}
+                                className={cn(
+                                  'px-1.5 py-0.5 rounded text-[10px] font-mono transition-colors',
+                                  customChunks === c
+                                    ? 'bg-primary text-primary-foreground font-semibold'
+                                    : 'bg-zinc-800 text-zinc-400 hover:bg-zinc-700'
+                                )}
+                              >
+                                {c}
+                              </button>
+                            ))}
+                          </div>
+                        )}
                       </div>
                     </div>
-                  )}
-                </div>
-
-                {/* Level 2: Balanced Low */}
-                <div
-                  onClick={() => setSelectedLevel('balanced_low')}
-                  className={cn(
-                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
-                    selectedLevel === 'balanced_low'
-                      ? 'border-teal-500/60 bg-teal-500/10 ring-1 ring-teal-500/30'
-                      : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
-                  )}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-teal-300 flex items-center gap-1.5">
-                        <Monitor size={14} className="text-teal-400" />
-                        ⚖️ Cân Bằng (Balanced Low)
-                      </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-teal-500/20 text-teal-300">
-                        Máy Trung
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Render 8 chunks, Mipmap 1, đồ họa Nhanh, mây Nhanh. Cân bằng giữa độ nét và độ mượt.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Level 3: High Quality */}
-                <div
-                  onClick={() => setSelectedLevel('high_quality')}
-                  className={cn(
-                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left',
-                    selectedLevel === 'high_quality'
-                      ? 'border-sky-500/60 bg-sky-500/10 ring-1 ring-sky-500/30'
-                      : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
-                  )}
-                >
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-sky-300 flex items-center gap-1.5">
-                        <Sparkles size={14} className="text-sky-400" />
-                        ✨ Chơi Đẹp (High Quality)
-                      </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-sky-500/20 text-sky-300">
-                        Máy Khá
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Render 16 chunks, Mipmap đầy đủ, đồ họa Đẹp (Fancy), mây bật. Tận dụng sức mạnh máy để chơi trải nghiệm đẹp hơn.
-                    </p>
-                  </div>
-                </div>
-
-                {/* Level 4: Ultra Quality */}
-                <div
-                  onClick={() => setSelectedLevel('ultra_quality')}
-                  className={cn(
-                    'p-3.5 rounded-md border cursor-pointer transition-all flex flex-col justify-between gap-2 text-left relative overflow-hidden',
-                    selectedLevel === 'ultra_quality'
-                      ? 'border-violet-500/60 bg-violet-500/10 ring-1 ring-violet-500/30'
-                      : 'border-zinc-800/80 bg-zinc-950/60 hover:border-zinc-700'
-                  )}
-                >
-                  {/* Glow corner */}
-                  <div className="absolute -top-4 -right-4 w-16 h-16 bg-violet-500/20 rounded-full blur-xl pointer-events-none" />
-                  <div className="space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-violet-300 flex items-center gap-1.5">
-                        <Zap size={14} className="text-violet-400 fill-current" />
-                        🚀 Siêu Đẹp (Ultra Quality)
-                      </span>
-                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-violet-500/25 text-violet-200 border border-violet-500/30">
-                        Máy Mạnh
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground leading-relaxed">
-                      Render 24 chunks, Mipmap cực cao, đồ họa Đẹp tối đa, Sodium tối ưu hiệu năng GPU. Dành cho máy RTX/RX hoặc CPU mạnh ≥8 nhân.
-                    </p>
-                  </div>
-                </div>
+                  )
+                })}
               </div>
             </div>
 
@@ -433,7 +441,7 @@ export const LowEndOptimizerModal = ({
                     Gói Mod Tăng Tốc Khuyến Nghị Cho Máy Yếu
                   </label>
                   {!isVanilla && (
-                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-zinc-800 text-zinc-300 border border-zinc-700">
+                    <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/25">
                       {status?.essentialMods?.filter((m) => m.installed).length || 0}/
                       {status?.essentialMods?.length || 0} đã cài
                     </span>
@@ -443,9 +451,10 @@ export const LowEndOptimizerModal = ({
                 {!isVanilla && missingCount > 0 && (
                   <Button
                     size="sm"
+                    variant="primary"
                     disabled={installingAll || !!installingModSlug}
                     onClick={handleInstallAllMissing}
-                    className="h-7 px-3 text-[11px] font-bold gap-1.5 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm"
+                    className="h-7 px-3 text-[11px] font-semibold gap-1.5"
                   >
                     {installingAll ? (
                       <>
@@ -454,7 +463,7 @@ export const LowEndOptimizerModal = ({
                       </>
                     ) : (
                       <>
-                        <Sparkles size={12} />
+                        <Download size={12} />
                         Cài đặt tất cả ({missingCount} mod)
                       </>
                     )}
@@ -464,16 +473,16 @@ export const LowEndOptimizerModal = ({
 
               {/* Vanilla Warning Banner */}
               {isVanilla ? (
-                <div className="p-3.5 rounded-md border border-amber-500/30 bg-amber-500/10 flex items-start gap-3 text-xs shadow-sm">
-                  <div className="h-8 w-8 rounded-md bg-amber-500/20 text-amber-400 border border-amber-500/30 flex items-center justify-center shrink-0 mt-0.5">
-                    <AlertCircle size={17} />
+                <div className="p-3 rounded-md border border-amber-500/20 bg-amber-950/20 flex items-start gap-3 text-xs">
+                  <div className="h-7 w-7 rounded-md bg-amber-500/10 text-amber-400/90 border border-amber-500/20 flex items-center justify-center shrink-0 mt-0.5">
+                    <AlertCircle size={15} />
                   </div>
-                  <div className="space-y-1">
-                    <h5 className="font-bold text-amber-200">
-                      Cấu hình hiện tại là Minecraft Vanilla (Không hỗ trợ nạp Mod)
+                  <div className="space-y-0.5">
+                    <h5 className="font-semibold text-amber-300/90 text-xs">
+                      Cấu hình Minecraft Vanilla (Không hỗ trợ mod)
                     </h5>
-                    <p className="text-[11px] text-zinc-300/85 leading-relaxed">
-                      Các mod tăng tốc tối ưu hiệu năng như Sodium, FerriteCore, Lithium yêu cầu môi trường Fabric, Quilt, Forge hoặc NeoForge. Bạn vui lòng đổi hoặc tạo cấu hình Fabric/Forge để có thể cài đặt các mod này.
+                    <p className="text-[11px] text-zinc-400 leading-relaxed">
+                      Các mod tăng tốc yêu cầu Fabric, Quilt, Forge hoặc NeoForge. Vui lòng chuyển sang profile hỗ trợ mod để cài đặt.
                     </p>
                   </div>
                 </div>
@@ -486,8 +495,8 @@ export const LowEndOptimizerModal = ({
                     className={cn(
                       'p-2.5 rounded-md border flex items-center justify-between gap-2 transition',
                       mod.installed
-                        ? 'border-emerald-500/30 bg-zinc-950/70'
-                        : 'border-zinc-800/80 bg-zinc-950/50'
+                        ? 'border-primary/25 bg-primary/[0.03]'
+                        : 'border-zinc-800/80 bg-zinc-950/40'
                     )}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -495,34 +504,35 @@ export const LowEndOptimizerModal = ({
                         className={cn(
                           'h-7 w-7 rounded-md flex items-center justify-center shrink-0 border',
                           mod.installed
-                            ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
-                            : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                            ? 'bg-primary/15 text-primary border-primary/30'
+                            : 'bg-zinc-900 text-zinc-500 border-zinc-800'
                         )}
                       >
-                        {mod.installed ? <CheckCircle2 size={15} /> : <Layers size={15} />}
+                        {mod.installed ? <Check size={14} className="text-primary" /> : <Layers size={14} />}
                       </div>
                       <div className="min-w-0">
-                        <h5 className="text-xs font-bold text-foreground truncate">{mod.name}</h5>
+                        <h5 className="text-xs font-semibold text-foreground/90 truncate">{mod.name}</h5>
                         <p className="text-[10px] text-muted-foreground truncate">{mod.description}</p>
                       </div>
                     </div>
 
                     <div className="shrink-0">
                       {isVanilla ? (
-                        <span className="text-[9px] font-semibold px-2 py-0.5 rounded bg-zinc-800/80 text-zinc-500 border border-zinc-700/50">
+                        <span className="text-[9px] font-medium px-2 py-0.5 rounded bg-zinc-900 text-zinc-500 border border-zinc-800">
                           Không khả dụng
                         </span>
                       ) : mod.installed ? (
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center gap-1">
-                          <CheckCircle2 size={12} className="text-emerald-400" />
+                        <span className="text-[10px] font-medium px-2 py-0.5 rounded bg-primary/10 text-primary border border-primary/25 flex items-center gap-1">
+                          <Check size={11} className="text-primary" />
                           Đã cài
                         </span>
                       ) : (
                         <Button
                           size="sm"
+                          variant="outline"
                           disabled={installingModSlug === mod.slug || installingAll}
                           onClick={() => handleInstallSingleMod(mod.slug, mod.name)}
-                          className="h-6 px-2.5 text-[10px] font-bold gap-1 bg-emerald-500 hover:bg-emerald-400 text-zinc-950 shadow-sm"
+                          className="h-6 px-2.5 text-[10px] font-medium gap-1 border-primary/35 bg-primary/10 text-primary hover:bg-primary/20 hover:text-primary shadow-none"
                         >
                           {installingModSlug === mod.slug ? (
                             <>

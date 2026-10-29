@@ -427,7 +427,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
       <div className="flex items-center justify-between gap-4">
         <div className="min-w-0">
           <div className="flex items-center gap-2.5 flex-wrap">
-            <h2 className="text-xl font-bold text-foreground tracking-tight whitespace-nowrap">
+            <h2 className="text-xl font-bold text-foreground/80 tracking-tight whitespace-nowrap">
               Quản lý Thế giới
             </h2>
             {profileName && (
@@ -684,7 +684,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
 
                       {/* Title */}
                       <h3
-                        className="text-base font-bold text-foreground truncate mt-1.5 group-hover:text-primary transition-colors"
+                        className="text-base font-bold text-foreground/85 truncate mt-1.5 group-hover:text-primary transition-colors"
                         title={world.name}
                       >
                         {world.name}

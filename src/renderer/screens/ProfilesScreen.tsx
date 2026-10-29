@@ -234,7 +234,7 @@ export const ProfilesScreen = ({
                         <div className="flex items-center gap-2 flex-wrap">
                           <span className={cn(
                             'text-base font-bold truncate transition-colors',
-                            isActive ? 'text-primary' : 'text-foreground'
+                            isActive ? 'text-primary' : 'text-foreground/85 group-hover:text-foreground'
                           )}>
                             {profile.name}
                           </span>
@@ -242,7 +242,7 @@ export const ProfilesScreen = ({
                         </div>
 
                         <div className="flex items-center gap-3 text-xs text-muted-foreground flex-wrap">
-                          <span>RAM: <span className="font-semibold text-zinc-200">{profile.minMemoryMb}M – {profile.maxMemoryMb}M</span></span>
+                          <span>RAM: <span className="font-semibold text-zinc-300">{profile.minMemoryMb}M – {profile.maxMemoryMb}M</span></span>
                         </div>
                       </div>
                     </div>

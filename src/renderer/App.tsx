@@ -439,22 +439,26 @@ function MainApp() {
             </div>
           ) : (
             <div className="flex min-h-0 flex-1 overflow-hidden">
-              <Sidebar
-                activeTab={activeTab}
-                onTabChange={setActiveTab}
-                accountState={accountState}
-                onAccountStateChange={setAccountState}
-                activeProfile={activeProfile}
-                profiles={profiles}
-                onSetActiveProfile={handleSetActiveProfile}
-                javaSelection={javaSelection}
-                settings={settings}
-                gameDir={gameDir}
-                isWorking={isWorking}
-              />
+              <ErrorBoundary compact fallbackMessage="Thanh bên gặp sự cố.">
+                <Sidebar
+                  activeTab={activeTab}
+                  onTabChange={setActiveTab}
+                  accountState={accountState}
+                  onAccountStateChange={setAccountState}
+                  activeProfile={activeProfile}
+                  profiles={profiles}
+                  onSetActiveProfile={handleSetActiveProfile}
+                  javaSelection={javaSelection}
+                  settings={settings}
+                  gameDir={gameDir}
+                  isWorking={isWorking}
+                />
+              </ErrorBoundary>
 
               <main className="flex min-w-0 flex-1 flex-col">
-                <TopBar />
+                <ErrorBoundary compact fallbackMessage="Thanh điều hướng gặp sự cố.">
+                  <TopBar />
+                </ErrorBoundary>
 
                 {isBootstrapping && (
                   <div className="flex items-center gap-2 border-b border-border/60 bg-card/40 px-4 py-1.5 text-xs text-muted-foreground">
@@ -464,7 +468,7 @@ function MainApp() {
                 )}
 
                 <div className="min-h-0 flex-1 tab-viewport">
-                  <ErrorBoundary fallbackMessage="Màn hình này đang gặp sự cố. Vui lòng thử lại.">
+                  <ErrorBoundary fallbackMessage="Màn hình này đang gặp sự cố. Vui lòng thử lại." resetKey={activeTab}>
                     <Suspense fallback={
                       <div className="flex h-full w-full items-center justify-center text-muted-foreground text-sm">
                         <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />
@@ -637,19 +641,21 @@ function MainApp() {
             </div>
           )}
 
-          <ProfileModal
-            isOpen={isProfileModalOpen}
-            onClose={() => {
-              setIsProfileModalOpen(false);
-              setEditingProfile(null);
-              setPreselectedVersion(null);
-            }}
-            onSave={handleSaveProfile}
-            profile={editingProfile}
-            versionCatalog={versionCatalog}
-            preselectedVersion={preselectedVersion}
-            defaultGameDir={gameDir}
-          />
+          <ErrorBoundary fallbackMessage="Cửa sổ hồ sơ gặp sự cố.">
+            <ProfileModal
+              isOpen={isProfileModalOpen}
+              onClose={() => {
+                setIsProfileModalOpen(false);
+                setEditingProfile(null);
+                setPreselectedVersion(null);
+              }}
+              onSave={handleSaveProfile}
+              profile={editingProfile}
+              versionCatalog={versionCatalog}
+              preselectedVersion={preselectedVersion}
+              defaultGameDir={gameDir}
+            />
+          </ErrorBoundary>
         </div>
       </div>
   );
@@ -657,10 +663,12 @@ function MainApp() {
 
 export default function App() {
   return (
-    <ToastProvider>
-      <ConfirmDialogProvider>
-        <MainApp />
-      </ConfirmDialogProvider>
-    </ToastProvider>
+    <ErrorBoundary fallbackMessage="Giao diện launcher gặp sự cố không mong muốn. Vui lòng thử lại.">
+      <ToastProvider>
+        <ConfirmDialogProvider>
+          <MainApp />
+        </ConfirmDialogProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }

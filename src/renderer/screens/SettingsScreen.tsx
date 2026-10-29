@@ -30,6 +30,7 @@ import {
   Palette,
   Download,
   Loader2,
+  SlidersHorizontal,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Select } from '../components/ui/Select'
@@ -333,37 +334,34 @@ export const SettingsScreen = ({
       </div>
 
       <div className="space-y-4">
-        {/* ── SECTION 0: Ultra Low-End Potato PC Quick Boost ─────────────── */}
-        <div className="p-4 rounded-md border border-emerald-500/40 bg-emerald-500/10 shadow-md flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="h-11 w-11 rounded-md bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0 shadow-inner">
-              <Zap size={22} className="fill-current text-emerald-400" />
-            </div>
+        {/* ── SECTION 0: Performance Optimizer ───────────────────────────── */}
+        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
+          <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <h3 className="text-sm font-bold text-emerald-200">
-                  Tối ưu máy yếu
-                </h3>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 whitespace-nowrap shrink-0">
-                  ⚡ Chống giật lag
-                </span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                Cài mod tăng tốc và giảm tải đồ họa cho máy 2-4GB RAM / Card onboard.
+              <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+                <SlidersHorizontal className="h-5 w-5 text-primary" />
+                Tối ưu hiệu năng & đồ họa game
+                {activeProfile && (
+                  <span className="text-[10px] font-mono font-normal px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60 ml-1">
+                    {activeProfile.name}
+                  </span>
+                )}
+              </CardTitle>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Tinh chỉnh options.txt và cài đặt mod tăng tốc chuyên dụng cho profile
               </p>
             </div>
-          </div>
-
-          <Button
-            onClick={() => setLowEndModalOpen(true)}
-            size="sm"
-            variant="outline"
-            className="h-9 px-4 text-xs font-bold gap-1.5 bg-emerald-500/10 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/25 hover:border-emerald-400 transition-all shrink-0 shadow-sm"
-          >
-            <Sparkles size={14} className="text-emerald-400" />
-            Mở bộ tinh chỉnh
-          </Button>
-        </div>
+            <Button
+              onClick={() => setLowEndModalOpen(true)}
+              size="sm"
+              variant="outline"
+              className="h-8 px-3 text-xs font-semibold gap-1.5 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shrink-0 shadow-none"
+            >
+              <SlidersHorizontal size={13} className="text-primary" />
+              Tinh chỉnh
+            </Button>
+          </CardHeader>
+        </Card>
 
         {/* ── SECTION: UI Graphic & Effects Quality (Performance) ───────── */}
         <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
@@ -377,7 +375,7 @@ export const SettingsScreen = ({
                 Mức độ hiệu ứng mờ kính và bóng đổ
               </p>
             </div>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
               60 FPS
             </span>
           </CardHeader>
@@ -388,7 +386,6 @@ export const SettingsScreen = ({
                   id: 'auto' as const,
                   name: 'Tự động',
                   badge: 'Khuyến nghị',
-                  badgeColor: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
                   tagline: 'Theo máy của bạn',
                   detail: `Đang dùng: ${
                     sysInfo
@@ -404,7 +401,6 @@ export const SettingsScreen = ({
                   id: 'low' as const,
                   name: 'Máy yếu',
                   badge: 'Siêu nhẹ',
-                  badgeColor: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
                   tagline: 'Tắt bóng & làm mờ',
                   detail: 'Mượt mà cho RAM ≤ 4GB',
                 },
@@ -412,7 +408,6 @@ export const SettingsScreen = ({
                   id: 'medium' as const,
                   name: 'Cân bằng',
                   badge: 'Mượt & Đẹp',
-                  badgeColor: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
                   tagline: 'Làm mờ nhẹ',
                   detail: 'Vừa mượt vừa đẹp mắt',
                 },
@@ -420,7 +415,6 @@ export const SettingsScreen = ({
                   id: 'high' as const,
                   name: 'Đầy đủ hiệu ứng',
                   badge: 'Đẹp nhất',
-                  badgeColor: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
                   tagline: 'Kính mờ & phát sáng',
                   detail: 'Dành cho máy mạnh',
                 },
@@ -464,7 +458,12 @@ export const SettingsScreen = ({
                           {isSelected && <Check size={10} strokeWidth={3} />}
                         </div>
                       </div>
-                      <span className={cn('inline-block text-[9px] font-bold px-1.5 py-0.2 rounded border', opt.badgeColor)}>
+                      <span className={cn(
+                        'inline-block text-[9px] font-medium px-1.5 py-0.5 rounded border',
+                        isSelected
+                          ? 'bg-primary/15 text-primary border-primary/30'
+                          : 'bg-zinc-800 text-zinc-400 border-zinc-700/60'
+                      )}>
                         {opt.badge}
                       </span>
                       <p className="text-[11px] text-zinc-300 font-medium leading-tight pt-1">
@@ -489,7 +488,7 @@ export const SettingsScreen = ({
               <Zap className="h-5 w-5 text-primary" />
               Tối ưu hiệu năng game
             </CardTitle>
-            <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/30">
+            <span className="text-[11px] font-mono px-2 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
               Tăng FPS
             </span>
           </CardHeader>
@@ -521,12 +520,12 @@ export const SettingsScreen = ({
                             {preset.name}
                           </span>
                           {preset.recommended && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                            <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-primary/10 text-primary border border-primary/25">
                               Khuyên dùng
                             </span>
                           )}
                           {preset.minJavaVersion > 8 && (
-                            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                            <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 border border-zinc-700/60">
                               Java {preset.minJavaVersion}+
                             </span>
                           )}
@@ -729,7 +728,7 @@ export const SettingsScreen = ({
                     size="sm"
                     disabled={isInstallingJava}
                     onClick={handleAutoInstallJava}
-                    className="h-8 px-3 text-xs font-semibold gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white shrink-0 self-start sm:self-auto"
+                    className="h-8 px-3 text-xs font-semibold gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground shrink-0 self-start sm:self-auto shadow-none"
                   >
                     {isInstallingJava ? (
                       <>
@@ -768,19 +767,20 @@ export const SettingsScreen = ({
                 size="sm"
                 disabled={isScanningCache}
                 onClick={handleScanCache}
-                className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1"
+                className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1 shadow-none"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isScanningCache && 'animate-spin')} />
                 Quét
               </Button>
               <Button
                 type="button"
+                variant="outline"
                 size="sm"
                 disabled={isCleaningCache || (cacheScan?.totalSizeBytes || 0) === 0}
                 onClick={handleCleanCache}
-                className="h-7 px-3 text-xs font-semibold gap-1.5 bg-rose-600 hover:bg-rose-500 text-white"
+                className="h-7 px-3 text-xs font-semibold gap-1.5 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shadow-none"
               >
-                <Trash2 size={12} />
+                <Trash2 size={12} className="text-zinc-400" />
                 Dọn dẹp ({totalCacheMb} MB)
               </Button>
             </div>

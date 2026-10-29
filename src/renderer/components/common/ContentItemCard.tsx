@@ -59,7 +59,7 @@ export const ContentItemCard: React.FC<ContentItemCardProps> = ({
             <span
               className={cn(
                 'text-sm font-bold truncate transition-colors',
-                disabled ? 'text-zinc-400 line-through' : 'text-foreground group-hover:text-primary'
+                disabled ? 'text-zinc-400 line-through' : 'text-foreground/85 group-hover:text-primary'
               )}
             >
               {title}

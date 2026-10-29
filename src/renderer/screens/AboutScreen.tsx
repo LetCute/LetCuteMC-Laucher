@@ -144,7 +144,7 @@ export function AboutScreen() {
 
             <div className="space-y-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="text-2xl font-black text-foreground tracking-tight">LetCuteMC Launcher</h2>
+                <h2 className="text-2xl font-black text-foreground/85 tracking-tight">LetCuteMC Launcher</h2>
                 <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30 font-mono">
                   v{pkg.version}
                 </span>

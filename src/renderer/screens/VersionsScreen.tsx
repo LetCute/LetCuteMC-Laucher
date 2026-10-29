@@ -204,7 +204,7 @@ export function VersionsScreen({
 
                     <div className="flex flex-col gap-1 min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="text-sm font-bold text-foreground truncate group-hover:text-primary transition-colors">
+                        <span className="text-sm font-bold text-foreground/85 truncate group-hover:text-primary transition-colors">
                           Minecraft {ver.name || ver.id}
                         </span>
 

@@ -1,10 +1,12 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { AlertTriangle, RefreshCw } from 'lucide-react';
+import { AlertCircle, RefreshCw } from 'lucide-react';
 import { Button } from './ui/button';
 
 interface Props {
   children: ReactNode;
   fallbackMessage?: string;
+  resetKey?: unknown;
+  compact?: boolean;
 }
 
 interface State {
@@ -15,7 +17,7 @@ interface State {
 export class ErrorBoundary extends Component<Props, State> {
   public state: State = {
     hasError: false,
-    error: null
+    error: null,
   };
 
   public static getDerivedStateFromError(error: Error): State {
@@ -23,27 +25,55 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error('Uncaught error:', error, errorInfo);
+    console.error('Uncaught UI error:', error, errorInfo);
+  }
+
+  public componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && this.props.resetKey !== prevProps.resetKey) {
+      this.setState({ hasError: false, error: null });
+    }
   }
 
   public render() {
     if (this.state.hasError) {
+      if (this.props.compact) {
+        return (
+          <div className="flex items-center justify-between gap-3 p-3 rounded-md border border-zinc-800/80 bg-zinc-900/85 text-xs text-muted-foreground">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertCircle size={15} className="text-zinc-400 shrink-0" />
+              <span className="truncate">
+                {this.props.fallbackMessage || 'Thành phần gặp sự cố.'}
+              </span>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="h-7 px-2.5 text-xs font-semibold gap-1 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shrink-0 shadow-none"
+            >
+              <RefreshCw size={11} className="text-primary" />
+              Thử lại
+            </Button>
+          </div>
+        );
+      }
+
       return (
-        <div className="flex flex-col items-center justify-center w-full h-full min-h-[200px] p-6 text-center bg-card rounded-md border border-destructive/20 shadow-sm gap-4">
-          <div className="h-12 w-12 rounded-full bg-destructive/10 flex items-center justify-center text-destructive">
-            <AlertTriangle size={24} />
+        <div className="flex flex-col items-center justify-center w-full h-full min-h-[220px] p-6 text-center border border-zinc-800/80 bg-zinc-900/85 rounded-md shadow-md gap-3.5">
+          <div className="h-9 w-9 rounded-md bg-zinc-800/80 border border-zinc-700/60 flex items-center justify-center text-zinc-300">
+            <AlertCircle size={18} className="text-zinc-400" />
           </div>
           <div className="space-y-1">
-            <h2 className="text-lg font-bold text-foreground">
-              Đã xảy ra lỗi giao diện
-            </h2>
-            <p className="text-sm text-muted-foreground max-w-[400px]">
+            <h3 className="text-sm font-semibold text-zinc-200">
+              Đã xảy ra sự cố giao diện
+            </h3>
+            <p className="text-xs text-muted-foreground max-w-[420px] leading-relaxed">
               {this.props.fallbackMessage || 'Một thành phần trên giao diện gặp sự cố không mong muốn.'}
             </p>
           </div>
           {this.state.error && (
-            <div className="w-full max-w-md bg-destructive/5 border border-destructive/10 p-3 rounded-md text-left overflow-auto max-h-32">
-              <p className="text-xs font-mono text-destructive/80 break-words">
+            <div className="w-full max-w-md bg-zinc-950/60 border border-zinc-800/80 p-2.5 rounded text-left overflow-auto max-h-32">
+              <p className="text-[11px] font-mono text-zinc-400 break-words leading-snug">
                 {this.state.error.message}
               </p>
             </div>
@@ -51,9 +81,9 @@ export class ErrorBoundary extends Component<Props, State> {
           <Button
             variant="outline"
             onClick={() => this.setState({ hasError: false, error: null })}
-            className="mt-2"
+            className="h-8 px-3 text-xs font-semibold gap-1.5 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shadow-none mt-1"
           >
-            <RefreshCw size={14} className="mr-2" />
+            <RefreshCw size={13} className="text-primary" />
             Thử lại
           </Button>
         </div>
@@ -63,3 +93,4 @@ export class ErrorBoundary extends Component<Props, State> {
     return this.props.children;
   }
 }
+

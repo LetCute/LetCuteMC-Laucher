@@ -82,14 +82,14 @@
 
   /* Base */
   --background: oklch(0.125 0.010 240);
-  --foreground: oklch(0.880 0.008 240);
+  --foreground: oklch(0.855 0.008 240);
 
   /* Surfaces - Soft Glass for High Readability */
   --card: oklch(0.160 0.010 240 / 0.85);
-  --card-foreground: oklch(0.880 0.008 240);
+  --card-foreground: oklch(0.855 0.008 240);
 
   --popover: oklch(0.135 0.010 240 / 0.96);
-  --popover-foreground: oklch(0.880 0.008 240);
+  --popover-foreground: oklch(0.855 0.008 240);
 
   /* Primary - Vibrant Minecraft Emerald Green */
   --primary: oklch(0.620 0.175 150);
@@ -98,14 +98,13 @@
 
   /* Secondary - Dark Glass Stone */
   --secondary: oklch(0.220 0.012 240 / 0.65);
-  --secondary-foreground: oklch(0.860 0.008 240);
+  --secondary-foreground: oklch(0.835 0.008 240);
 
   /* Interactive states */
   --muted: oklch(0.200 0.010 240 / 0.6);
   --muted-foreground: oklch(0.680 0.010 140);
-
   --accent: oklch(0.240 0.025 150 / 0.55);
-  --accent-foreground: oklch(0.880 0.008 240);
+  --accent-foreground: oklch(0.855 0.008 240);
 
   /* Destructive - Red */
   --destructive: oklch(0.600 0.210 27);
@@ -135,13 +134,11 @@
 
   /* Sidebar - Darkest Surface */
   --sidebar: oklch(0.105 0.008 240);
-  --sidebar-foreground: oklch(0.880 0.008 140);
-
+  --sidebar-foreground: oklch(0.855 0.008 140);
   --sidebar-primary: oklch(0.620 0.175 150);
   --sidebar-primary-foreground: oklch(0.110 0.020 240);
-
   --sidebar-accent: oklch(0.190 0.035 150 / 0.7);
-  --sidebar-accent-foreground: oklch(0.880 0.008 240);
+  --sidebar-accent-foreground: oklch(0.855 0.008 240);
 
   --sidebar-border: oklch(0.200 0.010 240);
   --sidebar-ring: oklch(0.620 0.175 150);
