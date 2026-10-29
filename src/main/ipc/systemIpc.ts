@@ -97,12 +97,30 @@ export function registerSystemIpc(): void {
       throw new Error('Đường dẫn phiên bản không hợp lệ.')
     }
     const pathMod = await import('node:path')
-    const parentDir = pathMod.basename(pathMod.dirname(pathMod.resolve(versionPath))).toLowerCase()
+    const resolvedVersionPath = pathMod.resolve(versionPath)
+    const parentDir = pathMod.basename(pathMod.dirname(resolvedVersionPath)).toLowerCase()
     if (parentDir !== 'versions') {
       throw new Error('Chỉ được phép xóa thư mục phiên bản hợp lệ nằm trong versions.')
     }
+
+    // Đảm bảo chỉ xóa thư mục nằm bên trong thư mục Minecraft đã cấu hình
+    const settings = await getSettings()
+    const detected = await detectMinecraftDirectory()
+    const allowedRoots = [settings.minecraftDirectory, detected.path]
+      .filter((r): r is string => Boolean(r))
+      .map(r => pathMod.resolve(r))
+
+    const isInsideAllowed = allowedRoots.some(root => {
+      const rel = pathMod.relative(root, resolvedVersionPath)
+      return !rel.startsWith('..') && !pathMod.isAbsolute(rel)
+    })
+
+    if (!isInsideAllowed) {
+      throw new Error('Thư mục phiên bản phải nằm bên trong thư mục Minecraft hợp lệ.')
+    }
+
     const fs = await import('node:fs/promises')
-    await fs.rm(versionPath, { recursive: true, force: true })
+    await fs.rm(resolvedVersionPath, { recursive: true, force: true })
     return true
   })
 
@@ -173,10 +191,14 @@ export function registerSystemIpc(): void {
     try {
       const fs = await import('node:fs/promises')
       const path = await import('node:path')
-      const normalized = path.normalize(filePath)
+      const normalized = path.resolve(filePath)
       const ext = path.extname(normalized).toLowerCase().substring(1)
       const allowedExts = ['png', 'jpg', 'jpeg', 'webp', 'gif', 'bmp']
       if (!allowedExts.includes(ext)) return null
+
+      // Giới hạn kích thước tệp ảnh tối đa 15MB để ngăn chặn DoS tràn bộ nhớ RAM
+      const stat = await fs.stat(normalized)
+      if (!stat.isFile() || stat.size > 15 * 1024 * 1024) return null
 
       const buffer = await fs.readFile(normalized)
       return `data:image/${ext};base64,${buffer.toString('base64')}`

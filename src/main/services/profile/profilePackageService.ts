@@ -272,14 +272,34 @@ export class ProfilePackageService {
 
       // Register new profile in profileService
       const profileName = customName && customName.trim() ? customName.trim() : manifest.name
+
+      // Sanitize imported JVM arguments: drop dangerous flags that can lead to arbitrary code execution
+      let sanitizedJvmArgs: string | undefined = undefined
+      if (typeof manifest.jvmArgs === 'string' && manifest.jvmArgs.trim()) {
+        const tokens = manifest.jvmArgs.split(/\s+/)
+        const safeTokens = tokens.filter((arg: string) => {
+          const lower = arg.toLowerCase()
+          return !(
+            lower.startsWith('-javaagent:') ||
+            lower.startsWith('-agentlib:') ||
+            lower.startsWith('-agentpath:') ||
+            lower.startsWith('-xbootclasspath') ||
+            lower.startsWith('-xx:onerror=') ||
+            lower.startsWith('-xx:onoutofmemoryerror=')
+          )
+        })
+        sanitizedJvmArgs = safeTokens.length > 0 ? safeTokens.join(' ') : undefined
+      }
+
       const newProfile: LauncherProfile = await createProfile({
         name: profileName,
         minecraftVersion: manifest.minecraftVersion,
         gameDir: targetGameDir,
-        javaPath: manifest.javaPath || undefined,
+        // Do not inherit absolute host javaPath from external package manifests; let launcher resolve Java locally
+        javaPath: undefined,
         minMemoryMb: manifest.minMemoryMb,
         maxMemoryMb: manifest.maxMemoryMb,
-        jvmArgs: manifest.jvmArgs || undefined,
+        jvmArgs: sanitizedJvmArgs,
         description: manifest.description,
       })
 

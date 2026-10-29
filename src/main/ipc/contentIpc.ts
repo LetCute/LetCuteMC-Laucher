@@ -37,9 +37,9 @@ export function registerContentIpc(): void {
   handleIpc('content:scan-resourcepacks', (gameDir: string) => scanResourcePacks(gameDir))
   handleIpc('content:scan-shaderpacks', (gameDir: string) => scanShaderPacks(gameDir))
   handleIpc('content:get-mod-metadata', (_gameDir: string, jarPath: string) => getModMetadata(jarPath))
-  handleIpc('content:enable', (_gameDir: string, itemPath: string) => enableGameContent(itemPath))
-  handleIpc('content:disable', (_gameDir: string, itemPath: string) => disableGameContent(itemPath))
-  handleIpc('content:delete', (_gameDir: string, itemPath: string) => deleteGameContent(_gameDir, itemPath))
+  handleIpc('content:enable', (gameDir: string, itemPath: string) => enableGameContent(itemPath, gameDir))
+  handleIpc('content:disable', (gameDir: string, itemPath: string) => disableGameContent(itemPath, gameDir))
+  handleIpc('content:delete', (gameDir: string, itemPath: string) => deleteGameContent(gameDir, itemPath))
   handleIpc('content:import', importGameContent)
   handleIpc('content:open-folder', async (gameDir: string, type: GameContentType) => {
     const folderPath = await resolveContentFolderPath(gameDir, type)

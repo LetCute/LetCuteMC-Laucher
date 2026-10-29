@@ -68,9 +68,9 @@ function downloadFile(url: string, destination: string, maxRedirects = 10): Prom
     }
 
     const parsedUrl = new URL(url);
-    const client = parsedUrl.protocol === 'http:' ? http : https;
+    if (parsedUrl.protocol !== 'https:') { reject(new Error('Chỉ chấp nhận tải xuống Java qua kết nối HTTPS bảo mật.')); return; }
 
-    const request = client.get(url, {
+    const request = https.get(url, {
       timeout: 45000,
       headers: {
         'User-Agent': 'LetCuteMC-Launcher',
@@ -83,7 +83,7 @@ function downloadFile(url: string, destination: string, maxRedirects = 10): Prom
       if ([301, 302, 303, 307, 308].includes(statusCode)) {
         const redirectLocation = response.headers.location;
         if (redirectLocation) {
-          const resolvedUrl = new URL(redirectLocation, url).toString();
+          const resolvedUrl = new URL(redirectLocation, url).toString(); if (!resolvedUrl.startsWith('https://')) { response.resume(); reject(new Error('Từ chối chuyển hướng không an toàn (bắt buộc HTTPS).')); return; }
           response.resume(); // drain response stream
           downloadFile(resolvedUrl, destination, maxRedirects - 1).then(resolve).catch(reject);
           return;
@@ -188,6 +188,11 @@ export async function autoInstallJava(
       });
 
       await downloadFile(versionInfo.url, tempArchivePath);
+
+      const archiveStats = await fsPromises.stat(tempArchivePath);
+      if (!archiveStats.isFile() || archiveStats.size < 5 * 1024 * 1024) {
+        throw new Error('Gói cài đặt Java tải về không hợp lệ hoặc kích thước quá nhỏ (< 5MB).');
+      }
 
       onProgress?.({
         stage: 'downloading',

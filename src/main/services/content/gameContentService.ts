@@ -331,8 +331,15 @@ export async function scanGameContent(gameDir: string): Promise<GameContentScanR
 
 // ─── Enable Mod ───────────────────────────────────────────────────────────────
 
-export async function enableGameContent(itemPath: string): Promise<GameContentItem> {
-  assertPathInsideGameDir(path.dirname(itemPath), itemPath)
+export async function enableGameContent(itemPath: string, gameDir?: string): Promise<GameContentItem> {
+  if (gameDir) {
+    assertPathInsideGameDir(gameDir, itemPath)
+  } else {
+    const parentDirName = path.basename(path.dirname(path.resolve(itemPath))).toLowerCase()
+    if (parentDirName !== 'mods') {
+      throw new Error('Chỉ được phép bật mod nằm trong thư mục mods.')
+    }
+  }
 
   if (!itemPath.endsWith('.jar.disabled')) {
     throw new Error('Only .jar.disabled files can be enabled')
@@ -366,8 +373,15 @@ export async function enableGameContent(itemPath: string): Promise<GameContentIt
 
 // ─── Disable Mod ──────────────────────────────────────────────────────────────
 
-export async function disableGameContent(itemPath: string): Promise<GameContentItem> {
-  assertPathInsideGameDir(path.dirname(itemPath), itemPath)
+export async function disableGameContent(itemPath: string, gameDir?: string): Promise<GameContentItem> {
+  if (gameDir) {
+    assertPathInsideGameDir(gameDir, itemPath)
+  } else {
+    const parentDirName = path.basename(path.dirname(path.resolve(itemPath))).toLowerCase()
+    if (parentDirName !== 'mods') {
+      throw new Error('Chỉ được phép tắt mod nằm trong thư mục mods.')
+    }
+  }
 
   if (!itemPath.endsWith('.jar')) {
     throw new Error('Only .jar files can be disabled')
