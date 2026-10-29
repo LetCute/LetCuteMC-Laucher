@@ -27,12 +27,16 @@ export interface PinnedServerConfig {
   version?: string
   tags?: string[]
   matchIps?: string[]
+  bannerUrl?: string
+  faviconUrl?: string
 }
 
+export const PINNED_SERVERS_URL = 'https://storage.letcute.com/letcutemc-launcher/pinned-servers.json'
+
 /**
- * Danh sách server ghim lên đầu. Thêm server mới vào mảng này theo thứ tự ưu tiên.
+ * Danh sách server ghim mặc định (fallback khi không có mạng).
  */
-export const PINNED_SERVERS: PinnedServerConfig[] = [
+export const DEFAULT_PINNED_SERVERS: PinnedServerConfig[] = [
   {
     ip: 'choi.novusmc.online',
     // Minecraft color formatting: §6 = Vàng cam (Gold), §e = Vàng sáng (Yellow), §l = In đậm (Bold)
@@ -52,45 +56,141 @@ export const PINNED_SERVERS: PinnedServerConfig[] = [
   }
 ]
 
-function normalizeIp(ip?: string): string {
+export let PINNED_SERVERS: PinnedServerConfig[] = [...DEFAULT_PINNED_SERVERS]
+
+export function normalizeIp(ip?: string): string {
   return ip ? ip.toLowerCase().trim().replace(/:(?:25565|19012|\d+)$/, '') : ''
 }
 
-export function findPinnedServer(ip?: string): PinnedServerConfig | undefined {
+export function findPinnedServer(ip?: string, customList?: PinnedServerConfig[]): PinnedServerConfig | undefined {
   if (!ip) return undefined
   const clean = normalizeIp(ip)
   const full = ip.toLowerCase().trim()
+  const list = customList ?? PINNED_SERVERS
 
-  return PINNED_SERVERS.find(pinned => {
+  return list.find(pinned => {
     const pinnedClean = normalizeIp(pinned.ip)
     if (clean === pinnedClean || full === pinned.ip.toLowerCase().trim()) return true
     return pinned.matchIps?.some(m => normalizeIp(m) === clean || m.toLowerCase().trim() === full) ?? false
   })
 }
 
-export function isPinnedServerIp(ip?: string): boolean {
-  return findPinnedServer(ip) !== undefined
+export function isPinnedServerIp(ip?: string, customList?: PinnedServerConfig[]): boolean {
+  return findPinnedServer(ip, customList) !== undefined
 }
 
 // Backward compatibility
-export const NOVUS_SERVER_IP = PINNED_SERVERS[0]?.ip ?? 'choi.novusmc.online'
-export const NOVUS_SERVER_NAME = PINNED_SERVERS[0]?.name ?? '§6§l[Server Chill Lắm] §e§lNovusMC'
+export const NOVUS_SERVER_IP = DEFAULT_PINNED_SERVERS[0]?.ip ?? 'choi.novusmc.online'
+export const NOVUS_SERVER_NAME = DEFAULT_PINNED_SERVERS[0]?.name ?? '§6§l[Server Chill Lắm] §e§lNovusMC'
 export const isNovusServerIp = isPinnedServerIp
 
 export class ServerListService {
   private readonly baseUrl = 'https://minecraft-mp.com/country/vietnam'
+  private fetchPinnedPromise: Promise<PinnedServerConfig[]> | null = null
+
+  /**
+   * Lấy danh sách pinned servers từ remote URL hoặc cache, fallback về DEFAULT_PINNED_SERVERS nếu lỗi.
+   */
+  async getPinnedServers(forceRefresh = false): Promise<PinnedServerConfig[]> {
+    if (!forceRefresh && this.fetchPinnedPromise) {
+      return this.fetchPinnedPromise
+    }
+
+    const task = this.resolvePinnedServers(forceRefresh)
+    this.fetchPinnedPromise = task
+    try {
+      return await task
+    } finally {
+      this.fetchPinnedPromise = null
+    }
+  }
+
+  private async resolvePinnedServers(forceRefresh = false): Promise<PinnedServerConfig[]> {
+    const { getLauncherDataDirectory, readJsonFile, writeJsonFile } = await import('../system/storageService.js')
+    const cachePath = path.join(getLauncherDataDirectory(), 'pinned-servers-cache.json')
+    const ONE_DAY = 24 * 60 * 60 * 1000
+
+    let diskCache: { timestamp: number; servers: PinnedServerConfig[] } | null = null
+    try {
+      diskCache = (await readJsonFile(cachePath, { timestamp: 0, servers: [] })) as {
+        timestamp: number
+        servers: PinnedServerConfig[]
+      }
+    } catch {
+      diskCache = null
+    }
+
+    const now = Date.now()
+    if (!forceRefresh && diskCache && Array.isArray(diskCache.servers) && diskCache.servers.length > 0 && now - diskCache.timestamp < ONE_DAY) {
+      PINNED_SERVERS = diskCache.servers
+      return PINNED_SERVERS
+    }
+
+    try {
+      const res = await fetch(PINNED_SERVERS_URL, { signal: AbortSignal.timeout(5000) })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      const parsed = this.parsePinnedServersJson(data)
+
+      if (parsed.length > 0) {
+        PINNED_SERVERS = parsed
+        await writeJsonFile(cachePath, { timestamp: now, servers: parsed }).catch(() => {})
+        return parsed
+      }
+    } catch (err) {
+      console.warn('[ServerListService] Fetch remote pinned servers failed:', err instanceof Error ? err.message : String(err))
+    }
+
+    if (diskCache && Array.isArray(diskCache.servers) && diskCache.servers.length > 0) {
+      PINNED_SERVERS = diskCache.servers
+      return diskCache.servers
+    }
+
+    PINNED_SERVERS = [...DEFAULT_PINNED_SERVERS]
+    return PINNED_SERVERS
+  }
+
+  private parsePinnedServersJson(data: any): PinnedServerConfig[] {
+    const rawList = Array.isArray(data) ? data : (Array.isArray(data?.servers) ? data.servers : [])
+    const result: PinnedServerConfig[] = []
+
+    for (const item of rawList) {
+      if (!item || typeof item.ip !== 'string' || typeof item.name !== 'string') continue
+      const ip = item.ip.trim()
+      const name = item.name.trim()
+      if (!ip || !name) continue
+
+      result.push({
+        ip,
+        name,
+        description: typeof item.description === 'string' ? item.description.trim() : undefined,
+        version: typeof item.version === 'string' ? item.version.trim() : undefined,
+        tags: Array.isArray(item.tags)
+          ? item.tags.filter((t: any) => typeof t === 'string' && t.trim()).map((t: string) => t.trim())
+          : undefined,
+        matchIps: Array.isArray(item.matchIps)
+          ? item.matchIps.filter((m: any) => typeof m === 'string' && m.trim()).map((m: string) => m.trim())
+          : undefined,
+        bannerUrl: typeof item.bannerUrl === 'string' && item.bannerUrl.startsWith('http') ? item.bannerUrl.trim() : undefined,
+        faviconUrl: typeof item.faviconUrl === 'string' && item.faviconUrl.startsWith('http') ? item.faviconUrl.trim() : undefined
+      })
+    }
+
+    return result
+  }
 
   /**
    * Đảm bảo các server trong PINNED_SERVERS luôn ở đầu danh sách theo thứ tự mảng.
    * Nếu có ở dưới thì xóa khỏi vị trí cũ và đẩy lên đầu; nếu chưa có thì thêm mới vào đầu.
    */
-  promotePinnedServers(servers: MinecraftServer[], page: number = 1): MinecraftServer[] {
-    const list = servers.filter(s => !isPinnedServerIp(s.ip))
+  promotePinnedServers(servers: MinecraftServer[], page: number = 1, customPinned?: PinnedServerConfig[]): MinecraftServer[] {
+    const pinnedList = customPinned ?? PINNED_SERVERS
+    const list = servers.filter(s => !isPinnedServerIp(s.ip, pinnedList))
     if (page > 1) return list
 
-    const pinnedItems: MinecraftServer[] = PINNED_SERVERS.map((pinned, index) => {
+    const pinnedItems: MinecraftServer[] = pinnedList.map((pinned, index) => {
       const existing = servers.find(s => {
-        const found = findPinnedServer(s.ip)
+        const found = findPinnedServer(s.ip, pinnedList)
         return found?.ip.toLowerCase() === pinned.ip.toLowerCase()
       })
 
@@ -99,6 +199,12 @@ export class ServerListService {
           ...existing,
           name: pinned.name,
           ip: pinned.ip,
+          rank: index + 1,
+          bannerUrl: pinned.bannerUrl ?? existing.bannerUrl,
+          faviconUrl: pinned.faviconUrl ?? existing.faviconUrl,
+          description: pinned.description || existing.description,
+          tags: pinned.tags || existing.tags,
+          version: pinned.version || existing.version,
           isOnline: true
         }
       }
@@ -108,6 +214,8 @@ export class ServerListService {
         rank: index + 1,
         name: pinned.name,
         ip: pinned.ip,
+        bannerUrl: pinned.bannerUrl,
+        faviconUrl: pinned.faviconUrl,
         description: pinned.description ?? 'Máy chủ cộng đồng Minecraft',
         isOnline: true,
         players: { online: 0, max: 500 },
@@ -128,7 +236,9 @@ export class ServerListService {
    * @param page Page number
    */
   async getTopServers(page: number = 1): Promise<MinecraftServer[]> {
+    let pinnedList: PinnedServerConfig[] = PINNED_SERVERS
     try {
+      pinnedList = await this.getPinnedServers()
       const { getLauncherDataDirectory, readJsonFile, writeJsonFile } = await import('../system/storageService.js')
       const cachePath = path.join(getLauncherDataDirectory(), `top-servers-cache-page${page}.json`)
 
@@ -137,7 +247,7 @@ export class ServerListService {
       const ONE_DAY = 24 * 60 * 60 * 1000
 
       if (now - cache.timestamp < ONE_DAY && cache.data.length > 0) {
-        return this.promotePinnedServers(cache.data, page)
+        return this.promotePinnedServers(cache.data, page, pinnedList)
       }
 
       const url = page === 1 ? this.baseUrl + '/' : `${this.baseUrl}/${page}/`
@@ -201,15 +311,14 @@ export class ServerListService {
         }
       })
 
-      const finalServers = this.promotePinnedServers(servers, page)
+      const finalServers = this.promotePinnedServers(servers, page, pinnedList)
       if (finalServers.length > 0) {
         await writeJsonFile(cachePath, { timestamp: now, data: finalServers }).catch(() => {})
       }
-
       return finalServers
     } catch (error) {
       console.error('[ServerListService] Error fetching servers:', error)
-      return this.promotePinnedServers([], page)
+      return this.promotePinnedServers([], page, pinnedList)
     }
   }
 
@@ -235,8 +344,9 @@ export class ServerListService {
       // Set lưu các IP đã có (pinned + user servers) để không inject trùng lặp
       const existingIps = new Set<string>()
 
-      // 1. Tạo compounds cho pinned servers (NovusMC, Aenat) luôn nằm ở vị trí đầu (index 0, 1, ...)
-      const pinnedCompounds = PINNED_SERVERS.map(pinned => {
+      // 1. Tạo compounds cho pinned servers luôn nằm ở vị trí đầu (index 0, 1, ...)
+      const pinnedList = await this.getPinnedServers()
+      const pinnedCompounds = pinnedList.map(pinned => {
         existingIps.add(pinned.ip.toLowerCase().trim())
         existingIps.add(normalizeIp(pinned.ip))
         pinned.matchIps?.forEach(m => {
@@ -289,8 +399,8 @@ export class ServerListService {
             return false
           }
 
-          // Server đặc biệt (NovusMC, Aenat) luôn được đưa lên đầu, nên bỏ ở vị trí cũ để không trùng lặp
-          if (isPinnedServerIp(ipStr) || PINNED_SERVERS.some(p => nameStr === p.name) || nameStr.includes('Aenat') || nameStr.includes('NovusMC')) {
+          // Server đặc biệt luôn được đưa lên đầu, nên bỏ ở vị trí cũ để không trùng lặp
+          if (isPinnedServerIp(ipStr, pinnedList) || pinnedList.some(p => nameStr === p.name || nameStr.includes(p.name))) {
             return false
           }
 
@@ -313,7 +423,7 @@ export class ServerListService {
       // 3. Chuẩn bị top servers từ web (chỉ thêm những server chưa có trong pinned hoặc server người dùng)
       const newServersNbt: any[] = []
       for (const srv of topServers) {
-        if (!srv.isOnline || isPinnedServerIp(srv.ip)) continue
+        if (!srv.isOnline || isPinnedServerIp(srv.ip, pinnedList)) continue
 
         const clean = normalizeIp(srv.ip)
         const full = srv.ip.toLowerCase().trim()
