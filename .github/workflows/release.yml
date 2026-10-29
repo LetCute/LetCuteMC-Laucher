@@ -75,13 +75,14 @@ jobs:
             --exclude "*" \
             --include "*.exe" \
             --include "latest.yml"
+          rm -rf release/win-unpacked release/*-unpacked
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
             --exclude "*" \
-            --exclude "win-unpacked/*" \
             --include "*.exe" \
-            --include "latest.yml"
+            --include "latest.yml" \
+            --exclude "*win-unpacked*"
 
       - name: Upload to Cloudflare R2 - Stable (Linux)
         if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && !contains(github.ref, '-beta') && !contains(github.ref, '-alpha') && !contains(github.ref, '-rc') && github.event.inputs.channel != 'beta' && matrix.os == 'ubuntu-latest'
@@ -96,6 +97,7 @@ jobs:
             --exclude "*" \
             --include "*.deb" \
             --include "latest-linux.yml"
+          rm -rf release/linux-unpacked release/*-unpacked
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
@@ -120,13 +122,14 @@ jobs:
             --exclude "*" \
             --include "*.exe" \
             --include "latest.yml"
+          rm -rf release/win-unpacked release/*-unpacked
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/beta/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
             --exclude "*" \
-            --exclude "win-unpacked/*" \
             --include "*.exe" \
-            --include "latest.yml"
+            --include "latest.yml" \
+            --exclude "*win-unpacked*"
 
       - name: Upload to Cloudflare R2 - Beta (Linux)
         if: (startsWith(github.ref, 'refs/tags/') || github.event_name == 'release') && (contains(github.ref, '-beta') || contains(github.ref, '-alpha') || contains(github.ref, '-rc') || github.event.inputs.channel == 'beta') && matrix.os == 'ubuntu-latest'
@@ -141,6 +144,7 @@ jobs:
             --exclude "*" \
             --include "*.deb" \
             --include "latest-linux.yml"
+          rm -rf release/linux-unpacked release/*-unpacked
           aws s3 cp release/ s3://storage-letcute/letcutemc-launcher/beta/ \
             --endpoint-url https://${{ secrets.R2_ACCOUNT_ID }}.r2.cloudflarestorage.com \
             --recursive \
