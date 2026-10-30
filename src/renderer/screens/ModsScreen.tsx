@@ -10,6 +10,7 @@ import {
   FileText,
   Zap,
   AlertTriangle,
+  FolderOpen,
 } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { DropZone } from '../components/ui/DropZone'
@@ -122,28 +123,44 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
             <Button
               onClick={handleCheckUpdates}
               disabled={isCheckingUpdates || loading}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-emerald-500/10 border-emerald-500/30 text-emerald-300 hover:bg-emerald-500/20 hover:border-emerald-500/50 transition-colors shadow-sm text-xs font-semibold gap-1.5"
+              className={cn(
+                'h-9 px-3 text-xs gap-1.5 transition-all',
+                updatesCount > 0 && 'border-emerald-500/60 text-emerald-300'
+              )}
+              title="Kiểm tra bản cập nhật mới cho các mod"
             >
               <ArrowUpCircle className={cn('h-4 w-4 text-emerald-400', isCheckingUpdates && 'animate-spin')} />
-              {isCheckingUpdates ? 'Đang kiểm tra...' : 'Cập nhật Mod'}
+              <span>{isCheckingUpdates ? 'Đang kiểm tra...' : 'Cập nhật Mod'}</span>
+              {updatesCount > 0 && (
+                <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-emerald-600 text-white">
+                  {updatesCount}
+                </span>
+              )}
             </Button>
 
             <Button
               onClick={handleOpenConflictChecker}
               disabled={isScanningConflicts}
-              variant="outline"
+              variant="elevated"
               size="sm"
               className={cn(
-                'h-9 px-3 text-xs font-semibold gap-1.5 shadow-sm transition-colors',
+                'h-9 px-3 text-xs gap-1.5 transition-all',
                 conflictCheckResult?.hasCritical
-                  ? 'bg-rose-500/15 border-rose-500/40 text-rose-300 hover:bg-rose-500/25 animate-pulse'
-                  : 'bg-amber-500/10 border-amber-500/30 text-amber-300 hover:bg-amber-500/20'
+                  ? 'bg-rose-500/20 border-rose-500/60 text-rose-200 hover:bg-rose-500/30 animate-pulse'
+                  : ''
               )}
+              title="Quét xung đột và crash giữa các mod"
             >
-              <AlertTriangle className={cn('h-4 w-4', isScanningConflicts && 'animate-spin')} />
-              {isScanningConflicts ? 'Đang quét...' : 'Xung đột Mod'}
+              <AlertTriangle
+                className={cn(
+                  'h-4 w-4',
+                  conflictCheckResult?.hasCritical ? 'text-rose-400' : 'text-amber-400',
+                  isScanningConflicts && 'animate-spin'
+                )}
+              />
+              <span>{isScanningConflicts ? 'Đang quét...' : 'Xung đột Mod'}</span>
               {conflictCheckResult?.criticalCount ? (
                 <span className="ml-0.5 px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-rose-600 text-white">
                   {conflictCheckResult.criticalCount}
@@ -153,33 +170,36 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
 
             <Button
               onClick={handleOpenDepInspector}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-primary/10 border-primary/30 text-primary hover:bg-primary/20 hover:border-primary/50 transition-colors shadow-sm text-xs font-semibold gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5 transition-all"
+              title="Kiểm tra thiếu dependency và tự động sửa mod"
             >
-              <ShieldCheck className="h-4 w-4 text-primary" />
-              Kiểm tra & Sửa Mod
+              <ShieldCheck className="h-4 w-4 text-emerald-400" />
+              <span>Kiểm tra & Sửa Mod</span>
             </Button>
 
             <Button
               onClick={() => void refetchMods()}
               disabled={loading}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5 transition-all"
+              title="Quét lại danh sách mod"
             >
-              <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />
-              Làm mới
+              <RefreshCw className={cn('h-4 w-4 text-zinc-300', loading && 'animate-spin')} />
+              <span>Làm mới</span>
             </Button>
 
             <Button
               onClick={handleOpenFolder}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5 transition-all"
+              title="Mở thư mục mods trong Windows Explorer"
             >
-              <Box className="h-3.5 w-3.5 text-primary" />
-              Thư mục
+              <FolderOpen className="h-4 w-4 text-emerald-400" />
+              <span>Thư mục</span>
             </Button>
           </>
         }
@@ -342,10 +362,10 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                         {updateItem && (
                           <div className="flex items-center gap-1">
                             <Button
-                              variant="outline"
+                              variant="elevated"
                               size="sm"
                               onClick={() => setSelectedChangelogMod(updateItem)}
-                              className="h-8 px-2 text-xs bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 gap-1 rounded-md"
+                              className="h-8 px-2 text-xs gap-1 rounded-md"
                               title="Xem nhật ký thay đổi"
                             >
                               <FileText size={12} />
@@ -369,16 +389,17 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                           </div>
                         )}
 
+                        {/* Toggle Mod Active/Inactive */}
                         <Button
                           disabled={isOperating}
                           onClick={() => handleToggleMod(mod)}
                           variant="outline"
                           size="icon-sm"
                           className={cn(
-                            'h-8 w-8 rounded-md border transition-all',
+                            'h-8 w-8 rounded-md border transition-all shadow-sm active:scale-95',
                             isEnabled
-                              ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/50'
-                              : 'bg-zinc-800/80 border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800'
+                              ? 'bg-emerald-500/20 border-emerald-500/40 text-emerald-300 hover:bg-emerald-500/30 hover:border-emerald-500/60'
+                              : 'bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-700'
                           )}
                           title={isEnabled ? 'Bấm để tắt mod' : 'Bấm để bật mod'}
                         >
@@ -389,12 +410,13 @@ export const ModsScreen = ({ gameDir, profileName, minecraftVersion }: ModsScree
                           )}
                         </Button>
 
+                        {/* Delete Mod */}
                         <Button
                           disabled={isOperating}
                           onClick={() => handleDeleteMod(mod)}
                           variant="outline"
                           size="icon-sm"
-                          className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-md transition-all"
+                          className="h-8 w-8 bg-zinc-800 border-zinc-700 text-zinc-400 hover:text-rose-400 hover:bg-rose-500/15 hover:border-rose-500/40 rounded-md transition-all shadow-sm active:scale-95"
                           title="Xóa mod này"
                         >
                           <Trash2 size={13} />

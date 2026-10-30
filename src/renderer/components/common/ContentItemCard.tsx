@@ -32,12 +32,12 @@ export const ContentItemCard: React.FC<ContentItemCardProps> = ({
     <div
       onClick={onClick}
       className={cn(
-        'group flex items-center justify-between gap-3.5 p-3 px-3.5 rounded-md border transition-all duration-150 shadow-sm cv-auto',
+        'group flex items-center justify-between gap-3.5 p-3 px-3.5 rounded-lg border transition-all duration-150 cv-auto',
         highlighted
-          ? 'border-emerald-500/50 bg-zinc-900/95 ring-1 ring-emerald-500/20'
+          ? 'border-emerald-500/50 bg-zinc-950/70 ring-1 ring-emerald-500/20 shadow-sm'
           : disabled
-          ? 'border-zinc-800/60 bg-zinc-950/60 opacity-75 hover:opacity-100 hover:border-zinc-700'
-          : 'border-zinc-800/80 bg-zinc-900/85 hover:border-emerald-500/50 hover:bg-zinc-900',
+          ? 'border-zinc-800/40 bg-zinc-950/40 opacity-70 hover:opacity-100 hover:border-zinc-700/60'
+          : 'border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40',
         onClick && 'cursor-pointer',
         className
       )}
@@ -46,8 +46,8 @@ export const ContentItemCard: React.FC<ContentItemCardProps> = ({
       <div className="flex items-center gap-3 min-w-0 flex-1">
         <div
           className={cn(
-            'h-10 w-10 rounded-md flex items-center justify-center shrink-0 border shadow-inner transition-colors',
-            iconClassName || 'bg-zinc-800/80 text-zinc-400 border-zinc-700'
+          'h-10 w-10 rounded-lg flex items-center justify-center shrink-0 border shadow-inner transition-colors',
+          iconClassName || 'bg-zinc-900/80 text-zinc-400 border-zinc-800'
           )}
         >
           {icon}

@@ -8,6 +8,8 @@ import {
   Zap,
   Play,
   Loader2,
+  CheckCircle2,
+  XCircle,
   Square,
   User,
   Heart,
@@ -23,7 +25,6 @@ import {
   Gamepad2,
 } from 'lucide-react'
 import { useToast } from '../ui/Toast'
-// Images now loaded directly from public/assets
 import type {
   LauncherProfile,
   JavaRuntimeSelectionResult,
@@ -220,14 +221,17 @@ export function Sidebar({
       <div className="px-3 pb-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <div className="flex w-full cursor-pointer items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/85 p-2.5 transition-all hover:bg-zinc-900 hover:border-primary/40 hover:text-accent-foreground group shadow-sm">
+            <div
+              className="flex w-full cursor-pointer items-center justify-between rounded-md border border-zinc-800/60 hover:border-zinc-700/60 p-2.5 transition duration-150 hover:bg-sidebar-accent group"
+              title="Đổi cấu hình"
+            >
               <div className="flex flex-col gap-0.5 overflow-hidden">
-                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80">Cấu hình hiện tại</span>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground/80 group-hover:text-sidebar-foreground">Cấu hình hiện tại</span>
                 <span className="truncate text-sm font-semibold text-sidebar-foreground">
                   {activeProfile ? activeProfile.name : 'Chưa có cấu hình'}
                 </span>
               </div>
-              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180" />
+              <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-data-[state=open]:rotate-180 group-hover:text-sidebar-foreground" />
             </div>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="center" className="w-[220px] dropdown-panel rounded-md p-1.5 z-50">
@@ -262,8 +266,8 @@ export function Sidebar({
             {/* Back Button */}
             <Button
               onClick={() => setNavView('main')}
-              variant="sidebar"
-              className="group relative flex w-full items-center gap-2.5 mb-2 bg-zinc-900/90 border border-zinc-800 hover:border-primary/40 text-primary font-bold text-xs rounded-md h-9 shadow-sm"
+              variant="elevated"
+              className="group relative flex w-full items-center gap-2.5 mb-2 text-primary hover:text-primary font-bold text-xs rounded-md h-9 shadow-sm"
             >
               <ArrowLeft className="h-4 w-4 shrink-0 transition-transform group-hover:-translate-x-0.5" />
               <span>Quay lại Menu chính</span>
@@ -283,13 +287,13 @@ export function Sidebar({
                   variant="sidebar"
                   className={cn(
                     'group relative flex w-full items-center gap-3 transition-all duration-150',
-                    isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                    isActive && 'bg-primary text-white hover:bg-primary-hover hover:text-white font-semibold'
                   )}
                 >
                   <Icon
                     className={cn(
                       'h-4 w-4 shrink-0 transition-colors',
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                      isActive ? 'text-white' : 'text-muted-foreground group-hover:text-sidebar-foreground'
                     )}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
@@ -306,13 +310,13 @@ export function Sidebar({
               variant="sidebar"
               className={cn(
                 'group relative flex w-full items-center gap-3 transition-all duration-150',
-                activeTab === 'store' && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                activeTab === 'store' && 'bg-primary text-white hover:bg-primary-hover hover:text-white font-semibold'
               )}
             >
               <ModrinthIcon
                 className={cn(
                   'h-4 w-4 shrink-0 transition-colors',
-                  activeTab === 'store' ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                  activeTab === 'store' ? 'text-white' : 'text-muted-foreground group-hover:text-sidebar-foreground'
                 )}
               />
               <span>Cửa hàng</span>
@@ -330,7 +334,7 @@ export function Sidebar({
               className={cn(
                 'group relative flex w-full items-center justify-between gap-3 transition-all duration-150',
                 isGameTab
-                  ? 'bg-primary/20 text-primary border border-primary/40 font-bold'
+                  ? 'bg-primary text-white hover:bg-primary-hover hover:text-white font-semibold'
                   : 'text-sidebar-foreground hover:bg-sidebar-accent'
               )}
             >
@@ -338,17 +342,29 @@ export function Sidebar({
                 <Gamepad2
                   className={cn(
                     'h-4 w-4 shrink-0 transition-colors',
-                    isGameTab ? 'text-primary' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                    isGameTab ? 'text-white' : 'text-muted-foreground group-hover:text-sidebar-foreground'
                   )}
                   strokeWidth={isGameTab ? 2.5 : 2}
                 />
                 <span className="truncate font-semibold">Quản lý Game</span>
               </div>
               <div className="flex items-center gap-1.5 shrink-0">
-                <span className="text-[10px] px-1.5 py-0.5 rounded-md bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold group-hover:bg-zinc-800 group-hover:text-zinc-200">
+                <span
+                  className={cn(
+                    'text-[10px] px-1.5 py-0.5 rounded-md font-semibold transition-colors',
+                    isGameTab
+                      ? 'bg-white/20 text-white border border-white/20'
+                      : 'bg-zinc-800 border border-zinc-700/80 text-zinc-300 group-hover:bg-zinc-700 group-hover:text-white'
+                  )}
+                >
                   8 mục
                 </span>
-                <ChevronRight className="h-3.5 w-3.5 text-zinc-500 group-hover:text-zinc-300" />
+                <ChevronRight
+                  className={cn(
+                    'h-3.5 w-3.5 transition-colors',
+                    isGameTab ? 'text-white' : 'text-zinc-500 group-hover:text-zinc-300'
+                  )}
+                />
               </div>
             </Button>
 
@@ -363,13 +379,13 @@ export function Sidebar({
                   variant="sidebar"
                   className={cn(
                     'group relative flex w-full items-center gap-3 transition-all duration-150',
-                    isActive && 'bg-primary text-primary-foreground hover:bg-primary-hover hover:text-primary-foreground'
+                    isActive && 'bg-primary text-white hover:bg-primary-hover hover:text-white font-semibold'
                   )}
                 >
                   <Icon
                     className={cn(
                       'h-4 w-4 shrink-0 transition-colors',
-                      isActive ? 'text-primary-foreground' : 'text-muted-foreground group-hover:text-sidebar-foreground'
+                      isActive ? 'text-white' : 'text-muted-foreground group-hover:text-sidebar-foreground'
                     )}
                     strokeWidth={isActive ? 2.5 : 2}
                   />
@@ -395,7 +411,7 @@ export function Sidebar({
 
       {/* Unified Play & Account Card */}
       <div className="">
-        <div className="rounded-md  p-3 space-y-3">
+        <div className="rounded-md p-3 space-y-3">
           {/* Account Info Header */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -501,15 +517,27 @@ export function Sidebar({
                 <Button
                   disabled={isBusy || isStarting || isPreparing}
                   onClick={handlePlay}
-                  variant={isFailed ? "danger" : "primary"}
-                  className="w-full h-10 rounded-md font-bold text-xs"
+                  className={cn(
+                    "w-full h-12 rounded-[14px] font-black text-sm tracking-wider text-white select-none transition-all duration-150",
+                    isFailed
+                      ? "bg-red-600 hover:bg-red-500 shadow-red-900/30"
+                      : isRunning
+                        ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30"
+                        : isBusy || isPreparing
+                          ? "bg-[#049c49]/80 cursor-wait"
+                          : "bg-[#049c49] hover:bg-[#05ad52] active:bg-[#03883f] shadow-[0_4px_14px_rgba(4,156,73,0.35)] hover:shadow-[0_6px_20px_rgba(4,156,73,0.45)]"
+                  )}
                 >
                   {isBusy && !isRunning ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isPreparing ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin stroke-white" strokeWidth={2.5} />
+                  ) : isRunning ? (
+                    <CheckCircle2 size={18} className="stroke-white" strokeWidth={2.5} />
+                  ) : isFailed ? (
+                    <XCircle size={18} className="stroke-white" strokeWidth={2.5} />
                   ) : (
-                    <Play size={14} className="fill-current" />
+                    <Play size={20} strokeWidth={2.8} className="fill-none stroke-white shrink-0" />
                   )}
                   <span>
                     {isRunning
@@ -520,14 +548,14 @@ export function Sidebar({
                           ? 'KHỞI ĐỘNG...'
                           : isPreparing
                             ? 'ĐANG TẢI...'
-                            : 'CHƠI (OFFLINE)'}
+                            : 'PLAY (OFFLINE)'}
                   </span>
                 </Button>
               ) : !hasMicrosoftAccount ? (
                 <Button
                   disabled
                   variant="outline"
-                  className="w-full h-10 rounded-md font-bold text-xs bg-muted text-muted-foreground border border-dashed border-border cursor-not-allowed select-none"
+                  className="w-full h-12 rounded-[14px] font-bold text-xs bg-muted/30 text-muted-foreground border border-dashed border-border cursor-not-allowed select-none"
                 >
                   CẦN ĐĂNG NHẬP
                 </Button>
@@ -535,15 +563,27 @@ export function Sidebar({
                 <Button
                   disabled={isBusy || isStarting || isPreparing}
                   onClick={handlePlay}
-                  variant={isFailed ? "danger" : "primary"}
-                  className="w-full h-10 rounded-md font-bold text-xs"
+                  className={cn(
+                    "w-full h-12 rounded-[14px] font-black text-sm tracking-wider text-white select-none transition-all duration-150",
+                    isFailed
+                      ? "bg-red-600 hover:bg-red-500 shadow-red-900/30"
+                      : isRunning
+                        ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30"
+                        : isBusy || isPreparing
+                          ? "bg-[#049c49]/80 cursor-wait"
+                          : "bg-[#049c49] hover:bg-[#05ad52] active:bg-[#03883f] shadow-[0_4px_14px_rgba(4,156,73,0.35)] hover:shadow-[0_6px_20px_rgba(4,156,73,0.45)]"
+                  )}
                 >
                   {isBusy && !isRunning ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isPreparing ? (
-                    <Loader2 size={14} className="animate-spin" />
+                    <Loader2 size={18} className="animate-spin stroke-white" strokeWidth={2.5} />
+                  ) : isRunning ? (
+                    <CheckCircle2 size={18} className="stroke-white" strokeWidth={2.5} />
+                  ) : isFailed ? (
+                    <XCircle size={18} className="stroke-white" strokeWidth={2.5} />
                   ) : (
-                    <Play size={14} className="fill-current" />
+                    <Play size={20} strokeWidth={2.8} className="fill-none stroke-white shrink-0" />
                   )}
                   <span>
                     {isRunning
@@ -554,7 +594,7 @@ export function Sidebar({
                           ? 'KHỞI ĐỘNG...'
                           : isPreparing
                             ? 'ĐANG TẢI...'
-                            : 'CHƠI'}
+                            : 'PLAY'}
                   </span>
                 </Button>
               )}
@@ -563,12 +603,12 @@ export function Sidebar({
               {canCancel && (
                 <Button
                   onClick={() => void cancelLaunch()}
-                  variant="outline"
+                  variant="elevated"
                   size="sm"
-                  className="w-full h-8 border-sidebar-border text-muted-foreground hover:bg-destructive/10 hover:text-destructive hover:border-destructive/30"
+                  className="w-full h-8 text-rose-400 hover:text-rose-300 hover:border-rose-500/40"
                 >
                   <Square size={11} className="fill-current" />
-                  Hủy khởi động
+                  <span>Hủy khởi động</span>
                 </Button>
               )}
 
@@ -592,7 +632,7 @@ export function Sidebar({
             <Button
               disabled
               variant="outline"
-              className="w-full h-10 rounded-md font-bold text-xs bg-muted text-muted-foreground cursor-not-allowed select-none"
+              className="w-full h-12 rounded-[14px] font-bold text-xs bg-muted/30 text-muted-foreground cursor-not-allowed select-none"
             >
               CHƯA CHỌN CẤU HÌNH
             </Button>

@@ -487,8 +487,8 @@ export const AccountsScreen = ({
                     'group relative flex flex-col items-center rounded-md border p-4 transition-all duration-200 cursor-pointer shadow-md',
                     isWorking ? 'opacity-60 cursor-not-allowed' : '',
                     isActive
-                      ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
-                      : 'border-zinc-800/80 bg-zinc-900/85 hover:bg-zinc-900 hover:border-primary/40 hover:-translate-y-0.5',
+                      ? 'border-primary/60 bg-zinc-900/90 ring-1 ring-primary/30'
+                      : 'border-zinc-800/60 bg-zinc-950/45 hover:bg-zinc-950/70 hover:border-zinc-700/60 hover:-translate-y-0.5',
                   ].join(' ')}
                 >
                   {isActive && (

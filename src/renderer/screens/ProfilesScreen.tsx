@@ -162,22 +162,21 @@ export const ProfilesScreen = ({
               <Button
                 onClick={() => void handleReload()}
                 disabled={isWorking || isReloading}
-                variant="outline"
+                variant="elevated"
                 size="sm"
-                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+                className="h-9 px-3 text-xs gap-1.5"
                 title="Tải lại danh sách cấu hình và quét thư mục instance"
               >
                 <RefreshCw size={14} className={cn("text-primary", isReloading && "animate-spin")} />
                 Tải lại
               </Button>
             )}
-
             <Button
               onClick={handleOpenImportFileDialog}
               disabled={isWorking}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5"
               title="Nhập gói cấu hình từ bạn bè hoặc tệp sao lưu"
             >
               <DownloadCloud size={14} className="text-primary" />
@@ -212,10 +211,10 @@ export const ProfilesScreen = ({
                       onSetActive(profile.id)
                     }}
                     className={cn(
-                      'group flex items-center justify-between gap-4 p-4 rounded-md border transition-all duration-200 shadow-md cursor-pointer',
+                      'group flex items-center justify-between gap-4 p-4 rounded-md border transition-all duration-200 shadow-xs cursor-pointer',
                       isActive
-                        ? 'border-primary/60 bg-zinc-900/95 ring-1 ring-primary/30'
-                        : 'border-zinc-800/80 bg-zinc-900/85 hover:bg-zinc-900 hover:border-primary/40'
+                        ? 'border-primary/60 bg-zinc-900/90 ring-1 ring-primary/30'
+                        : 'border-zinc-800/60 bg-zinc-950/45 hover:bg-zinc-950/70 hover:border-zinc-700/60'
                     )}
                   >
                     {/* Left: Info */}
@@ -269,9 +268,9 @@ export const ProfilesScreen = ({
                           e.stopPropagation()
                           setExportProfile(profile)
                         }}
-                        variant="outline"
+                        variant="elevated"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-primary hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
+                        className="h-8 w-8 text-primary hover:text-white rounded-md"
                       >
                         <Share2 size={13} />
                       </Button>
@@ -282,9 +281,9 @@ export const ProfilesScreen = ({
                           e.stopPropagation()
                           onEdit(profile)
                         }}
-                        variant="outline"
+                        variant="elevated"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
+                        className="h-8 w-8 text-zinc-200 hover:text-white rounded-md"
                       >
                         <Edit2 size={13} />
                       </Button>
@@ -295,9 +294,9 @@ export const ProfilesScreen = ({
                           e.stopPropagation()
                           onDelete(profile.id)
                         }}
-                        variant="ghost"
+                        variant="elevated"
                         size="icon-sm"
-                        className="hover:bg-destructive/10 text-destructive/80 hover:text-destructive border border-destructive/10"
+                        className="h-8 w-8 text-rose-400 hover:text-rose-300 hover:border-rose-500/40 rounded-md"
                       >
                         <Trash2 size={13} />
                       </Button>

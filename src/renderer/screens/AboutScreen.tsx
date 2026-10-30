@@ -131,7 +131,7 @@ export function AboutScreen() {
   return (
     <div className="px-6 pt-2 pb-8 max-w-5xl mx-auto flex flex-col gap-5 select-none">
       {/* Hero Header Banner */}
-      <div className="p-5 rounded-md border border-zinc-800/80 bg-zinc-900/85 relative overflow-hidden shadow-md">
+      <div className="p-5 rounded-md border border-zinc-800/60 bg-zinc-950/45 relative overflow-hidden shadow-xs">
         {/* Glow Ambient */}
         <div className="absolute -right-10 -top-10 w-48 h-48 bg-primary/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -left-10 -bottom-10 w-40 h-40 bg-purple-500/10 rounded-full blur-3xl pointer-events-none" />
@@ -160,9 +160,9 @@ export function AboutScreen() {
 
           <div className="flex items-center gap-2 shrink-0 w-full md:w-auto">
             <Button
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-8 px-3 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5 flex-1 md:flex-initial"
+              className="h-8 px-3 text-xs gap-1.5 flex-1 md:flex-initial"
               onClick={() => window.launcherApi.openExternal('https://discord.gg/rRZujVzPRx')}
             >
               <HelpCircle size={13} />
@@ -253,7 +253,7 @@ export function AboutScreen() {
             return (
               <div
                 key={item.id}
-                className="p-3.5 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-sm flex flex-col justify-between gap-3 group cv-auto"
+                className="p-3.5 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/60 hover:bg-zinc-950/70 transition-all duration-200 shadow-xs flex flex-col justify-between gap-3 group cv-auto"
               >
                 <div className="space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -293,7 +293,7 @@ export function AboutScreen() {
       </div>
 
       {/* Bottom Section: Unified Developer & Donation Footer Card */}
-      <div className="p-5 rounded-md border border-zinc-800/80 bg-zinc-900/85 shadow-md flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden cv-auto">
+      <div className="p-5 rounded-md border border-zinc-800/60 bg-zinc-950/45 shadow-xs flex flex-col md:flex-row items-stretch md:items-center justify-between gap-5 relative overflow-hidden cv-auto">
         {/* Glow ambient */}
         <div className="absolute right-0 bottom-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 

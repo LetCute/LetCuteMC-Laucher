@@ -65,8 +65,8 @@ export function ScreenFilterBar<TCat extends string = string, TTab extends strin
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button
-              variant="outline"
-              className="h-10 px-3.5 rounded-md bg-zinc-900/90 border border-zinc-800 hover:border-emerald-500/50 hover:bg-zinc-900 text-foreground transition-all duration-150 gap-2.5 shadow-sm min-w-[260px] justify-between group"
+              variant="elevated"
+              className="h-10 px-3.5 rounded-md gap-2.5 min-w-[260px] justify-between group"
             >
               <div className="flex items-center gap-2.5 min-w-0">
                 {ActiveIcon && (
@@ -189,7 +189,7 @@ export function ScreenFilterBar<TCat extends string = string, TTab extends strin
                   'h-10 px-3 rounded-md text-xs font-semibold transition-all',
                   isActive
                     ? 'bg-primary text-primary-foreground font-bold shadow-sm shadow-primary/20'
-                    : 'bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800'
+                    : 'bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/60'
                 )}
               >
                 {item.label}

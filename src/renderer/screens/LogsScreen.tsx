@@ -482,9 +482,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           <Button
             onClick={handleCopyAll}
             disabled={!rawLogContent}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 text-xs"
             title="Sao chép toàn bộ nội dung log"
           >
             <Copy size={13} className="mr-1.5" />
@@ -495,9 +495,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
-                variant="outline"
+                variant="elevated"
                 size="sm"
-                className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+                className="h-9 px-3 text-xs gap-1.5"
                 title="Mở thư mục lưu trữ trong Explorer"
               >
                 <FolderOpen size={14} />
@@ -535,9 +535,9 @@ export function LogsScreen({ gameDir, profileName }: LogsScreenProps) {
           <Button
             onClick={loadFiles}
             disabled={isLoadingFiles}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 text-xs"
             title="Làm mới log"
           >
             <RefreshCw size={13} className={cn(isLoadingFiles && 'animate-spin', 'mr-1.5')} />

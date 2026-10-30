@@ -94,7 +94,7 @@
   /* Primary - Vibrant Minecraft Emerald Green */
   --primary: oklch(0.620 0.175 150);
   --primary-hover: oklch(0.680 0.185 150);
-  --primary-foreground: oklch(0.110 0.020 240);
+  --primary-foreground: oklch(0.980 0.005 240);
 
   /* Secondary - Dark Glass Stone */
   --secondary: oklch(0.220 0.012 240 / 0.65);
@@ -136,7 +136,7 @@
   --sidebar: oklch(0.105 0.008 240);
   --sidebar-foreground: oklch(0.855 0.008 140);
   --sidebar-primary: oklch(0.620 0.175 150);
-  --sidebar-primary-foreground: oklch(0.110 0.020 240);
+  --sidebar-primary-foreground: oklch(0.980 0.005 240);
   --sidebar-accent: oklch(0.190 0.035 150 / 0.7);
   --sidebar-accent-foreground: oklch(0.855 0.008 240);
 

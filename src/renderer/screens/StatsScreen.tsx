@@ -210,9 +210,9 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
-                    variant="outline"
+                    variant="elevated"
                     size="sm"
-                    className="h-6 px-2 bg-zinc-900/90 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 text-[11px] gap-1 rounded-md"
+                    className="h-6 px-2 text-[11px] gap-1 rounded-md"
                   >
                     <MapPin size={11} className="text-primary" />
                     <span className="truncate max-w-[130px]">
@@ -300,24 +300,24 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
         <div className="flex items-center gap-1.5 shrink-0">
           <Button
             onClick={handleOpenStatsFolder}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-8 px-2.5 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-8 px-2.5 text-xs gap-1.5"
             title="Mở thư mục stats trong Explorer"
           >
-            <FolderOpen size={13} className="mr-1.5" />
+            <FolderOpen size={13} />
             Thư mục Stats
           </Button>
 
           <Button
             onClick={loadStats}
             disabled={isLoading}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-8 px-2.5 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-8 px-2.5 text-xs gap-1.5"
             title="Làm mới thống kê"
           >
-            <RotateCcw size={12} className={cn(isLoading && 'animate-spin', 'mr-1.5')} />
+            <RotateCcw size={12} className={cn(isLoading && 'animate-spin')} />
             Làm mới
           </Button>
         </div>
@@ -326,7 +326,7 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
       {/* Hero 4 Sleek & Compact Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-2.5">
         {/* Card 1: Playtime */}
-        <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+        <div className="p-3 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-150 shadow-xs flex items-center gap-3 min-w-0 cv-auto">
           <div className="h-9 w-9 rounded-md bg-cyan-500/15 border border-cyan-500/30 text-primary flex items-center justify-center shrink-0">
             <Clock size={18} />
           </div>
@@ -346,7 +346,7 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
         </div>
 
         {/* Card 2: Launches & Last Played */}
-        <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+        <div className="p-3 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-150 shadow-xs flex items-center gap-3 min-w-0 cv-auto">
           <div className="h-9 w-9 rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 flex items-center justify-center shrink-0">
             <Zap size={18} />
           </div>
@@ -361,7 +361,7 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
         </div>
 
         {/* Card 3: Rare Ores */}
-        <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+        <div className="p-3 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-150 shadow-xs flex items-center gap-3 min-w-0 cv-auto">
           <div className="h-9 w-9 rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shrink-0">
             <Pickaxe size={18} />
           </div>
@@ -376,7 +376,7 @@ export default function StatsScreen({ gameDir, profileId, profileName }: StatsSc
         </div>
 
         {/* Card 4: Combat & K/D */}
-        <div className="p-3 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-150 shadow-sm flex items-center gap-3 min-w-0 cv-auto">
+        <div className="p-3 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-150 shadow-xs flex items-center gap-3 min-w-0 cv-auto">
           <div className="h-9 w-9 rounded-md bg-red-500/15 border border-red-500/30 text-red-400 flex items-center justify-center shrink-0">
             <Sword size={18} />
           </div>

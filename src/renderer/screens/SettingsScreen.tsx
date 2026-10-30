@@ -335,7 +335,7 @@ export const SettingsScreen = ({
 
       <div className="space-y-4">
         {/* ── SECTION 0: Performance Optimizer ───────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -354,8 +354,8 @@ export const SettingsScreen = ({
             <Button
               onClick={() => setLowEndModalOpen(true)}
               size="sm"
-              variant="outline"
-              className="h-8 px-3 text-xs font-semibold gap-1.5 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shrink-0 shadow-none"
+              variant="elevated"
+              className="h-8 px-3 text-xs font-semibold gap-1.5 shrink-0"
             >
               <SlidersHorizontal size={13} className="text-primary" />
               Tinh chỉnh
@@ -364,7 +364,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION: UI Graphic & Effects Quality (Performance) ───────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div>
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -482,7 +482,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 1: JVM Optimizer Presets ───────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md cv-auto">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md cv-auto">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Zap className="h-5 w-5 text-primary" />
@@ -625,7 +625,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 2: RAM Memory ──────────────────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Cpu className="h-5 w-5 text-primary" />
@@ -633,10 +633,10 @@ export const SettingsScreen = ({
             </CardTitle>
             <Button
               type="button"
-              variant="outline"
+              variant="elevated"
               size="sm"
               onClick={handleAutoRecommendRam}
-              className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-primary hover:bg-zinc-800 gap-1.5"
+              className="h-7 px-2.5 text-xs text-primary gap-1.5"
             >
               <Sparkles size={12} />
               Tự chọn mức hợp lý
@@ -674,7 +674,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 3: Java Runtime ────────────────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
               <Layers className="h-5 w-5 text-primary" />
@@ -682,11 +682,11 @@ export const SettingsScreen = ({
             </CardTitle>
             <Button
               type="button"
-              variant="outline"
+              variant="elevated"
               size="sm"
               disabled={javaScanning || isInstallingJava || !activeProfile}
               onClick={() => void refreshJava(true)}
-              className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1.5"
+              className="h-7 px-2.5 text-xs gap-1.5"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', javaScanning && 'animate-spin')} />
               {javaScanning ? 'Đang kiểm tra & tải Java...' : 'Tìm Java trên máy'}
@@ -749,7 +749,7 @@ export const SettingsScreen = ({
         </Card>
 
         {/* ── SECTION 4: Storage & Cache Cleaner ─────────────────────────── */}
-        <Card className="border-zinc-800/80 bg-zinc-900/85 shadow-md rounded-md">
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <div className="space-y-0.5">
               <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
@@ -763,22 +763,22 @@ export const SettingsScreen = ({
             <div className="flex items-center gap-1.5">
               <Button
                 type="button"
-                variant="outline"
+                variant="elevated"
                 size="sm"
                 disabled={isScanningCache}
                 onClick={handleScanCache}
-                className="h-7 px-2.5 text-xs bg-zinc-900 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 gap-1 shadow-none"
+                className="h-7 px-2.5 text-xs gap-1"
               >
                 <RefreshCw className={cn('h-3.5 w-3.5', isScanningCache && 'animate-spin')} />
                 Quét
               </Button>
               <Button
                 type="button"
-                variant="outline"
+                variant="elevated"
                 size="sm"
                 disabled={isCleaningCache || (cacheScan?.totalSizeBytes || 0) === 0}
                 onClick={handleCleanCache}
-                className="h-7 px-3 text-xs font-semibold gap-1.5 bg-zinc-900 border-zinc-800 text-zinc-200 hover:bg-zinc-800 hover:text-zinc-100 shadow-none"
+                className="h-7 px-3 text-xs font-semibold gap-1.5"
               >
                 <Trash2 size={12} className="text-zinc-400" />
                 Dọn dẹp ({totalCacheMb} MB)

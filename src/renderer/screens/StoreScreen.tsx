@@ -304,7 +304,7 @@ export const StoreScreen = ({ gameDir, profiles = [], activeProfileId }: StoreSc
               <div
                 key={project.project_id}
                 onClick={() => openProject(project)}
-                className="group relative flex flex-col bg-zinc-900/85 border border-zinc-800/80 rounded-md overflow-hidden hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cursor-pointer cv-auto"
+                className="group relative flex flex-col bg-zinc-950/45 border border-zinc-800/60 rounded-md overflow-hidden hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-200 shadow-xs cursor-pointer cv-auto"
               >
                 {/* Banner / Icon area */}
                 <div className="h-32 bg-zinc-950 flex items-center justify-center overflow-hidden border-b border-zinc-800/80 relative">

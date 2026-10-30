@@ -12,9 +12,11 @@ const buttonVariants = cva(
         primary:
           "bg-primary text-primary-foreground hover:bg-primary-hover shadow-[0_0_20px_color-mix(in_oklch,var(--primary)_20%,transparent)]",
         secondary:
-          "bg-card text-card-foreground border border-border hover:bg-card/80",
+          "bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/80 hover:border-zinc-600 text-zinc-100 hover:text-white shadow-sm font-medium active:scale-[0.98]",
+        elevated:
+          "bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/80 hover:border-zinc-600 text-zinc-100 hover:text-white shadow-sm font-medium active:scale-[0.98]",
         outline:
-          "border border-border bg-transparent text-foreground hover:bg-card/50",
+          "bg-zinc-800/90 hover:bg-zinc-700 border border-zinc-700/80 hover:border-zinc-600 text-zinc-200 hover:text-white shadow-sm font-medium active:scale-[0.98]",
         ghost:
           "bg-transparent text-muted-foreground hover:bg-card/50 hover:text-foreground",
         sidebar:

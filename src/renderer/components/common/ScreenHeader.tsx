@@ -19,8 +19,8 @@ export const ScreenHeader: React.FC<ScreenHeaderProps> = ({
       <div className="flex items-center gap-2 flex-wrap">
         <h2 className="text-lg font-bold text-foreground/90 tracking-tight shrink-0">{title}</h2>
         {profileName && (
-          <span className="text-xs font-semibold text-zinc-300 px-2.5 py-0.5 bg-zinc-800/90 border border-zinc-700/80 rounded-md shrink-0">
-            Cấu hình: {profileName}
+          <span className="text-xs font-medium text-zinc-400 px-2.5 py-0.5 bg-zinc-900/70 border border-zinc-800/80 rounded-md shrink-0">
+            Cấu hình: <span className="text-zinc-200 font-semibold">{profileName}</span>
           </span>
         )}
         {/* Spacer */}

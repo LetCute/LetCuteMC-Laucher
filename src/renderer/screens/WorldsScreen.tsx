@@ -458,9 +458,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
 
           <Button
             onClick={() => handleOpenFolder()}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 text-xs"
             title="Mở thư mục saves trong Explorer"
           >
             <FolderOpen size={14} className="mr-1.5" />
@@ -470,9 +470,9 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
           <Button
             onClick={loadWorlds}
             disabled={isLoading}
-            variant="outline"
+            variant="elevated"
             size="sm"
-            className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs"
+            className="h-9 px-3 text-xs"
             title="Làm mới danh sách"
           >
             <RefreshCw size={13} className={cn(isLoading && 'animate-spin', 'mr-1.5')} />
@@ -634,7 +634,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               return (
                 <div
                   key={world.folderName}
-                  className="group relative flex flex-col justify-between p-4 rounded-md border border-zinc-800/90 bg-zinc-900/85 hover:border-primary/50 hover:bg-zinc-900 transition-all duration-200 shadow-md cv-auto"
+                  className="group relative flex flex-col justify-between p-4 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/60 hover:bg-zinc-950/70 transition-all duration-200 shadow-xs cv-auto"
                 >
                   {/* Top Section: Thumbnail + Info */}
                   <div className="flex items-start gap-3.5">
@@ -861,7 +861,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
         maxWidth="max-w-md"
         footer={
           <>
-            <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={isRenaming} className="bg-zinc-900 border-zinc-800">
+            <Button variant="elevated" onClick={() => setRenameTarget(null)} disabled={isRenaming}>
               Hủy
             </Button>
             <Button
@@ -913,7 +913,7 @@ export function WorldsScreen({ gameDir, profileName }: WorldsScreenProps) {
               <Archive size={13} className="mr-1.5" />
               Tạo bản sao lưu mới
             </Button>
-            <Button variant="outline" onClick={() => setActiveBackupsWorld(null)} className="bg-zinc-900 border-zinc-800">
+            <Button variant="elevated" onClick={() => setActiveBackupsWorld(null)}>
               Đóng
             </Button>
           </div>

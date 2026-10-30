@@ -78,9 +78,9 @@ export function VersionsScreen({
           <>
             <Button
               onClick={handleOpenVersionsFolder}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5"
               title="Mở thư mục .minecraft/versions trong Windows Explorer"
             >
               <FolderOpen size={14} className="text-primary" />
@@ -89,9 +89,9 @@ export function VersionsScreen({
             <Button
               onClick={onRefresh}
               disabled={isWorking}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5"
               title="Tải lại danh mục từ Mojang"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', isWorking && 'animate-spin')} />
@@ -181,10 +181,10 @@ export function VersionsScreen({
                 <div
                   key={ver.id}
                   className={cn(
-                    'group flex items-center justify-between gap-3 p-3 px-3.5 rounded-md border transition-all duration-150 shadow-sm',
+                    'group flex items-center justify-between gap-3 p-3 px-3.5 rounded-md border transition-all duration-150 shadow-xs',
                     isInstalled
-                      ? 'border-emerald-500/40 bg-zinc-900/95 hover:border-emerald-500/60'
-                      : 'border-zinc-800/80 bg-zinc-900/85 hover:border-emerald-500/40 hover:bg-zinc-900'
+                      ? 'border-emerald-500/40 bg-zinc-900/90 hover:border-emerald-500/60'
+                      : 'border-zinc-800/60 bg-zinc-950/45 hover:border-emerald-500/40 hover:bg-zinc-950/70'
                   )}
                 >
                   {/* Left: Icon & Info */}
@@ -260,21 +260,20 @@ export function VersionsScreen({
                     {isInstalled && ver.path && (
                       <Button
                         onClick={() => handleOpenSpecificVersionFolder(ver.path!)}
-                        variant="outline"
+                        variant="elevated"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 rounded-md"
+                        className="h-8 w-8 text-zinc-300 hover:text-white rounded-md"
                         title="Mở thư mục phiên bản"
                       >
                         <FolderOpen size={13} />
                       </Button>
                     )}
-
                     {isInstalled && ver.path && (
                       <Button
                         onClick={() => handleDeleteVersion(ver)}
-                        variant="outline"
+                        variant="elevated"
                         size="icon-sm"
-                        className="h-8 w-8 bg-zinc-800/80 border-zinc-700 text-rose-400 hover:bg-rose-500/10 hover:border-rose-500/30 rounded-md"
+                        className="h-8 w-8 text-rose-400 hover:text-rose-300 hover:border-rose-500/40 rounded-md"
                         title="Xóa bản cài đặt này"
                       >
                         <Trash2 size={13} />

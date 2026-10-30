@@ -336,14 +336,13 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
               <>
                 <Button
                   onClick={clearSelection}
-                  variant="outline"
+                  variant="elevated"
                   size="sm"
-                  className="h-8 px-2.5 bg-zinc-900 border-zinc-800 text-zinc-300 hover:text-zinc-200 text-xs"
+                  className="h-8 px-2.5 text-xs"
                   title="Hủy bỏ chọn"
                 >
                   Hủy chọn
                 </Button>
-
                 <Button
                   onClick={handleDeleteSelected}
                   variant="destructive"
@@ -359,9 +358,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
 
             <Button
               onClick={handleOpenFolder}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-8 px-3 text-xs gap-1.5"
               title="Mở thư mục screenshots trong Explorer"
             >
               <FolderOpen size={13} className="text-primary" />
@@ -371,9 +370,9 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             <Button
               onClick={loadScreenshots}
               disabled={isLoading}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-8 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-8 px-3 text-xs gap-1.5"
               title="Làm mới danh sách ảnh"
             >
               <RefreshCw size={13} className={cn(isLoading && 'animate-spin')} />
@@ -406,8 +405,8 @@ export function ScreenshotsScreen({ gameDir, profileName }: ScreenshotsScreenPro
             className={cn(
               'h-8.5 px-3 border text-xs gap-1.5 rounded-md shrink-0 transition-all shadow-sm',
               isAllSelected
-                ? 'bg-primary/15 border-primary/40 text-primary font-semibold hover:bg-primary/25'
-                : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700'
+                ? 'bg-primary/20 border-primary/50 text-primary font-semibold hover:bg-primary/30'
+                : 'bg-zinc-800 hover:bg-zinc-700 border-zinc-700/80 text-zinc-100 active:scale-[0.98]'
             )}
           >
             {isAllSelected ? (

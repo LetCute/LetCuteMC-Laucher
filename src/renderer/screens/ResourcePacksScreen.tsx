@@ -48,9 +48,9 @@ export const ResourcePacksScreen = ({ gameDir, profileName }: ResourcePacksScree
           <>
             <Button
               onClick={handleOpenFolder}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5"
               title="Mở thư mục resourcepacks trong Windows Explorer"
             >
               <FolderOpen size={14} className="text-primary" />
@@ -60,9 +60,9 @@ export const ResourcePacksScreen = ({ gameDir, profileName }: ResourcePacksScree
             <Button
               onClick={fetchPacks}
               disabled={loading}
-              variant="outline"
+              variant="elevated"
               size="sm"
-              className="h-9 px-3 bg-zinc-900/90 border-zinc-800 text-zinc-200 hover:text-zinc-200 hover:bg-zinc-800 hover:border-zinc-700 text-xs gap-1.5"
+              className="h-9 px-3 text-xs gap-1.5"
               title="Quét lại thư mục resourcepacks"
             >
               <RefreshCw className={cn('h-3.5 w-3.5', loading && 'animate-spin')} />

@@ -77,7 +77,7 @@ function TaskCard({ task, onCancel }: { task: BackgroundTask; onCancel: (id: str
       initial={{ opacity: 0, y: 10, scale: 0.98 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, scale: 0.95 }}
-      className="relative overflow-hidden flex items-center justify-between gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/85 hover:border-primary/40 transition-all duration-200 shadow-md"
+      className="relative overflow-hidden flex items-center justify-between gap-4 p-4 rounded-md border border-zinc-800/60 bg-zinc-950/45 hover:border-zinc-700/80 hover:bg-zinc-900/40 transition-all duration-200 shadow-xs"
     >
       {/* Background Progress Bar (if running) */}
       {isRunning && (
@@ -130,9 +130,9 @@ function TaskCard({ task, onCancel }: { task: BackgroundTask; onCancel: (id: str
       {isRunning && (
         <Button
           onClick={() => onCancel(task.id)}
-          variant="ghost"
+          variant="elevated"
           size="sm"
-          className="h-8 px-2.5 text-xs text-muted-foreground hover:text-red-400 hover:bg-red-500/10 shrink-0 relative z-10"
+          className="h-8 px-2.5 text-xs text-rose-400 hover:text-rose-300 hover:bg-rose-500/10 shrink-0 relative z-10"
         >
           <Ban size={13} className="mr-1" />
           Hủy

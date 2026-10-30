@@ -20,7 +20,7 @@ import { Button } from '../ui/button'
 import { useLauncherJob } from '../../hooks/useLauncherJob'
 import { usePrepareGame } from '../../hooks/usePrepareGame'
 import { useState, useEffect } from 'react'
-import { formatVersionDisplay } from '@/lib/utils'
+import { cn, formatVersionDisplay } from '@/lib/utils'
 import { buildLaunchAuthSession } from '../../../shared/auth'
 
 interface LaunchPanelProps {
@@ -322,7 +322,7 @@ export function LaunchPanel({
             {javaSelection && !javaSelection.found && javaInstallState !== 'installing' && (
               <Button
                 onClick={handleInstallJava}
-                variant="outline"
+                variant="elevated"
                 className="w-full h-10"
               >
                 <Download size={15} />
@@ -336,26 +336,34 @@ export function LaunchPanel({
               <Button
                 disabled={!activeProfile || isBusy || isStarting || isPreparing}
                 onClick={handlePlay}
-                variant={isFailed ? "danger" : "primary"}
-                className="relative w-full h-14 rounded-md font-bold text-base"
+                className={cn(
+                  "relative w-full h-14 rounded-md font-black text-lg tracking-wider text-white select-none transition-all duration-150",
+                  isFailed
+                    ? "bg-red-600 hover:bg-red-500 shadow-red-900/30"
+                    : isRunning
+                      ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30"
+                      : isBusy || isPreparing
+                        ? "bg-[#049c49]/80 cursor-wait"
+                        : "bg-[#049c49] hover:bg-[#05ad52] active:bg-[#03883f] shadow-[0_4px_16px_rgba(4,156,73,0.4)] hover:shadow-[0_6px_22px_rgba(4,156,73,0.5)]"
+                )}
               >
                 {showProgress && (
                   <span
-                    className="pointer-events-none absolute left-0 top-0 h-full bg-primary-foreground/8 transition-all duration-500"
+                    className="pointer-events-none absolute left-0 top-0 h-full bg-white/15 transition-all duration-500 rounded-[16px]"
                     style={{ width: `${percent}%` }}
                   />
                 )}
-                <span className="relative flex items-center gap-3">
+                <span className="relative flex items-center justify-center gap-3">
                   {isBusy && !isRunning ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={24} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isPreparing ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={24} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isRunning ? (
-                    <CheckCircle2 size={20} />
+                    <CheckCircle2 size={24} className="stroke-white" strokeWidth={2.5} />
                   ) : isFailed ? (
-                    <XCircle size={20} />
+                    <XCircle size={24} className="stroke-white" strokeWidth={2.5} />
                   ) : (
-                    <Play size={20} className="fill-current" />
+                    <Play size={26} strokeWidth={2.8} className="fill-none stroke-white shrink-0" />
                   )}
                   <span>
                     {isRunning
@@ -366,7 +374,7 @@ export function LaunchPanel({
                           ? 'ĐANG KHỞI ĐỘNG...'
                           : isPreparing
                             ? 'PREPARING...'
-                            : 'CHƠI (OFFLINE)'}
+                            : 'PLAY (OFFLINE)'}
                   </span>
                 </span>
               </Button>
@@ -389,26 +397,34 @@ export function LaunchPanel({
               <Button
                 disabled={!activeProfile || isBusy || isStarting || isPreparing}
                 onClick={handlePlay}
-                variant={isFailed ? "danger" : "primary"}
-                className="relative w-full h-14 rounded-md font-bold text-base"
+                className={cn(
+                  "relative w-full h-14 rounded-md font-black text-lg tracking-wider text-white select-none transition-all duration-150",
+                  isFailed
+                    ? "bg-red-600 hover:bg-red-500 shadow-red-900/30"
+                    : isRunning
+                      ? "bg-emerald-600 hover:bg-emerald-500 shadow-emerald-900/30"
+                      : isBusy || isPreparing
+                        ? "bg-[#049c49]/80 cursor-wait"
+                        : "bg-[#049c49] hover:bg-[#05ad52] active:bg-[#03883f] shadow-[0_4px_16px_rgba(4,156,73,0.4)] hover:shadow-[0_6px_22px_rgba(4,156,73,0.5)]"
+                )}
               >
                 {showProgress && (
                   <span
-                    className="pointer-events-none absolute left-0 top-0 h-full bg-primary-foreground/8 transition-all duration-500"
+                    className="pointer-events-none absolute left-0 top-0 h-full bg-white/15 transition-all duration-500 rounded-[16px]"
                     style={{ width: `${percent}%` }}
                   />
                 )}
-                <span className="relative flex items-center gap-3">
+                <span className="relative flex items-center justify-center gap-3">
                   {isBusy && !isRunning ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={24} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isPreparing ? (
-                    <Loader2 size={20} className="animate-spin" />
+                    <Loader2 size={24} className="animate-spin stroke-white" strokeWidth={2.5} />
                   ) : isRunning ? (
-                    <CheckCircle2 size={20} />
+                    <CheckCircle2 size={24} className="stroke-white" strokeWidth={2.5} />
                   ) : isFailed ? (
-                    <XCircle size={20} />
+                    <XCircle size={24} className="stroke-white" strokeWidth={2.5} />
                   ) : (
-                    <Play size={20} className="fill-current" />
+                    <Play size={26} strokeWidth={2.8} className="fill-none stroke-white shrink-0" />
                   )}
                   <span>
                     {isRunning
@@ -419,7 +435,7 @@ export function LaunchPanel({
                           ? 'ĐANG KHỞI ĐỘNG...'
                           : isPreparing
                             ? 'PREPARING...'
-                            : 'CHƠI'}
+                            : 'PLAY'}
                   </span>
                 </span>
               </Button>

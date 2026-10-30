@@ -51,7 +51,7 @@ export default function AddAccountModal({
           <button
             onClick={onMicrosoftLogin}
             disabled={isWorking}
-            className="w-full group flex items-center gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/90 hover:border-emerald-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
+            className="w-full group flex items-center gap-4 p-4 rounded-md border border-zinc-700/80 bg-zinc-800/90 hover:bg-zinc-700 hover:border-zinc-600 active:scale-[0.98] transition-all text-left disabled:opacity-50 shadow-sm"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 group-hover:bg-emerald-500/25">
               <Key size={20} />
@@ -74,7 +74,7 @@ export default function AddAccountModal({
           <button
             onClick={() => setShowLocalInput(true)}
             disabled={isWorking}
-            className="group flex items-center gap-4 p-4 rounded-md border border-zinc-800/80 bg-zinc-900/90 hover:border-amber-500/50 hover:bg-zinc-900 transition-all text-left disabled:opacity-50 shadow-sm"
+            className="group flex items-center gap-4 p-4 rounded-md border border-zinc-700/80 bg-zinc-800/90 hover:bg-zinc-700 hover:border-zinc-600 active:scale-[0.98] transition-all text-left disabled:opacity-50 shadow-sm"
           >
             <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-md bg-amber-500/15 border border-amber-500/30 text-amber-400 group-hover:bg-amber-500/25">
               <FlaskConical size={20} />
