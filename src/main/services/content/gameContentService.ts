@@ -21,10 +21,27 @@ async function pathExists(targetPath: string): Promise<boolean> {
   }
 }
 
+const ALLOWED_CONTENT_SUBDIRS = new Set(['mods', 'resourcepacks', 'shaderpacks'])
+
 function assertPathInsideGameDir(gameDir: string, targetPath: string): void {
-  const rel = path.relative(path.resolve(gameDir), path.resolve(targetPath))
-  if (rel.startsWith('..') || path.isAbsolute(rel)) {
+  if (!gameDir || typeof gameDir !== 'string' || !targetPath || typeof targetPath !== 'string') {
+    throw new Error('Security error: Invalid gameDir or targetPath')
+  }
+  const resolvedGameDir = path.resolve(gameDir)
+  const parsedRoot = path.parse(resolvedGameDir).root
+  if (resolvedGameDir === parsedRoot) {
+    throw new Error(`Security error: root directory cannot be used as gameDir`)
+  }
+  const resolvedTarget = path.resolve(targetPath)
+  const rel = path.relative(resolvedGameDir, resolvedTarget)
+  if (!rel || rel.startsWith('..') || path.isAbsolute(rel)) {
     throw new Error(`Security error: path ${targetPath} is outside gameDir ${gameDir}`)
+  }
+  const segments = rel.split(path.sep).filter(Boolean)
+  const first = (segments as string[])[0] ?? ''
+  const firstSubdir = first.toLowerCase()
+  if (segments.length < 2 || !ALLOWED_CONTENT_SUBDIRS.has(firstSubdir)) {
+    throw new Error(`Security error: path ${targetPath} must be inside mods, resourcepacks, or shaderpacks folder`)
   }
 }
 

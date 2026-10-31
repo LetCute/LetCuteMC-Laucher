@@ -118,11 +118,9 @@ export function getPlatformJavaCandidateRoots(): string[] {
 }
 
 /**
- * Lệnh tìm kiếm nhị phân java trong biến môi trường PATH
+ * Kiểm tra tên tệp thực thi Java hợp lệ (chống RCE / binary injection)
  */
-export function getPlatformWhereJavaCommand(): { command: string; args: string[] } {
-  if (isWindows) {
-    return { command: 'where.exe', args: ['java'] }
-  }
-  return { command: 'which', args: ['-a', 'java'] }
+export function isValidJavaExecutableName(filePath: string): boolean {
+  const base = path.basename(filePath.trim()).toLowerCase()
+  return isWindows ? base === 'java.exe' || base === 'javaw.exe' : base === 'java'
 }

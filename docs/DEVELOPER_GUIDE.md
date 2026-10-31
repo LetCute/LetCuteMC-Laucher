@@ -75,11 +75,12 @@ LetCuteMC/
 │   └── verify-electron-build.mjs # Kịch bản kiểm tra file build Electron
 ├── src/
 │   ├── main/                  # Tiến trình Electron Main Process
-│   │   ├── services/          # 20 Backend Services xử lý logic
+│   │   ├── services/         # 44 Backend Services xử lý logic (chia 6 domains)
 │   │   ├── workers/           # 2 Worker Threads (prepareWorker, launchWorker)
-│   │   ├── ipc.ts             # Đăng ký các kênh IPC Main
-│   │   ├── main.ts            # Khởi tạo BrowserWindow & App Lifecycle
-│   │   └── preload.ts         # Preload script bảo mật expose window.launcherApi
+│   │   ├── ipc/              # Đăng ký các kênh IPC phân theo domain
+│   │   ├── utils/            # Tiện ích platform và môi trường thực thi
+│   │   ├── main.ts           # Khởi tạo BrowserWindow & App Lifecycle
+│   │   └── preload.ts        # Preload script bảo mật expose window.launcherApi
 │   ├── renderer/              # Tiến trình Giao diện Renderer (React 19)
 │   │   ├── screens/           # Các màn hình chính (Profiles, Accounts, Mods, Settings...)
 │   │   ├── components/        # Các React Components giao diện dùng chung
@@ -119,5 +120,5 @@ Dự án sử dụng **`electron-builder`** để tạo bộ cài đặt chuyên
 ## 6. Quy Định Viết Mã (Coding Conventions)
 
 - **TypeScript Strict Mode**: Luôn khai báo kiểu dữ liệu rõ ràng trong `src/shared/types.ts`. Không sử dụng kiểu `any` trừ trường hợp bắt buộc.
-- **Xử lý Lỗi trong IPC**: Tất cả các handler IPC trong `src/main/ipc.ts` cần được bọc trong các khối `try...catch` để bắn lỗi rõ ràng về cho UI qua `Error` instance.
+- **Xử lý Lỗi trong IPC**: Tất cả các handler IPC trong `src/main/ipc/` được đăng ký thông qua `handleIpc` (từ `ipcHelper.ts`) tự động bọc trong `try...catch` và chuẩn hóa thông điệp lỗi gửi về Renderer.
 - **Tối ưu UI Render**: Đối với các sự kiện phát liên tục từ backend (như thông báo dòng log hoặc % tải dữ liệu), luôn sử dụng cơ chế batching (`launcher:event-batch`) để tránh làm React re-render quá mức.

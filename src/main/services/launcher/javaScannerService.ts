@@ -10,11 +10,11 @@ import type {
   JavaCompatibility,
 } from '../../../shared/types'
 import { autoInstallJava, getDefaultJavaInstallDir } from './javaInstallerService'
-import { getJavaCacheFilePath } from '../system/storageService'
+import { getJavaCacheFilePath, pathExists } from '../system/storageService'
 import {
   JAVA_EXE,
   getPlatformJavaCandidateRoots,
-  getPlatformWhereJavaCommand,
+  isValidJavaExecutableName,
 } from '../../utils/platform.js'
 
 const execFileAsync = promisify(execFile)
@@ -69,18 +69,6 @@ export function readJavaProperty(output: string, key: string): string | null {
   return value ? value : null
 }
 
-function logScanner(_message: string): void {}
-
-function logSelector(_message: string): void {}
-
-async function pathExists(targetPath: string): Promise<boolean> {
-  try {
-    await fs.access(targetPath)
-    return true
-  } catch {
-    return false
-  }
-}
 
 async function safeRealpath(targetPath: string): Promise<string> {
   try {
@@ -122,6 +110,9 @@ export async function inspectJavaExecutable(
   javaPath: string
 ): Promise<Omit<DetectedJavaRuntime, 'source' | 'id'> | null> {
   const resolvedPath = path.resolve(javaPath)
+  if (!isValidJavaExecutableName(resolvedPath)) {
+    return null
+  }
   let output = ''
 
   try {
@@ -140,7 +131,6 @@ export async function inspectJavaExecutable(
     const e = err as { stdout?: string; stderr?: string; message?: string }
     output = `${e.stdout ?? ''}\n${e.stderr ?? ''}`
     if (!output.trim()) {
-      logScanner(`Skipped invalid runtime: ${resolvedPath} (${e.message ?? 'no output'})`)
       return null
     }
   }
@@ -164,7 +154,6 @@ export async function inspectJavaExecutable(
     ?? parseJavaMajor(version)
 
   if (majorVersion == null) {
-    logScanner(`Skipped invalid runtime: ${resolvedPath} (unparseable version)`)
     return null
   }
 
@@ -172,10 +161,6 @@ export async function inspectJavaExecutable(
   const javaHome = javaHomeProp
     ? path.resolve(javaHomeProp)
     : path.resolve(path.dirname(resolvedPath), '..')
-
-  logScanner(
-    `Detected Java ${displayVersion}, major=${majorVersion}, vendor=${vendor ?? 'unknown'}`
-  )
 
   return {
     javaPath: resolvedPath,
@@ -198,6 +183,16 @@ export async function verifyJavaPath(
   requiredMajor: number
 ): Promise<import('../../../shared/types').JavaPathVerification> {
   const resolved = path.resolve(javaPath)
+  if (!isValidJavaExecutableName(resolved)) {
+    return {
+      valid: false,
+      majorVersion: null,
+      version: null,
+      compatible: false,
+      requiredMajor,
+      message: 'Tệp thực thi không phải là java/javaw hợp lệ.',
+    }
+  }
 
   if (!(await pathExists(resolved))) {
     return {
@@ -284,13 +279,7 @@ export async function findJavaExecutables(
 
 export async function scanJavaRoot(rootDir: string): Promise<string[]> {
   const resolved = path.resolve(rootDir)
-  if (!(await pathExists(resolved))) return []
-  logScanner(`Scan root: ${resolved}`)
-  const executables = await findJavaExecutables(resolved)
-  for (const exe of executables) {
-    logScanner(`Found executable: ${exe}`)
-  }
-  return executables
+  return (await pathExists(resolved)) ? findJavaExecutables(resolved) : []
 }
 
 /** Deep-scan roots only (known vendor dirs). PATH is handled separately. */
@@ -335,23 +324,6 @@ async function collectPathJavaExecutables(): Promise<string[]> {
   return found
 }
 
-async function collectWhereJava(): Promise<string[]> {
-  const { command, args } = getPlatformWhereJavaCommand()
-  try {
-    const { stdout } = await execFileAsync(command, args, {
-      timeout: 5000,
-      windowsHide: true,
-      maxBuffer: 256 * 1024,
-    })
-    return stdout
-      .split(/\r?\n/)
-      .map((l) => l.trim())
-      .filter(Boolean)
-      .map((p) => path.resolve(p))
-  } catch {
-    return []
-  }
-}
 
 function classifySource(
   javaPath: string,
@@ -401,7 +373,7 @@ export function deduplicateJavaRuntimes(runtimes: DetectedJavaRuntime[]): Detect
   const byKey = new Map<string, DetectedJavaRuntime>()
 
   for (const runtime of runtimes) {
-    if (!runtime.valid && !runtime.isValid) continue
+    if (!runtime.valid) continue
     const key = (runtime.javaHome || path.dirname(path.dirname(runtime.javaPath)))
       .toLowerCase()
       .replace(/\\/g, '/')
@@ -511,11 +483,6 @@ export function extractMinecraftVersion(version: string): string | null {
   return legacyMatch?.[0] ?? null
 }
 
-/** @deprecated use resolveRequiredJavaMajor — kept for call-site compat */
-export function resolveRequiredJavaVersion(version: string): number {
-  return fallbackRequiredJavaFromMinecraftVersion(version)
-}
-
 async function readVersionJsonMajor(
   gameDir: string,
   versionId: string,
@@ -548,14 +515,9 @@ export async function resolveRequiredJavaMajor(
 ): Promise<number> {
   if (gameDir) {
     const fromMeta = await readVersionJsonMajor(gameDir, minecraftVersion)
-    if (fromMeta != null) {
-      logSelector(`Required major from metadata=${fromMeta} (version=${minecraftVersion})`)
-      return fromMeta
-    }
+    if (fromMeta != null) return fromMeta
   }
-  const fallback = fallbackRequiredJavaFromMinecraftVersion(minecraftVersion)
-  logSelector(`Required major from fallback=${fallback} (version=${minecraftVersion})`)
-  return fallback
+  return fallbackRequiredJavaFromMinecraftVersion(minecraftVersion)
 }
 
 // ─── compatibility / selection ───────────────────────────────────────────────
@@ -588,7 +550,7 @@ export function selectCompatibleJava(
   requiredMajor: number,
   options?: { allowNewer?: boolean; preferredJavaPath?: string | null }
 ): DetectedJavaRuntime | null {
-  const valid = runtimes.filter((r) => r.valid || r.isValid)
+  const valid = runtimes.filter((r) => r.valid)
 
   if (options?.preferredJavaPath) {
     const preferred = path.resolve(options.preferredJavaPath)
@@ -663,9 +625,6 @@ export async function scanJavaRuntimes(
   }
   const sysPath = await collectPathJavaExecutables()
   for (const p of sysPath) candidatePaths.add(p)
-
-  const sysWhere = await collectWhereJava()
-  for (const p of sysWhere) candidatePaths.add(p)
   // Resolve realpaths early for dedupe of candidates
   const uniqueCandidates: string[] = []
   const seenReal = new Set<string>()
@@ -753,7 +712,7 @@ export async function selectBestJavaRuntime(
   }
 
   const scanResult = await scanJavaRuntimes(scanDirsToUse, options?.forceRefresh === true)
-  let candidates = scanResult.runtimes.filter((r) => r.valid || r.isValid)
+  let candidates = scanResult.runtimes.filter((r) => r.valid)
 
   let selected = selectCompatibleJava(candidates, requiredMajor, {
     allowNewer: options?.allowNewer === true,
@@ -762,21 +721,17 @@ export async function selectBestJavaRuntime(
 
   // If missing exact match and not a manual preferred path, auto-install required Java
   if (!selected && !options?.preferredJavaPath) {
-    logSelector(`Java ${requiredMajor} not found. Triggering automatic background install...`)
     try {
       const installRes = await autoInstallJava(requiredMajor, getDefaultJavaInstallDir())
       if (installRes.success) {
-        logSelector(`Auto-install Java ${requiredMajor} succeeded. Rescanning...`)
         const refreshedScan = await scanJavaRuntimes(scanDirsToUse, true)
-        candidates = refreshedScan.runtimes.filter((r) => r.valid || r.isValid)
+        candidates = refreshedScan.runtimes.filter((r) => r.valid)
         selected = selectCompatibleJava(candidates, requiredMajor, {
           allowNewer: options?.allowNewer === true,
         })
-      } else {
-        logSelector(`Auto-install Java ${requiredMajor} failed: ${installRes.message}`)
       }
-    } catch (installErr) {
-      logSelector(`Auto-install Java error: ${installErr}`)
+    } catch {
+      // auto-install failed, continue with candidate reporting
     }
   }
 
@@ -790,7 +745,6 @@ export async function selectBestJavaRuntime(
 
   if (!selected) {
     const available = candidates.map((c) => c.majorVersion).join(', ')
-    logSelector(`Required major=${requiredMajor}, no match (available: ${available})`)
     return {
       found: false,
       requiredVersion: requiredMajor,
@@ -815,8 +769,6 @@ export async function selectBestJavaRuntime(
     !isExactMatch && isManualOverride
       ? `Đang dùng Java ${compat.actualMajor} (chọn thủ công). Khuyến nghị: Java ${requiredMajor}.`
       : null
-
-  logSelector(`Required major=${requiredMajor}, selected major=${selected.majorVersion}`)
 
   return {
     found: true,

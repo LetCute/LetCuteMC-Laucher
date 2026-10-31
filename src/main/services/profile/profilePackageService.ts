@@ -9,7 +9,7 @@ import type {
   ProfilePackageManifest,
   LauncherProfile,
 } from '../../../shared/types'
-import { getProfiles, createProfile } from './profileService'
+import { getProfiles, createProfile, isDangerousJvmArg } from './profileService'
 import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
 
 export class ProfilePackageService {
@@ -276,18 +276,7 @@ export class ProfilePackageService {
       // Sanitize imported JVM arguments: drop dangerous flags that can lead to arbitrary code execution
       let sanitizedJvmArgs: string | undefined = undefined
       if (typeof manifest.jvmArgs === 'string' && manifest.jvmArgs.trim()) {
-        const tokens = manifest.jvmArgs.split(/\s+/)
-        const safeTokens = tokens.filter((arg: string) => {
-          const lower = arg.toLowerCase()
-          return !(
-            lower.startsWith('-javaagent:') ||
-            lower.startsWith('-agentlib:') ||
-            lower.startsWith('-agentpath:') ||
-            lower.startsWith('-xbootclasspath') ||
-            lower.startsWith('-xx:onerror=') ||
-            lower.startsWith('-xx:onoutofmemoryerror=')
-          )
-        })
+        const safeTokens = manifest.jvmArgs.trim().split(/\s+/).filter((arg) => !isDangerousJvmArg(arg))
         sanitizedJvmArgs = safeTokens.length > 0 ? safeTokens.join(' ') : undefined
       }
 

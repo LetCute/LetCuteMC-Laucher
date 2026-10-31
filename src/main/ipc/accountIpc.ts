@@ -98,6 +98,27 @@ export function registerAccountIpc(): void {
         targetUrl = targetUrl.replace('http://', 'https://')
       }
 
+      const parsedUrl = new URL(targetUrl)
+      if (parsedUrl.protocol !== 'https:') {
+        return null
+      }
+
+      const hostname = parsedUrl.hostname.toLowerCase()
+      const allowedHosts = [
+        'textures.minecraft.net',
+        'minotar.net',
+        'crafatar.com',
+        'visage.surgeplay.com',
+        'namemc.com',
+        'mc-heads.net',
+      ]
+      const isAllowedHost = allowedHosts.some(
+        (allowed) => hostname === allowed || hostname.endsWith(`.${allowed}`)
+      )
+      if (!isAllowedHost) {
+        return null
+      }
+
       // Check in-memory cache first
       const cached = getCachedTexture(targetUrl)
       if (cached) return cached

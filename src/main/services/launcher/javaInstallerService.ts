@@ -1,9 +1,9 @@
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
+import crypto from 'crypto';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
-import http from 'http';
 import https from 'https';
 import { URL } from 'url';
 import { getLauncherDataDirectory } from '../system/storageService';
@@ -123,6 +123,29 @@ function downloadFile(url: string, destination: string, maxRedirects = 10): Prom
   });
 }
 
+async function calculateFileSha256(filePath: string): Promise<string> {
+  const hash = crypto.createHash('sha256');
+  const stream = fs.createReadStream(filePath);
+  for await (const chunk of stream) {
+    hash.update(chunk);
+  }
+  return hash.digest('hex').toLowerCase();
+}
+
+async function fetchExpectedSha256(url: string): Promise<string | null> {
+  try {
+    const checksumUrl = `${url}.sha256.txt`;
+    const res = await fetch(checksumUrl, { signal: AbortSignal.timeout(10000) });
+    if (!res.ok) return null;
+    const text = await res.text();
+    const match = text.trim().match(/^([a-fA-F0-9]{64})/);
+    const hash = match?.[1];
+    return hash ? hash.toLowerCase() : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Extract zip or tar file
  */
@@ -188,6 +211,20 @@ export async function autoInstallJava(
       });
 
       await downloadFile(versionInfo.url, tempArchivePath);
+
+      onProgress?.({
+        stage: 'downloading',
+        percent: 45,
+        message: 'Đang kiểm tra tính toàn vẹn (SHA-256)...',
+      });
+      const expectedSha256 = await fetchExpectedSha256(versionInfo.url);
+      if (expectedSha256) {
+        const actualSha256 = await calculateFileSha256(tempArchivePath);
+        if (actualSha256 !== expectedSha256) {
+          await fsPromises.unlink(tempArchivePath).catch(() => {});
+          throw new Error('Xác thực tính toàn vẹn Java thất bại: mã băm SHA-256 không khớp.');
+        }
+      }
 
       const archiveStats = await fsPromises.stat(tempArchivePath);
       if (!archiveStats.isFile() || archiveStats.size < 5 * 1024 * 1024) {

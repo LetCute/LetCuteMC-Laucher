@@ -425,8 +425,20 @@ export class WorldService {
           }
         }
       } else {
-        // level.dat ở root của zip
-        zip.extractAllTo(targetPath, true)
+        // level.dat ở root của zip - giải nén an toàn chống Zip Slip
+        for (const entry of entries) {
+          const destFilePath = path.resolve(targetPath, entry.entryName)
+          if (!destFilePath.startsWith(normalizedTarget + path.sep) && destFilePath !== normalizedTarget) {
+            continue
+          }
+          if (entry.isDirectory) {
+            if (!existsSync(destFilePath)) await fs.mkdir(destFilePath, { recursive: true })
+          } else {
+            const destFileDir = path.dirname(destFilePath)
+            if (!existsSync(destFileDir)) await fs.mkdir(destFileDir, { recursive: true })
+            await fs.writeFile(destFilePath, entry.getData())
+          }
+        }
       }
 
       // Đọc tên LevelName từ level.dat đã giải nén

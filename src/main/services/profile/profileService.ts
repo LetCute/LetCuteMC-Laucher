@@ -18,6 +18,20 @@ import {
   pathExists,
 } from '../system/storageService.js';
 import { recommendPerformance } from '../system/performanceTunerService.js';
+import { isValidJavaExecutableName } from '../../utils/platform.js';
+
+export function isDangerousJvmArg(arg: string): boolean {
+  const lower = arg.toLowerCase();
+  return (
+    lower.startsWith('-javaagent:') ||
+    lower.startsWith('-agentlib:') ||
+    lower.startsWith('-agentpath:') ||
+    lower.startsWith('-xbootclasspath') ||
+    lower.startsWith('-xrun') ||
+    lower.startsWith('-xx:onerror=') ||
+    lower.startsWith('-xx:onoutofmemoryerror=')
+  );
+}
 
 const DEFAULT_STORE: ProfilesStore = {
   activeProfileId: null,
@@ -26,13 +40,16 @@ const DEFAULT_STORE: ProfilesStore = {
 
 function validateInput(input: Partial<CreateProfileInput>, isNew: boolean): string[] {
   const errors: string[] = [];
+
   if (isNew) {
     if (!input.name?.trim()) errors.push('Tên profile không được để trống');
     if (!input.minecraftVersion?.trim()) errors.push('Phiên bản Minecraft không được để trống');
   }
+
   if (input.minMemoryMb !== undefined && input.minMemoryMb < 512) {
     errors.push('RAM tối thiểu phải >= 512 MB');
   }
+
   if (
     input.maxMemoryMb !== undefined &&
     input.minMemoryMb !== undefined &&
@@ -40,6 +57,23 @@ function validateInput(input: Partial<CreateProfileInput>, isNew: boolean): stri
   ) {
     errors.push('RAM tối đa phải >= RAM tối thiểu');
   }
+
+  if (input.javaPath && typeof input.javaPath === 'string' && input.javaPath.trim()) {
+    if (!isValidJavaExecutableName(input.javaPath)) {
+      errors.push('Đường dẫn Java không hợp lệ (tệp thực thi phải là java hoặc javaw)');
+    }
+  }
+
+  if (input.jvmArgs && typeof input.jvmArgs === 'string' && input.jvmArgs.trim()) {
+    const tokens = input.jvmArgs.trim().split(/\s+/);
+    for (const token of tokens) {
+      if (isDangerousJvmArg(token)) {
+        errors.push(`Đối số JVM không an toàn: ${token}`);
+        break;
+      }
+    }
+  }
+
   return errors;
 }
 
@@ -47,16 +81,21 @@ function validateInput(input: Partial<CreateProfileInput>, isNew: boolean): stri
 function normalizeProfile(raw: any): LauncherProfile {
   const minecraftVersion = raw.minecraftVersion ?? raw.version ?? '1.21.1';
   const name = String(raw.name ?? 'Vanilla Profile').trim();
-
   return {
     id: raw.id ?? crypto.randomUUID(),
     name,
     minecraftVersion,
     gameDir: raw.gameDir ?? '',
     mcRootDir: raw.mcRootDir ?? null,
+    loader: raw.loader,
+    loaderVersion: raw.loaderVersion,
     minMemoryMb: Number(raw.minMemoryMb ?? 2048),
     maxMemoryMb: Number(raw.maxMemoryMb ?? 4096),
     javaPath: raw.javaPath ?? null,
+    jvmArgs: raw.jvmArgs ?? null,
+    description: raw.description,
+    author: raw.author,
+    tags: raw.tags,
     createdAt: raw.createdAt ?? new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -196,6 +235,11 @@ export async function createProfile(
     minMemoryMb: input.minMemoryMb ?? rec.recommendedMinRam,
     maxMemoryMb: input.maxMemoryMb ?? rec.recommendedMaxRam,
     javaPath: input.javaPath ?? null,
+    jvmArgs: input.jvmArgs ?? null,
+    description: input.description,
+    author: input.author,
+    loader: input.loader,
+    loaderVersion: input.loaderVersion,
     createdAt: now,
     updatedAt: now,
   };
