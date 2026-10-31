@@ -305,28 +305,45 @@ export async function deleteProfile(profileId: string): Promise<boolean> {
   await ensureLauncherDataDirectory();
   const store = await getProfiles();
   const index = store.profiles.findIndex(p => p.id === profileId);
+  if (index === -1) return false;
   const profile = store.profiles[index];
-  if (index === -1 || !profile) return false;
-  const { getLauncherDataDirectory } = await import('../system/storageService.js');
-  const rootDir = getLauncherDataDirectory();
+  if (!profile) return false;
 
-  if (profile.gameDir && profile.gameDir.toLowerCase() !== rootDir.toLowerCase()) {
-      const profilesDir = path.resolve(rootDir, 'profiles');
-      const targetDir = path.resolve(profile.gameDir);
-      const rel = path.relative(profilesDir, targetDir);
-      const isProfilesDir = Boolean(rel && !rel.startsWith('..') && !path.isAbsolute(rel));
-      if (isProfilesDir) {
-        const fs = await import('node:fs/promises');
-        await fs.rm(targetDir, { recursive: true, force: true }).catch((err) => {
-          console.error('Lỗi khi xóa thư mục cấu hình:', err);
-        });
-      }
+  // Xóa thư mục game của profile nếu nó là thư mục con trong profiles/
+  if (profile.gameDir && isSafeToDeleteProfileDir(profile.gameDir)) {
+    const targetDir = path.resolve(profile.gameDir);
+    try {
+      await fs.rm(targetDir, { recursive: true, force: true, maxRetries: 3, retryDelay: 100 });
+    } catch (err) {
+      console.error('[profileService] Lỗi khi xóa thư mục cấu hình:', err);
     }
+  }
 
   store.profiles.splice(index, 1);
-  if (store.activeProfileId === profileId) store.activeProfileId = null;
+  if (store.activeProfileId === profileId) {
+    store.activeProfileId = store.profiles[0]?.id ?? null;
+  }
   await writeJsonFile(getProfilesFilePath(), store);
   return true;
+}
+
+export function isSafeToDeleteProfileDir(targetDir: string): boolean {
+  if (!targetDir || typeof targetDir !== 'string') return false;
+  const resolvedTarget = path.resolve(targetDir);
+
+  const allowedParents = [
+    path.resolve(getDefaultMinecraftDirectory(), 'profiles'),
+    path.resolve(getLauncherDataDirectory(), 'profiles'),
+  ];
+
+  for (const parent of allowedParents) {
+    const rel = path.relative(parent, resolvedTarget);
+    if (rel && !rel.startsWith('..') && !path.isAbsolute(rel)) {
+      return true;
+    }
+  }
+
+  return false;
 }
 
 export async function setActiveProfile(profileId: string): Promise<boolean> {

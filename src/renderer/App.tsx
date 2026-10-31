@@ -356,8 +356,17 @@ function MainApp() {
     try {
       const ok = await launcherClient.deleteProfile(id);
       if (ok) {
-        setProfiles(prev => prev.filter(p => p.id !== id));
-        if (activeProfileId === id) setActiveProfileId(null);
+        setProfiles((prev) => {
+          const remaining = prev.filter((p) => p.id !== id);
+          if (activeProfileId === id) {
+            const nextActiveId = remaining[0]?.id ?? null;
+            setActiveProfileId(nextActiveId);
+            if (nextActiveId) {
+              launcherClient.setActiveProfile(nextActiveId).catch(console.error);
+            }
+          }
+          return remaining;
+        });
       }
     } catch (e) {
       console.error('Delete profile error:', e);
