@@ -10,6 +10,8 @@ export interface ModalProps {
   children: ReactNode
   footer?: ReactNode
   maxWidth?: string
+  closable?: boolean
+  overlay?: ReactNode
 }
 
 export const Modal = ({
@@ -20,8 +22,16 @@ export const Modal = ({
   children,
   footer,
   maxWidth = 'max-w-[760px]',
+  closable = true,
+  overlay,
 }: ModalProps) => {
   if (!isOpen) return null
+
+  const handleClose = () => {
+    if (closable) {
+      onClose()
+    }
+  }
 
   const modalNode = (
     <div
@@ -29,13 +39,15 @@ export const Modal = ({
       style={{ background: 'rgba(0,0,0,0.75)' }}
     >
       {/* Backdrop */}
-      <div className="absolute inset-0 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 backdrop-blur-sm" onClick={handleClose} />
 
       {/* Dialog */}
       <div
         className={`relative w-full ${maxWidth} bg-card border border-border rounded-md shadow-2xl flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] z-10`}
         onClick={(e) => e.stopPropagation()}
       >
+        {overlay}
+
         {/* Header */}
         <div className="flex items-start justify-between px-5 py-3 border-b border-border shrink-0">
           <div>
@@ -44,12 +56,14 @@ export const Modal = ({
               <p className="text-[13px] text-muted-foreground mt-0.5">{description}</p>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="ml-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
-          >
-            <X size={18} />
-          </button>
+          {closable && (
+            <button
+              onClick={handleClose}
+              className="ml-4 p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-accent transition-colors shrink-0"
+            >
+              <X size={18} />
+            </button>
+          )}
         </div>
 
         {/* Body */}

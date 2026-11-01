@@ -26,6 +26,31 @@ interface ImportProfileModalProps {
   onSuccess: (newProfile: LauncherProfile) => void
 }
 
+const resolveLoader = (manifestLoader?: string, versionStr?: string): string => {
+  if (manifestLoader && manifestLoader !== 'vanilla') return manifestLoader
+  const v = (versionStr || '').toLowerCase()
+  if (v.includes('neoforge')) return 'neoforge'
+  if (v.includes('fabric')) return 'fabric'
+  if (v.includes('forge')) return 'forge'
+  if (v.includes('quilt')) return 'quilt'
+  return 'vanilla'
+}
+
+const getLoaderIcon = (loader: string) => {
+  switch (loader) {
+    case 'fabric':
+      return './assets/fabric.png'
+    case 'neoforge':
+      return './assets/neoforged.png'
+    case 'forge':
+      return './assets/forge.png'
+    case 'quilt':
+      return './assets/quilt.svg'
+    default:
+      return './assets/grass_block.png'
+  }
+}
+
 export function ImportProfileModal({
   isOpen,
   onClose,
@@ -128,29 +153,59 @@ export function ImportProfileModal({
           manifest && (
             <>
               {/* Package Banner Header */}
-              <div className="p-4 rounded-md border border-primary/40 bg-primary/10 flex items-center justify-between gap-3 shadow-md">
-                <div className="flex items-center gap-3 min-w-0">
-                  <div className="h-11 w-11 rounded-md bg-primary/20 border border-primary/40 text-primary flex items-center justify-center shrink-0">
-                    <Package size={22} />
-                  </div>
-                  <div className="min-w-0">
-                    <h4 className="text-base font-bold text-foreground truncate">{manifest.name}</h4>
-                    <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
-                      <span>
-                        Phiên bản: <strong className="text-zinc-200">{manifest.minecraftVersion}</strong>
-                      </span>
-                      <span>·</span>
-                      <span>
-                        Dung lượng: <strong className="text-primary">{sizeMb} MB</strong>
-                      </span>
+              {(() => {
+                const effectiveLoader = resolveLoader(manifest.loader, manifest.minecraftVersion)
+                return (
+                  <div className="p-4 rounded-md border border-primary/40 bg-primary/10 flex items-center justify-between gap-3 shadow-md">
+                    <div className="flex items-center gap-3 min-w-0">
+                      {previewInfo?.iconData ? (
+                        <img
+                          src={previewInfo.iconData}
+                          alt="Icon Modpack"
+                          className="h-11 w-11 rounded-md object-cover border border-primary/40 shrink-0 bg-black/40 shadow-sm"
+                        />
+                      ) : (
+                        <img
+                          src={getLoaderIcon(effectiveLoader)}
+                          alt={effectiveLoader}
+                          className="h-11 w-11 rounded-md object-contain p-1 border border-primary/30 shrink-0 bg-black/30 shadow-sm"
+                        />
+                      )}
+                      <div className="min-w-0">
+                        <h4 className="text-base font-bold text-foreground truncate">{manifest.name}</h4>
+                        <div className="flex items-center gap-2 text-[11px] text-muted-foreground mt-0.5">
+                          <span>
+                            Phiên bản: <strong className="text-zinc-200">{manifest.minecraftVersion}</strong>
+                          </span>
+                          <span>·</span>
+                          <span>
+                            Dung lượng: <strong className="text-primary">{sizeMb} MB</strong>
+                          </span>
+                        </div>
+                      </div>
                     </div>
+                    <span
+                      className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 capitalize ${
+                        effectiveLoader === 'neoforge' || effectiveLoader === 'forge'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : effectiveLoader === 'fabric' || effectiveLoader === 'quilt'
+                            ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30'
+                            : 'bg-zinc-800 text-zinc-300 border-zinc-700'
+                      }`}
+                    >
+                      {effectiveLoader === 'neoforge'
+                        ? 'NeoForge'
+                        : effectiveLoader === 'fabric'
+                          ? 'Fabric'
+                          : effectiveLoader === 'forge'
+                            ? 'Forge'
+                            : effectiveLoader === 'quilt'
+                              ? 'Quilt'
+                              : 'Vanilla'}
+                    </span>
                   </div>
-                </div>
-
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-primary/20 text-primary border border-primary/30 shrink-0 capitalize">
-                  {manifest.loader || 'Vanilla'}
-                </span>
-              </div>
+                )
+              })()}
 
               {/* Author & Description */}
               {(manifest.author || manifest.description) && (

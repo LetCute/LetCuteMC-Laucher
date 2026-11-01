@@ -260,8 +260,8 @@ async function _installMrpack(
     if (fallbackLoaders.includes('forge')) {
       taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt Forge cho ${minecraftVersion}...`)
       try {
-        const forgeList = await getForgeVersions()
-        const forgeItem = forgeList.find(f => f.version.startsWith(minecraftVersion))
+        const forgeList = await getForgeVersions(minecraftVersion)
+        const forgeItem = forgeList[0]
         if (forgeItem) {
           finalMinecraftVersion = await installForge(minecraftVersion, forgeItem.version, mcRootDir)
           await updateProfile(createdProfile.id, { minecraftVersion: finalMinecraftVersion })
@@ -273,7 +273,7 @@ async function _installMrpack(
     } else if (fallbackLoaders.includes('neoforge')) {
       taskManagerService.updateTaskProgress(taskId, 25, `Đang tìm và cài đặt NeoForge cho ${minecraftVersion}...`)
       try {
-        const neoList = await getNeoForgeVersions()
+        const neoList = await getNeoForgeVersions(minecraftVersion)
         const neoItem = neoList[0]
         if (neoItem) {
           finalMinecraftVersion = await installNeoForge(minecraftVersion, neoItem.version, mcRootDir)

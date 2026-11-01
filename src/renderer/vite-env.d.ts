@@ -161,8 +161,8 @@ loginMicrosoft(): Promise<AccountState>
       // Mod Loader API
       getFabricVersions(): Promise<ModLoaderVersion[]>
       getQuiltVersions(): Promise<ModLoaderVersion[]>
-      getForgeVersions(): Promise<ModLoaderVersion[]>
-      getNeoForgeVersions(): Promise<ModLoaderVersion[]>
+      getForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]>
+      getNeoForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]>
       installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
       installQuilt(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>
       installForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string>

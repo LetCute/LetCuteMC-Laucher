@@ -24,15 +24,16 @@ interface ProfilesScreenProps {
 function ProfileImage({ profile }: { profile: LauncherProfile }) {
   const [iconData, setIconData] = useState<string | null>(null)
 
-  const isFabric = profile.minecraftVersion.toLowerCase().includes('fabric')
-  const isQuilt = profile.minecraftVersion.toLowerCase().includes('quilt')
-  const isNeoForge = profile.minecraftVersion.toLowerCase().includes('neoforge')
-  const isForge = profile.minecraftVersion.toLowerCase().includes('forge') && !isNeoForge
-  const isModpack = !!profile.mcRootDir
+  const loader = profile.loader || ''
+  const ver = profile.minecraftVersion.toLowerCase()
+  const isFabric = loader === 'fabric' || ver.includes('fabric')
+  const isQuilt = loader === 'quilt' || ver.includes('quilt')
+  const isNeoForge = loader === 'neoforge' || ver.includes('neoforge')
+  const isForge = (loader === 'forge' || (ver.includes('forge') && !ver.includes('neoforge'))) && !isNeoForge
 
   useEffect(() => {
     let isMounted = true
-    if (isModpack && profile.gameDir) {
+    if (profile.gameDir) {
       const sep = profile.gameDir.includes('\\') ? '\\' : '/'
       const iconPath = profile.gameDir.endsWith(sep) ? `${profile.gameDir}icon.png` : `${profile.gameDir}${sep}icon.png`
       window.launcherApi.readLocalImageBase64(iconPath)
@@ -42,7 +43,7 @@ function ProfileImage({ profile }: { profile: LauncherProfile }) {
         .catch(() => { })
     }
     return () => { isMounted = false }
-  }, [profile.id, profile.gameDir, isModpack])
+  }, [profile.id, profile.gameDir])
 
   const imageClass = "w-10 h-10 rounded-md shadow-sm object-cover bg-black/20"
 
@@ -330,7 +331,8 @@ export const ProfilesScreen = ({
           setImportPackagePath(null)
         }}
         packagePath={importPackagePath}
-        onSuccess={(newProfile) => {
+        onSuccess={async (newProfile) => {
+          await onReloadProfiles?.();
           onSetActive(newProfile.id)
         }}
       />

@@ -7,9 +7,11 @@ import type {
 } from '@/shared/types'
 import { Modal } from '../ui/Modal'
 import { Input } from '../ui/Input'
-import { AlertCircle, Info } from 'lucide-react'
+import { AlertCircle, Info, Loader2 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { Select } from '../ui/Select'
+import { useToast } from '../ui/Toast'
+import { formatVersionDisplay } from '@/lib/utils'
 import type { ModLoaderType, ModLoaderVersion } from '@/shared/types'
 
 interface ProfileModalProps {
@@ -58,6 +60,7 @@ export function ProfileModal({
   const [selectedLoaderVersion, setSelectedLoaderVersion] = useState<string>('')
   const [isFetchingLoaders, setIsFetchingLoaders] = useState(false)
   const [isInstalling, setIsInstalling] = useState(false)
+  const { showToast } = useToast()
 
   useEffect(() => {
     if (!versionCatalog || !formData.minecraftVersion) {
@@ -106,7 +109,7 @@ export function ProfileModal({
 
   useEffect(() => {
     async function fetchLoaders() {
-      if (modLoader === 'vanilla') {
+      if (modLoader === 'vanilla' || !formData.minecraftVersion) {
         setLoaderVersions([])
         setSelectedLoaderVersion('')
         return
@@ -116,26 +119,33 @@ export function ProfileModal({
         let versions: ModLoaderVersion[] = []
         if (modLoader === 'fabric') versions = await window.launcherApi.getFabricVersions()
         if (modLoader === 'quilt') versions = await window.launcherApi.getQuiltVersions()
-        if (modLoader === 'forge') versions = await window.launcherApi.getForgeVersions()
-        if (modLoader === 'neoforge') versions = await window.launcherApi.getNeoForgeVersions()
+        if (modLoader === 'forge') versions = await window.launcherApi.getForgeVersions(formData.minecraftVersion)
+        if (modLoader === 'neoforge') versions = await window.launcherApi.getNeoForgeVersions(formData.minecraftVersion)
 
         setLoaderVersions(versions)
         if (versions.length > 0 && versions[0]) {
           setSelectedLoaderVersion(versions[0].version)
+        } else {
+          setSelectedLoaderVersion('')
         }
       } catch (e) {
         console.error('Failed to fetch loaders', e)
+        setLoaderVersions([])
+        setSelectedLoaderVersion('')
       } finally {
         setIsFetchingLoaders(false)
       }
     }
     fetchLoaders()
-  }, [modLoader])
+  }, [modLoader, formData.minecraftVersion])
 
   const validate = (): boolean => {
     const newErrors: Record<string, string> = {}
     if (!formData.name.trim()) newErrors.name = 'Tên profile không được rỗng'
     if (!formData.minecraftVersion.trim()) newErrors.minecraftVersion = 'Phiên bản không được rỗng'
+    if (modLoader !== 'vanilla' && !selectedLoaderVersion) {
+      newErrors.modLoader = 'Chưa chọn phiên bản Loader hoặc không có bản tương thích'
+    }
     if (formData.minMemoryMb < 512) newErrors.minMemoryMb = 'RAM tối thiểu >= 512 MB'
     if (formData.maxMemoryMb < formData.minMemoryMb)
       newErrors.maxMemoryMb = 'RAM tối đa phải >= RAM tối thiểu'
@@ -186,7 +196,8 @@ export function ProfileModal({
           )
         }
       } catch (err) {
-        alert(err instanceof Error ? err.message : 'Lỗi cài đặt Mod Loader')
+        const msg = err instanceof Error ? err.message : 'Lỗi cài đặt Mod Loader'
+        showToast('error', msg)
         setIsInstalling(false)
         return
       }
@@ -207,13 +218,57 @@ export function ProfileModal({
   const hasVersions = (versionCatalog?.all?.length ?? 0) > 0
   const btnText = profile ? 'Lưu thay đổi' : 'Tạo Profile'
 
+  const loaderName =
+    modLoader === 'fabric'
+      ? 'Fabric'
+      : modLoader === 'quilt'
+        ? 'Quilt'
+        : modLoader === 'forge'
+          ? 'Forge'
+          : 'NeoForge'
+
+  const installingOverlay = isInstalling ? (
+    <div className="absolute inset-0 bg-card/95 backdrop-blur-sm z-30 flex flex-col items-center justify-center p-6 text-center select-none animate-in fade-in duration-200">
+      <div className="relative flex items-center justify-center mb-4">
+        <div className="w-14 h-14 rounded-full border-4 border-primary/20 border-t-primary animate-spin" />
+        <div className="absolute w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+          <Loader2 size={18} className="text-primary animate-spin" />
+        </div>
+      </div>
+
+      <h3 className="text-base font-bold text-foreground mb-1">
+        Đang cài đặt {loaderName}
+      </h3>
+      <p className="text-xs text-primary font-mono mb-3">
+        {selectedLoaderVersion} • Minecraft {formData.minecraftVersion}
+      </p>
+
+      <p className="text-xs text-muted-foreground max-w-xs leading-relaxed mb-4">
+        Launcher đang tải tệp cài đặt và các thư viện cần thiết. Quá trình này có thể mất 1 - 3 phút tùy vào tốc độ mạng.
+      </p>
+
+      <div className="w-full max-w-xs bg-muted rounded-full h-1.5 overflow-hidden mb-4 border border-border">
+        <div className="h-full bg-primary rounded-full animate-pulse w-full" />
+      </div>
+
+      <div className="flex items-center gap-1.5 text-[11px] text-amber-300 bg-amber-500/10 border border-amber-500/20 px-3 py-1.5 rounded-md">
+        <AlertCircle size={13} className="shrink-0" />
+        <span>Vui lòng không đóng launcher trong khi đang cài đặt</span>
+      </div>
+    </div>
+  ) : null
+
   return (
     <Modal
       isOpen={isOpen}
-      onClose={onClose}
+      onClose={() => {
+        if (!isInstalling) onClose()
+      }}
+      closable={!isInstalling}
+      overlay={installingOverlay}
       title={profile ? 'Chỉnh Sửa Profile' : 'Tạo Profile'}
-      description="Chọn phiên bản Minecraft"
-      maxWidth="max-w-sm"
+      description={profile ? 'Cập nhật thông tin cấu hình' : 'Chọn phiên bản Minecraft'}
+      maxWidth="max-w-md"
       footer={
         <>
           <Button onClick={onClose} variant="ghost" size="sm" disabled={isInstalling}>
@@ -243,9 +298,23 @@ export function ProfileModal({
 
         <div className="col-span-2 flex flex-col gap-1.5">
           <label className="text-sm font-medium text-foreground">Phiên bản</label>
-          {hasVersions ? (
+          {profile ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center justify-between h-10 w-full rounded-md border border-border bg-input/40 px-3.5 py-2 text-sm select-none">
+                <span className="font-mono text-foreground font-medium truncate">
+                  {formatVersionDisplay(formData.minecraftVersion)}
+                </span>
+                <span className="text-[11px] text-muted-foreground bg-secondary px-2 py-0.5 rounded border border-border/50 shrink-0 font-normal">
+                  Cố định
+                </span>
+              </div>
+              <span className="text-xs text-muted-foreground">
+                Không thể thay đổi phiên bản của cấu hình đã tạo.
+              </span>
+            </div>
+          ) : hasVersions ? (
             <div className="flex items-center gap-3 w-full">
-              <div className="w-2/5">
+              <div className="w-1/3">
                 <Select
                   value={versionTypeFilter}
                   onChange={(val) => {
@@ -316,7 +385,7 @@ export function ProfileModal({
               onChange={(e) => setFormData({ ...formData, minecraftVersion: e.target.value })}
             />
           )}
-          {isVersionNotInstalled && modLoader === 'vanilla' && (
+          {!profile && isVersionNotInstalled && modLoader === 'vanilla' && (
             <div className="flex items-start gap-2 text-xs text-amber-300 bg-amber-500/8 border border-amber-500/20 rounded-md p-2.5">
               <AlertCircle size={13} className="mt-0.5 shrink-0" />
               <span>
@@ -345,15 +414,22 @@ export function ProfileModal({
 
             {modLoader !== 'vanilla' && (
               <div className="col-span-6 flex flex-col gap-1.5">
-                <label className="text-sm font-medium text-foreground invisible pointer-events-none">Phiên bản Loader</label>
+                <label className="text-sm font-medium text-foreground">Phiên bản Loader</label>
                 <Select
                   value={selectedLoaderVersion}
                   onChange={setSelectedLoaderVersion}
-                  options={isFetchingLoaders ? [{ value: selectedLoaderVersion, label: 'Đang tải danh sách...' }] : loaderVersions.map(v => ({
-                    value: v.version,
-                    label: v.version + (v.stable ? ' (Stable)' : ' (Beta)')
-                  }))}
+                  options={isFetchingLoaders
+                    ? [{ value: selectedLoaderVersion, label: 'Đang tải danh sách...' }]
+                    : loaderVersions.length === 0
+                      ? [{ value: '', label: 'Không có phiên bản tương thích' }]
+                      : loaderVersions.map(v => ({
+                        value: v.version,
+                        label: v.version + (v.stable ? ' (Stable)' : ' (Beta)')
+                      }))}
                 />
+                {errors.modLoader && (
+                  <span className="text-xs text-destructive">{errors.modLoader}</span>
+                )}
               </div>
             )}
           </div>
@@ -363,7 +439,7 @@ export function ProfileModal({
           <div className="col-span-2 flex items-start gap-2 text-xs text-primary/90 bg-primary/10 border border-primary/20 rounded-md p-2.5">
             <Info size={13} className="mt-0.5 shrink-0" />
             <span>
-              Launcher sẽ tự động tải và cài đặt nền tảng {modLoader === 'fabric' ? 'Fabric' : 'Quilt'} vào thư mục game.
+              Launcher sẽ tự động tải và cài đặt nền tảng {modLoader === 'fabric' ? 'Fabric' : modLoader === 'quilt' ? 'Quilt' : modLoader === 'forge' ? 'Forge' : 'NeoForge'} vào thư mục game.
             </span>
           </div>
         )}

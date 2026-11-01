@@ -14,19 +14,18 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
   const hasFinishedRef = useRef(false);
 
   // Helper to safely complete the splash screen
-  const completeAndProceed = () => {
+  const completeAndProceed = (delayMs = 250) => {
     if (hasFinishedRef.current) return;
     hasFinishedRef.current = true;
     
-    // Slight delay so user can read "Bạn đang dùng phiên bản mới nhất" or error message
     setTimeout(() => {
       onComplete();
-    }, 1500);
+    }, delayMs);
   };
 
   useEffect(() => {
     if (!window.launcherApi) {
-      completeAndProceed();
+      completeAndProceed(0);
       return;
     }
 
@@ -68,13 +67,13 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
           setPhase('error');
           setMessage(status.message);
           setErrorInfo(status.data?.toString() || 'Lỗi mạng hoặc không thể kết nối tới máy chủ cập nhật.');
-          completeAndProceed();
+          completeAndProceed(600);
           break;
         case 'update-not-available':
           clearTimeout(timeoutId);
           setPhase('checking');
           setMessage(status.message);
-          completeAndProceed();
+          completeAndProceed(250);
           break;
       }
     });
@@ -84,7 +83,7 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
       console.error('Check for updates failed to invoke', err);
       setPhase('error');
       setMessage('Không thể kiểm tra cập nhật');
-      completeAndProceed();
+      completeAndProceed(300);
     });
 
     // Fallback timeout in case the network hangs (15 seconds)
@@ -92,7 +91,7 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
       if (!hasFinishedRef.current && phase === 'checking') {
         setPhase('error');
         setMessage('Kết nối quá lâu. Đang bỏ qua cập nhật...');
-        completeAndProceed();
+        completeAndProceed(200);
       }
     }, 15000);
 

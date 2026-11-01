@@ -1040,6 +1040,7 @@ export interface ExportProfileResult {
 export interface PackagePreviewInfo {
   valid: boolean
   manifest?: ProfilePackageManifest
+  iconData?: string
   fileName: string
   filePath: string
   fileSizeBytes: number
@@ -1065,14 +1066,14 @@ export function formatVersionDisplay(versionStr?: string): string {
 
   // Extract base Minecraft version (e.g. 1.20.1, 1.21.4, 26.2)
   let baseVer = str
-    .replace(/^(?:fabric|quilt|neoforge|forge)-loader-[^-]+-/i, '')
+    .replace(/^(?:fabric|quilt|neoforge|forge)[-_](?:loader[-_])?[^-]+[-_]/i, '').replace(/^(?:fabric|quilt|neoforge|forge)[-_]/i, '')
     .replace(/^(\d+(?:\.\d+)+)-(?:fabric|quilt|forge|neoforge).*/i, '$1')
 
   const matchStandard = baseVer.match(/(?:^|[^0-9])(1\.\d+(?:\.\d+)?)/)
   if (matchStandard && matchStandard[1]) {
     baseVer = matchStandard[1]
   } else {
-    const matchGen = baseVer.match(/^(\d+(?:\.\d+)+)/)
+    const matchGen = baseVer.match(/(?:^|[^0-9])(\d+(?:\.\d+)+)/)
     if (matchGen && matchGen[1]) baseVer = matchGen[1]
   }
 

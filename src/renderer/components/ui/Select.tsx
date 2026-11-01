@@ -29,8 +29,8 @@ export function Select({
   align = "left",
 }: SelectProps) {
   const [isOpen, setIsOpen] = React.useState(false)
+  const [openUpward, setOpenUpward] = React.useState(false)
   const containerRef = React.useRef<HTMLDivElement>(null)
-
   const selectedOption = options.find((opt) => opt.value === value)
 
   React.useEffect(() => {
@@ -39,9 +39,18 @@ export function Select({
         setIsOpen(false)
       }
     }
+
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
+
+  React.useEffect(() => {
+    if (isOpen && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect()
+      const spaceBelow = window.innerHeight - rect.bottom
+      setOpenUpward(spaceBelow < 240 && rect.top > 240)
+    }
+  }, [isOpen])
 
   const handleSelect = (val: string | number) => {
     onChange(val)
@@ -62,15 +71,15 @@ export function Select({
           onClick={() => !disabled && setIsOpen(!isOpen)}
           disabled={disabled}
           className={cn(
-            "flex h-10 w-full items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/90 px-3.5 py-2 text-sm text-foreground transition-all duration-200 outline-none text-left select-none",
+            "flex h-10 w-full items-center justify-between rounded-md border border-zinc-800/80 bg-zinc-900/90 px-3.5 py-2 text-sm text-foreground transition-all duration-200 outline-none text-left select-none cursor-pointer",
             "hover:bg-zinc-800/80 hover:border-zinc-700 focus:border-primary/60 focus:ring-2 focus:ring-ring/30",
             isOpen && "border-primary/60 ring-2 ring-ring/30",
             disabled && "pointer-events-none cursor-not-allowed opacity-50",
             className
           )}
         >
-          <span className="truncate">
-            {selectedOption ? selectedOption.label : placeholder}
+          <span className="truncate flex-1 text-left min-w-0">
+            {selectedOption ? selectedOption.label : <span className="text-muted-foreground">{placeholder}</span>}
           </span>
           <ChevronDown
             className={cn(
@@ -83,7 +92,8 @@ export function Select({
         {isOpen && (
           <div
             className={cn(
-              "absolute z-[100] mt-1.5 max-h-60 w-full overflow-y-auto rounded-md border dropdown-panel p-1 animate-in fade-in slide-in-from-top-1 duration-150 scrollbar-thin scrollbar-thumb-zinc-700 shadow-2xl bg-zinc-900",
+              "absolute z-[100] max-h-60 w-full overflow-y-auto rounded-md border border-zinc-800 dropdown-panel p-1.5 bg-zinc-900 shadow-2xl animate-in fade-in duration-150 scrollbar-thin scrollbar-thumb-zinc-700",
+              openUpward ? "bottom-full mb-1.5" : "top-full mt-1.5",
               align === "right" ? "right-0" : "left-0"
             )}
           >
@@ -100,14 +110,15 @@ export function Select({
                     type="button"
                     onClick={() => handleSelect(option.value)}
                     className={cn(
-                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm text-foreground transition-colors text-left select-none cursor-pointer",
-                      "hover:bg-accent/60",
-                      isSelected && "bg-primary text-primary-foreground font-medium hover:bg-primary/95"
+                      "flex w-full items-center justify-between rounded-md px-3 py-2 text-sm transition-colors text-left select-none cursor-pointer my-0.5",
+                      isSelected
+                        ? "bg-primary/15 text-primary font-medium hover:bg-primary/20"
+                        : "text-zinc-300 hover:bg-zinc-800/80 hover:text-foreground"
                     )}
                   >
-                    <span className="truncate">{option.label}</span>
+                    <span className="truncate flex-1 min-w-0">{option.label}</span>
                     {isSelected && (
-                      <Check className={cn("h-4 w-4 shrink-0 ml-2", isSelected ? "text-primary-foreground" : "text-primary")} />
+                      <Check className="h-4 w-4 shrink-0 ml-2 text-primary" />
                     )}
                   </button>
                 )
@@ -119,3 +130,5 @@ export function Select({
     </div>
   )
 }
+
+export default Select

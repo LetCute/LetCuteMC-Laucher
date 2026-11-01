@@ -4,7 +4,7 @@ import { TopBar } from './components/layout/TopBar';
 import type { TabId } from './components/layout/Sidebar';
 
 import { ProfilesScreen } from './screens/ProfilesScreen';
-import { VersionsScreen } from './screens/VersionsScreen';
+const VersionsScreen = lazy(() => import('./screens/VersionsScreen').then(m => ({ default: m.VersionsScreen })));
 const WorldsScreen = lazy(() => import('./screens/WorldsScreen').then(m => ({ default: m.WorldsScreen })));
 const ModsScreen = lazy(() => import('./screens/ModsScreen').then(m => ({ default: m.ModsScreen })));
 const ResourcePacksScreen = lazy(() => import('./screens/ResourcePacksScreen').then(m => ({ default: m.ResourcePacksScreen })));
@@ -12,13 +12,13 @@ const ShaderPacksScreen = lazy(() => import('./screens/ShaderPacksScreen').then(
 const ScreenshotsScreen = lazy(() => import('./screens/ScreenshotsScreen').then(m => ({ default: m.ScreenshotsScreen })));
 const LogsScreen = lazy(() => import('./screens/LogsScreen').then(m => ({ default: m.LogsScreen })));
 const StatsScreen = lazy(() => import('./screens/StatsScreen'));
-import { SettingsScreen } from './screens/SettingsScreen';
-import { AccountsScreen } from './screens/AccountsScreen';
+const SettingsScreen = lazy(() => import('./screens/SettingsScreen').then(m => ({ default: m.SettingsScreen })));
+const AccountsScreen = lazy(() => import('./screens/AccountsScreen').then(m => ({ default: m.AccountsScreen })));
 const TasksScreen = lazy(() => import('./screens/TasksScreen'));
 const AboutScreen = lazy(() => import('./screens/AboutScreen').then(m => ({ default: m.AboutScreen })));
 const StoreScreen = lazy(() => import('./screens/StoreScreen').then(m => ({ default: m.StoreScreen })));
-import { ProfileModal } from './components/profiles/ProfileModal';
-import { UpdaterScreen } from './screens/UpdaterScreen';
+const ProfileModal = lazy(() => import('./components/profiles/ProfileModal').then(m => ({ default: m.ProfileModal })));
+const UpdaterScreen = lazy(() => import('./screens/UpdaterScreen').then(m => ({ default: m.UpdaterScreen })));
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { ToastProvider, useToast } from './components/ui/Toast';
 import { ConfirmDialogProvider, useConfirm } from './components/ui/ConfirmDialogContext';
@@ -205,7 +205,15 @@ function MainApp() {
         await new Promise(r => setTimeout(r, 25))
       }
 
-      const dirResult = await launcherClient.detectMinecraftDirectory();
+      // Phase 1 — critical local data (parallel disk I/O, no network)
+      setBootstrap({ phase: 'loading-critical', message: 'Đang tải dữ liệu...' });
+      const [dirResult, loadedSettings, profileStore, initialAccountState] = await Promise.all([
+        launcherClient.detectMinecraftDirectory(),
+        launcherClient.getSettings(),
+        launcherClient.getProfiles(),
+        launcherClient.getAccountState(),
+      ]);
+
       if (!dirResult.found || !dirResult.path) {
         setAppError('Không tìm thấy thư mục .minecraft. Hãy cài Minecraft trước.');
         setBootstrap({ phase: 'error', message: 'Lỗi thư mục game' });
@@ -214,15 +222,6 @@ function MainApp() {
 
       const resolvedGameDir = dirResult.path;
       setGameDir(resolvedGameDir);
-
-      // Phase 1 — critical local data only (disk, no network)
-      setBootstrap({ phase: 'loading-critical', message: 'Đang tải cài đặt...' });
-      const [loadedSettings, profileStore, initialAccountState] = await Promise.all([
-        launcherClient.getSettings(),
-        launcherClient.getProfiles(),
-        launcherClient.getAccountState(),
-      ]);
-
       setSettings(loadedSettings);
       setProfiles(profileStore.profiles);
       setActiveProfileId(profileStore.activeProfileId);
@@ -230,20 +229,16 @@ function MainApp() {
       setCriticalReady(true);
       setBootstrap({ phase: 'loading-heavy', message: 'Đang tải phiên bản...' });
 
-      // Phase 2 — heavy: version catalog (network) + java scan (disk walk)
-      // Yield a frame so shell paints before heavy work
-      await new Promise(r => requestAnimationFrame(() => r(undefined)));
+      // Fire background java scan (non-blocking disk walk)
+      launcherClient.scanJavaRuntimes(loadedSettings.customJavaScanDirs).catch((e) => {
+        console.error('Java scan failed:', e);
+      });
 
-      const [catalog] = await Promise.all([
-        launcherClient.getMinecraftVersionCatalog(resolvedGameDir).catch((e) => {
-          console.error('Version catalog failed:', e);
-          return null;
-        }),
-        launcherClient.scanJavaRuntimes(loadedSettings.customJavaScanDirs).catch((e) => {
-          console.error('Java scan failed:', e);
-          return null;
-        }),
-      ]);
+      // Phase 2 — heavy: version catalog
+      const catalog = await launcherClient.getMinecraftVersionCatalog(resolvedGameDir).catch((e) => {
+        console.error('Version catalog failed:', e);
+        return null;
+      });
 
       if (catalog) setVersionCatalog(catalog);
       setBootstrap({ phase: 'ready', message: 'Sẵn sàng' });
@@ -255,10 +250,8 @@ function MainApp() {
   };
 
   useEffect(() => {
-    if (appPhase === 'client') {
-      void initializeAppData();
-    }
-  }, [appPhase]);
+    void initializeAppData();
+  }, []);
 
   useEffect(() => {
     // Listen for task completion to reload app data
@@ -425,7 +418,7 @@ function MainApp() {
   }
 
   if (appPhase === 'updater') {
-    return <UpdaterScreen onComplete={() => setAppPhase('client')} />;
+    return <Suspense fallback={<div className="flex h-screen w-screen items-center justify-center bg-background text-muted-foreground text-sm"><span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent mr-2" />Đang tải...</div>}><UpdaterScreen onComplete={() => setAppPhase('client')} /></Suspense>;
   }
 
   return (
@@ -651,19 +644,23 @@ function MainApp() {
           )}
 
           <ErrorBoundary fallbackMessage="Cửa sổ hồ sơ gặp sự cố.">
-            <ProfileModal
-              isOpen={isProfileModalOpen}
-              onClose={() => {
-                setIsProfileModalOpen(false);
-                setEditingProfile(null);
-                setPreselectedVersion(null);
-              }}
-              onSave={handleSaveProfile}
-              profile={editingProfile}
-              versionCatalog={versionCatalog}
-              preselectedVersion={preselectedVersion}
-              defaultGameDir={gameDir}
-            />
+            {isProfileModalOpen && (
+              <Suspense fallback={null}>
+                <ProfileModal
+                  isOpen={isProfileModalOpen}
+                  onClose={() => {
+                    setIsProfileModalOpen(false);
+                    setEditingProfile(null);
+                    setPreselectedVersion(null);
+                  }}
+                  onSave={handleSaveProfile}
+                  profile={editingProfile}
+                  versionCatalog={versionCatalog}
+                  preselectedVersion={preselectedVersion}
+                  defaultGameDir={gameDir}
+                />
+              </Suspense>
+            )}
           </ErrorBoundary>
         </div>
       </div>

@@ -11,6 +11,7 @@ import type {
 } from '../../../shared/types'
 import { getProfiles, createProfile, isDangerousJvmArg } from './profileService'
 import { detectMinecraftDirectory } from '../launcher/minecraftDirectoryService'
+import { detectLoaderFromVersion } from '../content/modDependencyService'
 
 export class ProfilePackageService {
   /**
@@ -107,14 +108,29 @@ export class ProfilePackageService {
         }
       }
 
-      // 7. Create Manifest
+      // 7. Include icon.png if exists
+      const iconFile = path.join(gameDir, 'icon.png')
+      if (fs.existsSync(iconFile) && fs.statSync(iconFile).isFile()) {
+        zip.addLocalFile(iconFile, '')
+      }
+
+      // Detect loader if not explicitly set
+      let effectiveLoader = profile.loader
+      if (!effectiveLoader || effectiveLoader === 'vanilla') {
+        const detected = detectLoaderFromVersion(profile.minecraftVersion)
+        if (detected !== 'unknown') {
+          effectiveLoader = detected
+        }
+      }
+
+      // 8. Create Manifest
       const manifest: ProfilePackageManifest = {
         formatVersion: 1,
         appName: 'LetCuteMC',
         exportedAt: new Date().toISOString(),
         name: profile.name,
         minecraftVersion: profile.minecraftVersion,
-        loader: profile.loader,
+        loader: effectiveLoader,
         loaderVersion: profile.loaderVersion,
         minMemoryMb: profile.minMemoryMb,
         maxMemoryMb: profile.maxMemoryMb,
@@ -195,9 +211,25 @@ export class ProfilePackageService {
       const raw = manifestEntry.getData().toString('utf-8')
       const manifest: ProfilePackageManifest = JSON.parse(raw)
 
+      // Fallback: nếu manifest.loader chưa có hoặc là vanilla nhưng version chứa tên loader
+      if (!manifest.loader || manifest.loader === 'vanilla') {
+        const detected = detectLoaderFromVersion(manifest.minecraftVersion)
+        if (detected !== 'unknown') {
+          manifest.loader = detected
+        }
+      }
+
+      // Đọc icon.png nếu có trong gói
+      let iconData: string | undefined = undefined
+      const iconEntry = zip.getEntry('icon.png')
+      if (iconEntry) {
+        iconData = `data:image/png;base64,${iconEntry.getData().toString('base64')}`
+      }
+
       return {
         valid: true,
         manifest,
+        iconData,
         fileName: path.basename(packageFilePath),
         filePath: packageFilePath,
         fileSizeBytes: stat.size,
@@ -240,6 +272,47 @@ export class ProfilePackageService {
       const targetGameDir = path.join(baseMcDir, 'profiles', profileFolder)
       const normalizedTarget = path.resolve(targetGameDir)
 
+      // Register new profile in profileService FIRST before extracting to disk
+      // This ensures discoverDiskProfiles does not mistake targetGameDir for an unmanaged disk folder
+      const rawProfileName = customName && customName.trim() ? customName.trim() : manifest.name
+      const store = await getProfiles()
+      let profileName = rawProfileName
+      let counter = 1
+      while (store.profiles.some((p) => p.name.trim().toLowerCase() === profileName.trim().toLowerCase())) {
+        profileName = `${rawProfileName} (${counter++})`
+      }
+
+      // Sanitize imported JVM arguments: drop dangerous flags that can lead to arbitrary code execution
+      let sanitizedJvmArgs: string | undefined = undefined
+      if (typeof manifest.jvmArgs === 'string' && manifest.jvmArgs.trim()) {
+        const safeTokens = manifest.jvmArgs.trim().split(/\s+/).filter((arg) => !isDangerousJvmArg(arg))
+        sanitizedJvmArgs = safeTokens.length > 0 ? safeTokens.join(' ') : undefined
+      }
+
+      let effectiveLoader = manifest.loader
+      if (!effectiveLoader || effectiveLoader === 'vanilla') {
+        const detected = detectLoaderFromVersion(manifest.minecraftVersion)
+        if (detected !== 'unknown') {
+          effectiveLoader = detected
+        }
+      }
+
+      const newProfile: LauncherProfile = await createProfile({
+        name: profileName,
+        minecraftVersion: manifest.minecraftVersion,
+        gameDir: targetGameDir,
+        mcRootDir: baseMcDir,
+        loader: effectiveLoader,
+        loaderVersion: manifest.loaderVersion,
+        // Do not inherit absolute host javaPath from external package manifests; let launcher resolve Java locally
+        javaPath: undefined,
+        minMemoryMb: manifest.minMemoryMb,
+        maxMemoryMb: manifest.maxMemoryMb,
+        jvmArgs: sanitizedJvmArgs,
+        description: manifest.description,
+      })
+
+      // Now create disk folder and extract files
       fs.mkdirSync(targetGameDir, { recursive: true })
 
       // Extract zip files into targetGameDir (skip letcute-profile.json)
@@ -269,28 +342,6 @@ export class ProfilePackageService {
           fs.writeFileSync(resolvedEntry, entry.getData())
         }
       }
-
-      // Register new profile in profileService
-      const profileName = customName && customName.trim() ? customName.trim() : manifest.name
-
-      // Sanitize imported JVM arguments: drop dangerous flags that can lead to arbitrary code execution
-      let sanitizedJvmArgs: string | undefined = undefined
-      if (typeof manifest.jvmArgs === 'string' && manifest.jvmArgs.trim()) {
-        const safeTokens = manifest.jvmArgs.trim().split(/\s+/).filter((arg) => !isDangerousJvmArg(arg))
-        sanitizedJvmArgs = safeTokens.length > 0 ? safeTokens.join(' ') : undefined
-      }
-
-      const newProfile: LauncherProfile = await createProfile({
-        name: profileName,
-        minecraftVersion: manifest.minecraftVersion,
-        gameDir: targetGameDir,
-        // Do not inherit absolute host javaPath from external package manifests; let launcher resolve Java locally
-        javaPath: undefined,
-        minMemoryMb: manifest.minMemoryMb,
-        maxMemoryMb: manifest.maxMemoryMb,
-        jvmArgs: sanitizedJvmArgs,
-        description: manifest.description,
-      })
 
       // Đảm bảo options.txt chuẩn tiếng Việt cho profile vừa nhập
       try {

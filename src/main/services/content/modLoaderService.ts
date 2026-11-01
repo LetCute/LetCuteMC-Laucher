@@ -1,5 +1,7 @@
 // @xmcl/installer is lazy-loaded to reduce cold-start time.
 // It's only needed when the user actually installs a mod loader.
+import fs from 'fs'
+import path from 'path'
 import type { ModLoaderVersion } from '../../../shared/types'
 
 async function getXmclInstaller() {
@@ -13,9 +15,9 @@ const FORGE_PROMOTIONS_URL = 'https://files.minecraftforge.net/maven/net/minecra
 /**
  * Lấy danh sách Forge versions từ promotions_slim.json
  * Format: { promos: { "1.20.1-latest": "47.3.0", "1.20.1-recommended": "47.2.0", ... } }
- * Trả về mỗi MC version → forge version (ưu tiên recommended, fallback latest)
+ * Trả về Forge versions (lọc theo mcVersion nếu được truyền vào, ưu tiên recommended)
  */
-export async function getForgeVersions(): Promise<ModLoaderVersion[]> {
+export async function getForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]> {
   try {
     const res = await fetch(FORGE_PROMOTIONS_URL, {
       headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
@@ -28,38 +30,40 @@ export async function getForgeVersions(): Promise<ModLoaderVersion[]> {
     for (const [key, forgeVer] of Object.entries(data.promos)) {
       const match = key.match(/^(.+)-(latest|recommended)$/)
       if (!match || !match[1] || !match[2]) continue
-      const mcVer = match[1]
+      const promoMcVer = match[1]
       const type = match[2]
-      if (!versionMap.has(mcVer)) versionMap.set(mcVer, {})
-      const entry = versionMap.get(mcVer)!
+
+      if (mcVersion && promoMcVer !== mcVersion) continue
+
+      if (!versionMap.has(promoMcVer)) versionMap.set(promoMcVer, {})
+      const entry = versionMap.get(promoMcVer)!
       if (type === 'latest') entry.latest = forgeVer
       if (type === 'recommended') entry.recommended = forgeVer
     }
 
-    // Chuyển thành ModLoaderVersion[], mỗi entry = 1 MC version
+    // Chuyển thành ModLoaderVersion[]
     const results: ModLoaderVersion[] = []
-    for (const [mcVer, { latest, recommended }] of versionMap) {
-      // Ưu tiên recommended nếu có
+    for (const [promoMcVer, { latest, recommended }] of versionMap) {
       if (recommended) {
         results.push({
-          version: `${mcVer}-${recommended}`,
+          version: mcVersion ? recommended : `${promoMcVer}-${recommended}`,
           stable: true,
         })
       }
-      // Thêm latest nếu khác recommended
       if (latest && latest !== recommended) {
         results.push({
-          version: `${mcVer}-${latest}`,
+          version: mcVersion ? latest : `${promoMcVer}-${latest}`,
           stable: false,
         })
       }
     }
 
-    // Sort giảm dần theo MC version
+    // Ưu tiên stable (recommended) lên đầu, sau đó sort theo version giảm dần
     results.sort((a, b) => {
-      const mcA = a.version.split('-')[0] ?? ''
-      const mcB = b.version.split('-')[0] ?? ''
-      return compareMcVersions(mcB, mcA)
+      if (a.stable !== b.stable) return a.stable ? -1 : 1
+      const vA = a.version.includes('-') ? a.version.split('-')[1] ?? a.version : a.version
+      const vB = b.version.includes('-') ? b.version.split('-')[1] ?? b.version : b.version
+      return compareMcVersions(vB, vA)
     })
 
     return results
@@ -76,8 +80,9 @@ const NEOFORGE_VERSIONS_URL = 'https://maven.neoforged.net/api/maven/versions/re
 /**
  * Lấy danh sách NeoForge versions từ Maven API
  * Format: { versions: ["21.4.157", "21.4.156-beta", ...] }
+ * Lọc theo mcVersion nếu được truyền vào.
  */
-export async function getNeoForgeVersions(): Promise<ModLoaderVersion[]> {
+export async function getNeoForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]> {
   try {
     const res = await fetch(NEOFORGE_VERSIONS_URL, {
       headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
@@ -85,13 +90,27 @@ export async function getNeoForgeVersions(): Promise<ModLoaderVersion[]> {
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const data = await res.json() as { versions: string[] }
 
-    // Lọc bỏ snapshot/alpha, chỉ giữ version hợp lệ (xx.yy.zz hoặc xx.yy.zz-beta)
-    const results: ModLoaderVersion[] = data.versions
+    // Lọc bỏ snapshot/alpha
+    let versions = data.versions
       .filter(v => !v.includes('alpha') && !v.includes('snapshot') && !v.includes('craftmine'))
-      .map(v => ({
-        version: v,
-        stable: !v.includes('-beta'),
-      }))
+
+    if (mcVersion) {
+      let prefix = ''
+      if (mcVersion.startsWith('1.')) {
+        const parts = mcVersion.split('.')
+        const minor = parts[1]
+        const patch = parts[2] || '0'
+        prefix = `${minor}.${patch}.`
+      } else {
+        prefix = `${mcVersion}.`
+      }
+      versions = versions.filter(v => v.startsWith(prefix))
+    }
+
+    const results: ModLoaderVersion[] = versions.map(v => ({
+      version: v,
+      stable: !v.includes('-beta'),
+    }))
 
     // Sắp xếp giảm dần (mới nhất trước)
     results.reverse()
@@ -103,52 +122,125 @@ export async function getNeoForgeVersions(): Promise<ModLoaderVersion[]> {
   }
 }
 
-// ─── Forge & NeoForge Install ─────────────────────────────────────────────────
+// ─── Helper: Dọn dẹp file installer bị hỏng hoặc 0 byte ──────────────────────
 
-export async function installForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+async function cleanupCorruptJar(filePath: string): Promise<void> {
   try {
-    // loaderVersion format: "1.20.1-47.3.0" → mcversion = "1.20.1", version = "47.3.0"
-    let forgeVersion = loaderVersion
-    let mc = mcVersion
-
-    // Nếu loaderVersion chứa mcVersion prefix thì tách ra
-    if (loaderVersion.startsWith(mcVersion + '-')) {
-      forgeVersion = loaderVersion.substring(mcVersion.length + 1)
+    const stat = await fs.promises.stat(filePath)
+    if (stat.size < 1000) {
+      await fs.promises.unlink(filePath).catch(() => {})
+      return
     }
-
-    // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer Forge
-    const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
-    await ensureVersionMetadata(mc, gameDir)
-    const { Version } = await import('@xmcl/core')
-    const baseResolved = await Version.parse(gameDir, mc)
-    await ensureLibrariesAndAssets(baseResolved, gameDir)
-
-    const versionName = await (await getXmclInstaller()).installForge(
-      { mcversion: mc, version: forgeVersion },
-      gameDir
-    )
-    return versionName
-  } catch (error) {
-    console.error('Failed to install Forge:', error)
-    throw new Error(`Cài đặt Forge thất bại: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    const handle = await fs.promises.open(filePath, 'r')
+    const header = Buffer.alloc(4)
+    await handle.read(header, 0, 4, 0)
+    await handle.close()
+    // 0x04034b50 là Local File Header Signature của chuẩn ZIP/JAR (PK\x03\x04)
+    if (header.readUInt32LE(0) !== 0x04034b50) {
+      await fs.promises.unlink(filePath).catch(() => {})
+    }
+  } catch {
+    // File không tồn tại hoặc không thể đọc, bỏ qua
   }
 }
 
-export async function installNeoForge(_mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
-  try {
-    // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer NeoForge
-    const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
-    await ensureVersionMetadata(_mcVersion, gameDir)
-    const { Version } = await import('@xmcl/core')
-    const baseResolved = await Version.parse(gameDir, _mcVersion)
-    await ensureLibrariesAndAssets(baseResolved, gameDir)
+// ─── Forge & NeoForge Install ─────────────────────────────────────────────────
 
-    const versionName = await (await getXmclInstaller()).installNeoForged('neoforge', loaderVersion, gameDir, {})
-    return versionName
-  } catch (error) {
-    console.error('Failed to install NeoForge:', error)
-    throw new Error(`Cài đặt NeoForge thất bại: ${error instanceof Error ? error.message : 'Unknown error'}`)
+export async function installForge(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+  // loaderVersion format: "47.3.0" hoặc "1.20.1-47.3.0"
+  let forgeVersion = loaderVersion
+  const mc = mcVersion
+
+  if (loaderVersion.startsWith(mcVersion + '-')) {
+    forgeVersion = loaderVersion.substring(mcVersion.length + 1)
+  } else if (loaderVersion.includes('-')) {
+    const parts = loaderVersion.split('-')
+    forgeVersion = parts[parts.length - 1] ?? loaderVersion
   }
+
+  // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer Forge
+  const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
+  await ensureVersionMetadata(mc, gameDir)
+  const { Version } = await import('@xmcl/core')
+  const baseResolved = await Version.parse(gameDir, mc)
+  await ensureLibrariesAndAssets(baseResolved, gameDir)
+
+  const fullForgeVersion = forgeVersion.startsWith(mc) ? forgeVersion : `${mc}-${forgeVersion}`
+  const installerJarPath = path.join(
+    gameDir,
+    'libraries',
+    'net',
+    'minecraftforge',
+    'forge',
+    fullForgeVersion,
+    `forge-${fullForgeVersion}-installer.jar`
+  )
+
+  await cleanupCorruptJar(installerJarPath)
+
+  let attempts = 0
+  while (attempts < 2) {
+    attempts++
+    try {
+      const xmcl = await getXmclInstaller()
+      const versionName = await xmcl.installForge(
+        { mcversion: mc, version: forgeVersion },
+        gameDir
+      )
+      return versionName
+    } catch (error) {
+      await fs.promises.unlink(installerJarPath).catch(() => {})
+      const isZipCorrupt = error instanceof Error && /signature|zip|corrupt|end of central directory|BadForgeInstallerJarError/i.test(error.message)
+      if (attempts < 2 && isZipCorrupt) {
+        console.warn(`Forge installer jar lỗi (${error.message}). Đang tự động dọn dẹp và thử tải lại...`)
+        continue
+      }
+      console.error('Failed to install Forge:', error)
+      throw new Error(`Cài đặt Forge thất bại: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+  throw new Error('Cài đặt Forge thất bại sau khi thử lại')
+}
+
+export async function installNeoForge(_mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
+  // Đảm bảo metadata và client jar của Minecraft gốc đã tồn tại trước khi chạy installer NeoForge
+  const { ensureVersionMetadata, ensureLibrariesAndAssets } = await import('../launcher/versionResolver')
+  await ensureVersionMetadata(_mcVersion, gameDir)
+  const { Version } = await import('@xmcl/core')
+  const baseResolved = await Version.parse(gameDir, _mcVersion)
+  await ensureLibrariesAndAssets(baseResolved, gameDir)
+
+  const installerJarPath = path.join(
+    gameDir,
+    'libraries',
+    'net',
+    'neoforged',
+    'neoforge',
+    loaderVersion,
+    `neoforge-${loaderVersion}-installer.jar`
+  )
+
+  await cleanupCorruptJar(installerJarPath)
+
+  let attempts = 0
+  while (attempts < 2) {
+    attempts++
+    try {
+      const xmcl = await getXmclInstaller()
+      const versionName = await xmcl.installNeoForged('neoforge', loaderVersion, gameDir, {})
+      return versionName
+    } catch (error) {
+      await fs.promises.unlink(installerJarPath).catch(() => {})
+      const isZipCorrupt = error instanceof Error && /signature|zip|corrupt|end of central directory/i.test(error.message)
+      if (attempts < 2 && isZipCorrupt) {
+        console.warn(`NeoForge installer jar lỗi (${error.message}). Đang tự động dọn dẹp và thử tải lại...`)
+        continue
+      }
+      console.error('Failed to install NeoForge:', error)
+      throw new Error(`Cài đặt NeoForge thất bại: ${error instanceof Error ? error.message : 'Unknown error'}`)
+    }
+  }
+  throw new Error('Cài đặt NeoForge thất bại sau khi thử lại')
 }
 
 // ─── Fabric ───────────────────────────────────────────────────────────────────
@@ -209,8 +301,8 @@ export async function installQuilt(mcVersion: string, loaderVersion: string, gam
 
 /** So sánh 2 MC version strings, ví dụ "1.20.1" vs "1.19.4" */
 function compareMcVersions(a: string, b: string): number {
-  const partsA = a.split('.').map(Number)
-  const partsB = b.split('.').map(Number)
+  const partsA = a.split('.').map(p => Number.parseInt(p, 10) || 0)
+  const partsB = b.split('.').map(p => Number.parseInt(p, 10) || 0)
   for (let i = 0; i < Math.max(partsA.length, partsB.length); i++) {
     const diff = (partsA[i] ?? 0) - (partsB[i] ?? 0)
     if (diff !== 0) return diff

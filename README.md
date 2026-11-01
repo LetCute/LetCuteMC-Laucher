@@ -10,7 +10,7 @@
     <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" alt="License" />
   </p>
 
-  ![Giao diện LetCuteMC Launcher](docs/assets/screenshot-v3.png)
+  ![Giao diện LetCuteMC Launcher](docs/assets/screenshot-v4.png)
 </div>
 
 ---

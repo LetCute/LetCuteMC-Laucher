@@ -204,9 +204,9 @@ Tài liệu này cung cấp bảng tra cứu toàn bộ các kênh IPC (Inter-Pr
 - **Phương thức Frontend**:
   - `window.launcherApi.getFabricVersions()`
   - `window.launcherApi.getQuiltVersions()`
-  - `window.launcherApi.getForgeVersions()`
-  - `window.launcherApi.getNeoForgeVersions()`
-- **Mô tả**: Lấy danh sách phiên bản mod loader có sẵn.
+  - `window.launcherApi.getForgeVersions(mcVersion?)`
+  - `window.launcherApi.getNeoForgeVersions(mcVersion?)`
+- **Mô tả**: Lấy danh sách phiên bản mod loader có sẵn. `mcVersion` hỗ trợ lọc chính xác theo phiên bản Minecraft tương thích.
 - **Trả về**: `Promise<ModLoaderVersion[]>`
 
 ### `modloader:install-fabric` / `modloader:install-quilt` / `modloader:install-forge` / `modloader:install-neoforge`

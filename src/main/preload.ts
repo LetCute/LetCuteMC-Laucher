@@ -102,12 +102,12 @@ const launcherApi = {
     return ipcRenderer.invoke('modloader:get-quilt-versions')
   },
 
-  getForgeVersions(): Promise<ModLoaderVersion[]> {
-    return ipcRenderer.invoke('modloader:get-forge-versions')
+  getForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-forge-versions', mcVersion)
   },
 
-  getNeoForgeVersions(): Promise<ModLoaderVersion[]> {
-    return ipcRenderer.invoke('modloader:get-neoforge-versions')
+  getNeoForgeVersions(mcVersion?: string): Promise<ModLoaderVersion[]> {
+    return ipcRenderer.invoke('modloader:get-neoforge-versions', mcVersion)
   },
 
   installFabric(mcVersion: string, loaderVersion: string, gameDir: string): Promise<string> {
