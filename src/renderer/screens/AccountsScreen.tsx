@@ -18,8 +18,13 @@ import {
   XCircle,
   Pencil,
   Sparkles,
+  User,
+  Shirt,
+  Shield,
+  Box,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import type { NameMCCape } from '../data/namemcCapes'
 import { useAccounts } from '../hooks/useAccounts'
 import AddAccountModal from '../components/accounts/AddAccountModal'
@@ -557,19 +562,37 @@ export const AccountsScreen = ({
         isOpen={showSkinModal}
         onClose={closeSkinModal}
         title={`Ngoại hình – ${skinModalTargetName}`}
-        description={skinModalTargetType === 'microsoft' ? "Chỉnh sửa Skin & Cape trực tiếp trên server Mojang" : "Chỉnh sửa Skin & Cape (Local)"}
-        maxWidth="max-w-2xl"
+        description={
+          skinModalTargetType === 'microsoft'
+            ? 'Chỉnh sửa Skin & Cape trực tiếp trên máy chủ Mojang'
+            : 'Tùy chỉnh Skin & Cape cá nhân (Local)'
+        }
+        maxWidth="max-w-3xl"
         footer={
           <>
-            <Button variant="outline" onClick={closeSkinModal} disabled={isSavingMojang || isFetchingMojang}>Hủy</Button>
-            <Button variant="primary" onClick={handleSkinClick} disabled={isSavingMojang || isFetchingMojang || (!pendingSkinFile && !pendingCapeFile && skinModalTargetType === 'local')}>
-              {isSavingMojang ? <Loader2 size={14} className="mr-1 animate-spin" /> : <Check size={14} className="mr-1" />}
+            <Button variant="outline" onClick={closeSkinModal} disabled={isSavingMojang || isFetchingMojang}>
+              Hủy
+            </Button>
+            <Button
+              variant="primary"
+              onClick={handleSkinClick}
+              disabled={
+                isSavingMojang ||
+                isFetchingMojang ||
+                (!pendingSkinFile && !pendingCapeFile && skinModalTargetType === 'local')
+              }
+            >
+              {isSavingMojang ? (
+                <Loader2 size={14} className="mr-1.5 animate-spin" />
+              ) : (
+                <Check size={14} className="mr-1.5" />
+              )}
               {isSavingMojang ? 'Đang lưu...' : 'Lưu thay đổi'}
             </Button>
           </>
         }
       >
-        <div className="flex flex-col gap-5 min-h-[300px]">
+        <div className="flex flex-col gap-4">
           {isFetchingMojang ? (
             <div className="flex flex-col items-center justify-center h-full gap-3 py-10">
               <Loader2 size={32} className="animate-spin text-primary" />
@@ -577,47 +600,117 @@ export const AccountsScreen = ({
             </div>
           ) : (
             <>
-              <div className="flex items-stretch gap-6">
-                <div className="shrink-0 rounded-md border border-border bg-accent/20 p-2 flex items-center justify-center w-[160px]">
-                  <SkinViewer3D
-                    skinUrl={pendingSkinFile || undefined}
-                    capeUrl={pendingCapeFile || undefined}
-                    model={pendingSkinModel}
-                    width={140}
-                    height={200}
-                    autoRotate
-                    rotateSpeed={0.8}
-                  />
-                </div>
-
-                <div className="flex-1 flex flex-col gap-4">
-                  <div className="flex gap-2 bg-muted/30 p-1 rounded-md border border-border">
-                    <Button variant={skinTab === 'name' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('name')}>Tên</Button>
-                    <Button variant={skinTab === 'skin' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('skin')}>Skin</Button>
-                    <Button variant={skinTab === 'cape' ? 'primary' : 'ghost'} size="sm" className="flex-1" onClick={() => setSkinTab('cape')}>Cape</Button>
+              {/* Top Row: 3D Preview Pedestal + Controls Column */}
+              <div className="flex items-stretch gap-4">
+                {/* 3D Preview Pedestal */}
+                <div className="shrink-0 w-44 rounded-xl border border-zinc-800/80 bg-zinc-950/60 p-2.5 flex flex-col items-center justify-between relative overflow-hidden shadow-sm">
+                  <div className="w-full flex items-center justify-between z-10">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-medium text-zinc-400 bg-zinc-900/90 px-2 py-0.5 rounded-full border border-zinc-800/80">
+                      <Box size={11} className="text-primary" />
+                      3D
+                    </span>
+                    <span className="text-[10px] font-mono font-medium text-zinc-500 uppercase tracking-wider">
+                      {pendingSkinModel === 'slim' ? 'Slim' : 'Classic'}
+                    </span>
                   </div>
 
+                  <div className="my-auto py-1 flex items-center justify-center">
+                    <SkinViewer3D
+                      skinUrl={pendingSkinFile || undefined}
+                      capeUrl={pendingCapeFile || undefined}
+                      model={pendingSkinModel}
+                      width={130}
+                      height={170}
+                      autoRotate
+                      rotateSpeed={0.8}
+                    />
+                  </div>
+
+                  <span className="text-[10px] text-zinc-500 text-center z-10">
+                    Kéo chuột để xoay
+                  </span>
+                </div>
+
+                {/* Right controls: Segmented Tabs & Content */}
+                <div className="flex-1 flex flex-col gap-3 min-w-0">
+                  {/* Segmented Tabs */}
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-950/70 border border-zinc-800/80">
+                    <button
+                      type="button"
+                      onClick={() => setSkinTab('name')}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all',
+                        skinTab === 'name'
+                          ? 'bg-zinc-800 text-foreground shadow-sm border border-zinc-700/60'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      )}
+                    >
+                      <User size={13} className={skinTab === 'name' ? 'text-primary' : ''} />
+                      <span>Tên</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSkinTab('skin')}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all',
+                        skinTab === 'skin'
+                          ? 'bg-zinc-800 text-foreground shadow-sm border border-zinc-700/60'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      )}
+                    >
+                      <Shirt size={13} className={skinTab === 'skin' ? 'text-primary' : ''} />
+                      <span>Skin (Trang phục)</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSkinTab('cape')}
+                      className={cn(
+                        'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all',
+                        skinTab === 'cape'
+                          ? 'bg-zinc-800 text-foreground shadow-sm border border-zinc-700/60'
+                          : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
+                      )}
+                    >
+                      <Shield size={13} className={skinTab === 'cape' ? 'text-primary' : ''} />
+                      <span>Cape (Áo choàng)</span>
+                    </button>
+                  </div>
+
+                  {/* 1. Name Tab */}
                   {skinTab === 'name' && (
-                    <div className="space-y-4 animate-in fade-in duration-200">
+                    <div className="space-y-3 animate-in fade-in duration-200">
                       {isCheckingRename ? (
                         <div className="flex justify-center py-6"><Loader2 className="animate-spin text-muted-foreground" size={24} /></div>
                       ) : (
                         <>
-                          <div className="space-y-1">
+                          <div className="space-y-1.5">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              {renameTargetType === 'microsoft' ? 'Tên nhân vật (Mojang)' : 'Tên tài khoản (Offline / Local)'}
+                            </label>
                             <Input
                               value={newProfileName}
                               onChange={e => setNewProfileName(e.target.value)}
-                              placeholder="Nhập tên mới"
+                              placeholder="Nhập tên mới (3-16 ký tự)"
                               maxLength={16}
                               disabled={!renameAllowed || isSavingRename}
+                              className="bg-zinc-950/60 border-zinc-800 focus-visible:border-primary/60"
                             />
+                            <p className="text-[11px] text-muted-foreground">
+                              {renameTargetType === 'microsoft'
+                                ? 'Đổi tên nhân vật chính chủ được liên kết với tài khoản Mojang.'
+                                : 'Tên tài khoản offline từ 3-16 ký tự, chỉ chứa chữ cái, số và dấu gạch dưới.'}
+                            </p>
                           </div>
                           {!renameAllowed && renameTargetType === 'microsoft' && (
-                            <div className="bg-destructive/10 text-destructive border border-destructive/20 p-3 rounded-md text-xs">
+                            <div className="bg-destructive/10 text-destructive border border-destructive/20 p-2.5 rounded-lg text-xs">
                               {renameCooldownMessage || 'Tài khoản Premium này chưa được phép đổi tên.'}
                             </div>
                           )}
-                          <Button onClick={handleRenameClick} className="w-full mt-2" disabled={isSavingRename || !renameAllowed || newProfileName.trim() === '' || newProfileName.trim() === renameTargetName}>
+                          <Button
+                            onClick={handleRenameClick}
+                            className="w-full mt-2"
+                            disabled={isSavingRename || !renameAllowed || newProfileName.trim() === '' || newProfileName.trim() === renameTargetName}
+                          >
                             {isSavingRename ? <Loader2 size={16} className="animate-spin mr-2" /> : null}
                             Lưu thay đổi tên
                           </Button>
@@ -626,69 +719,107 @@ export const AccountsScreen = ({
                     </div>
                   )}
 
+                  {/* 2. Skin Tab */}
                   {skinTab === 'skin' && (
                     <div className="space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold text-foreground">Skin (Giao diện)</label>
-                        <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => skinInputRef.current?.click()}>
-                          <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file mới
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Skin (Giao diện)</label>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-xs px-2.5 rounded-lg border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700"
+                          onClick={() => skinInputRef.current?.click()}
+                        >
+                          <Upload size={12} className="mr-1.5 text-primary" />
+                          <span>Tải file PNG</span>
                         </Button>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      {/* File status */}
+                      <div className="flex items-center gap-2">
                         {pendingSkinFile ? (
-                          <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-md border border-primary/40 bg-black/10">
-                            <span className="text-xs font-medium text-primary">Đã nạp file skin</span>
-                            <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => setPendingSkinFile(null)} title="Gỡ bỏ">
-                              <Trash2 size={16} />
+                          <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg border border-primary/40 bg-primary/10">
+                            <span className="text-xs font-medium text-primary flex items-center gap-1.5">
+                              <Check size={13} />
+                              Đã nạp file skin mới
+                            </span>
+                            <button
+                              type="button"
+                              className="text-xs text-zinc-400 hover:text-rose-400 transition-colors flex items-center justify-center p-1 rounded-md hover:bg-rose-500/10"
+                              onClick={() => { setPendingSkinFile(null); setSelectedSkinUrl(null); }}
+                              title="Gỡ bỏ"
+                            >
+                              <Trash2 size={14} />
                             </button>
                           </div>
                         ) : (
-                          <p className="text-xs text-muted-foreground">Chưa nạp skin mới. Bạn có thể chọn file hoặc dùng link ảnh/NameMC để nạp.</p>
+                          <div className="flex-1 px-3 py-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-950/30">
+                            <p className="text-xs text-muted-foreground">Chưa nạp file mới. Có thể chọn mẫu NameMC bên dưới hoặc nạp PNG.</p>
+                          </div>
                         )}
                       </div>
 
-                      {/* Arm type selector */}
-                      <div className="grid grid-cols-2 gap-2.5">
+                      {/* Arm Model Selector: Classic vs Slim */}
+                      <div className="grid grid-cols-2 gap-2">
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('default')}
-                          className={['flex items-center gap-3 p-3 rounded-md border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'default' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                          className={cn(
+                            'relative flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group',
+                            pendingSkinModel === 'default'
+                              ? 'border-primary/60 bg-primary/10 shadow-sm ring-1 ring-primary/30'
+                              : 'border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                          )}
                         >
-                          <div className="flex items-end gap-0.5">
-                            <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
-                            <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
-                            <div className={['w-2 h-5 rounded-sm', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                          <div className="flex items-end gap-0.5 shrink-0 bg-zinc-900/80 p-1.5 rounded-lg border border-zinc-800/50">
+                            <div className={cn('w-2 h-4 rounded-sm transition-colors', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-zinc-600')} />
+                            <div className={cn('w-3 h-5 rounded-sm transition-colors', pendingSkinModel === 'default' ? 'bg-primary/70' : 'bg-zinc-500')} />
+                            <div className={cn('w-2 h-4 rounded-sm transition-colors', pendingSkinModel === 'default' ? 'bg-primary' : 'bg-zinc-600')} />
                           </div>
-                          <div className="text-left flex-1">
-                            <p className={['text-xs font-bold', pendingSkinModel === 'default' ? 'text-primary' : 'text-foreground'].join(' ')}>Classic</p>
-                            <p className="text-[9px] text-muted-foreground">Tay rộng</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={cn('text-xs font-bold leading-none', pendingSkinModel === 'default' ? 'text-primary' : 'text-foreground')}>Classic</p>
+                              {pendingSkinModel === 'default' && <Check size={11} className="text-primary" />}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Tay 4px (Steve)</p>
                           </div>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => setPendingSkinModel('slim')}
-                          className={['flex items-center gap-3 p-3 rounded-md border-2 transition-all duration-200 shadow-sm', pendingSkinModel === 'slim' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                          className={cn(
+                            'relative flex items-center gap-3 p-2.5 rounded-xl border transition-all text-left group',
+                            pendingSkinModel === 'slim'
+                              ? 'border-primary/60 bg-primary/10 shadow-sm ring-1 ring-primary/30'
+                              : 'border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                          )}
                         >
-                          <div className="flex items-end gap-0.5">
-                            <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
-                            <div className={['w-3.5 h-6 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary/70' : 'bg-muted-foreground/25'].join(' ')} />
-                            <div className={['w-1.5 h-5 rounded-sm', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-muted-foreground/40'].join(' ')} />
+                          <div className="flex items-end gap-0.5 shrink-0 bg-zinc-900/80 p-1.5 rounded-lg border border-zinc-800/50">
+                            <div className={cn('w-1.5 h-4 rounded-sm transition-colors', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-zinc-600')} />
+                            <div className={cn('w-3 h-5 rounded-sm transition-colors', pendingSkinModel === 'slim' ? 'bg-primary/70' : 'bg-zinc-500')} />
+                            <div className={cn('w-1.5 h-4 rounded-sm transition-colors', pendingSkinModel === 'slim' ? 'bg-primary' : 'bg-zinc-600')} />
                           </div>
-                          <div className="text-left flex-1">
-                            <p className={['text-xs font-bold', pendingSkinModel === 'slim' ? 'text-primary' : 'text-foreground'].join(' ')}>Slim</p>
-                            <p className="text-[9px] text-muted-foreground">Tay mảnh</p>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <p className={cn('text-xs font-bold leading-none', pendingSkinModel === 'slim' ? 'text-primary' : 'text-foreground')}>Slim</p>
+                              {pendingSkinModel === 'slim' && <Check size={11} className="text-primary" />}
+                            </div>
+                            <p className="text-[10px] text-muted-foreground mt-0.5">Tay 3px (Alex)</p>
                           </div>
                         </button>
                       </div>
 
-                      {/* NameMC Smart Import */}
-                      <div className="space-y-1.5 mt-2">
-                        <div className="flex items-center gap-2">
+                      {/* NameMC Quick Import */}
+                      <div className="space-y-1.5 pt-1">
+                        <label className="text-[11px] font-medium text-muted-foreground flex items-center gap-1">
+                          <Sparkles size={11} className="text-primary" />
+                          <span>Tìm skin theo nickname hoặc link NameMC:</span>
+                        </label>
+                        <div className="flex items-center gap-1.5">
                           <Input
-                            placeholder="Tên người chơi (SlenderMan, Độ Mixi...) hoặc link NameMC..."
-                            className="h-8 text-xs flex-1"
+                            placeholder="Nhập tên người chơi (vd: SlenderMan, Độ Mixi...) hoặc URL..."
+                            className="h-8 text-xs flex-1 bg-zinc-950/60 border-zinc-800 focus-visible:border-primary/60"
                             value={namemcInput}
                             onChange={(e) => setNamemcInput(e.target.value)}
                             onKeyDown={(e) => {
@@ -699,11 +830,15 @@ export const AccountsScreen = ({
                           <Button
                             variant="secondary"
                             size="sm"
-                            className="h-8 text-xs shrink-0 bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30"
+                            className="h-8 text-xs shrink-0 px-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700/60"
                             onClick={handleImportNamemc}
                             disabled={isImportingNamemc || !namemcInput.trim()}
                           >
-                            {isImportingNamemc ? <Loader2 size={14} className="animate-spin mr-1" /> : <Sparkles size={13} className="mr-1" />}
+                            {isImportingNamemc ? (
+                              <Loader2 size={13} className="animate-spin mr-1 text-primary" />
+                            ) : (
+                              <Sparkles size={12} className="mr-1 text-primary" />
+                            )}
                             Nạp
                           </Button>
                         </div>
@@ -711,49 +846,72 @@ export const AccountsScreen = ({
                     </div>
                   )}
 
-                  {/* 2. Cape Section */}
+                  {/* 3. Cape Tab */}
                   {skinTab === 'cape' && (
                     <div className="space-y-3 animate-in fade-in duration-200">
                       <div className="flex items-center justify-between">
-                        <label className="text-sm font-semibold text-foreground">Cape (Áo choàng)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Cape (Áo choàng)</label>
                         {skinModalTargetType === 'local' && (
-                          <Button variant="outline" size="sm" className="h-7 text-xs px-2" onClick={() => capeInputRef.current?.click()}>
-                            <Upload size={12} className="mr-1.5 text-muted-foreground" /> Chọn file cape
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-7 text-xs px-2.5 rounded-lg border-zinc-800 hover:bg-zinc-800 hover:border-zinc-700"
+                            onClick={() => capeInputRef.current?.click()}
+                          >
+                            <Upload size={12} className="mr-1.5 text-primary" />
+                            <span>Tải file PNG</span>
                           </Button>
                         )}
                       </div>
 
                       {skinModalTargetType === 'local' ? (
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           {pendingCapeFile ? (
-                            <div className="flex-1 flex items-center justify-between px-4 py-2.5 rounded-md border border-primary/40 bg-black/10">
-                              <span className="text-xs font-medium text-primary">Đã nạp file áo choàng</span>
-                              <button type="button" className="text-xs font-medium text-red-900 hover:text-destructive/80 transition-colors flex items-center justify-center p-1 rounded-full hover:bg-destructive/10" onClick={() => { setPendingCapeFile(null); setSelectedCapeUrl(null); }} title="Gỡ bỏ">
-                                <Trash2 size={16} />
+                            <div className="flex-1 flex items-center justify-between px-3 py-2 rounded-lg border border-primary/40 bg-primary/10">
+                              <span className="text-xs font-medium text-primary flex items-center gap-1.5">
+                                <Check size={13} />
+                                Đã nạp file áo choàng mới
+                              </span>
+                              <button
+                                type="button"
+                                className="text-xs text-zinc-400 hover:text-rose-400 transition-colors flex items-center justify-center p-1 rounded-md hover:bg-rose-500/10"
+                                onClick={() => { setPendingCapeFile(null); setSelectedCapeUrl(null); }}
+                                title="Gỡ bỏ"
+                              >
+                                <Trash2 size={14} />
                               </button>
                             </div>
                           ) : (
-                            <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể chọn từ danh sách NameMC bên dưới hoặc tự tải lên file PNG.</p>
+                            <div className="flex-1 px-3 py-2 rounded-lg border border-dashed border-zinc-800 bg-zinc-950/30">
+                              <p className="text-xs text-muted-foreground">Chưa có áo choàng. Bạn có thể chọn từ danh sách bên dưới hoặc tải lên PNG.</p>
+                            </div>
                           )}
                         </div>
                       ) : (
                         // Microsoft Capes
-                        <div className="space-y-3">
-                          <div className="p-2.5 rounded-md bg-primary/10 border border-primary/20 text-xs text-primary flex items-start gap-2">
-                            <Sparkles size={14} className="shrink-0 mt-0.5" />
-                            <span>Tài khoản Microsoft (Bản quyền) chỉ có thể trang bị các áo choàng chính chủ được cấp phép trên hệ thống Mojang.</span>
+                        <div className="space-y-2.5">
+                          <div className="p-2.5 rounded-lg bg-zinc-950/60 border border-zinc-800/80 text-xs text-zinc-300 flex items-start gap-2">
+                            <Sparkles size={13} className="shrink-0 mt-0.5 text-primary" />
+                            <span>Tài khoản Microsoft chỉ có thể trang bị các áo choàng chính chủ được cấp phép trên Mojang.</span>
                           </div>
 
                           <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto pr-1">
                             <button
                               type="button"
                               onClick={() => { setPendingCapeId(''); setPendingCapeFile(null); setSelectedCapeUrl(null); }}
-                              className={['flex items-center gap-2 p-2.5 rounded-md border transition-all shadow-sm', pendingCapeId === '' ? 'border-primary bg-primary/15' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                              className={cn(
+                                'flex items-center gap-2.5 p-2 rounded-lg border transition-all shadow-sm text-left',
+                                pendingCapeId === ''
+                                  ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
+                                  : 'border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                              )}
                             >
-                              <div className="h-8 w-8 rounded-md bg-zinc-800 flex items-center justify-center shrink-0">
+                              <div className="h-8 w-8 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center shrink-0">
                                 <XCircle size={14} className="text-muted-foreground" />
                               </div>
-                              <span className={['text-xs font-medium text-left truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground'].join(' ')}>Không dùng áo choàng</span>
+                              <span className={cn('text-xs font-medium truncate', pendingCapeId === '' ? 'text-primary' : 'text-foreground')}>
+                                Không dùng áo choàng
+                              </span>
                             </button>
 
                             {mojangProfile?.capes?.map((cape: any) => (
@@ -761,16 +919,22 @@ export const AccountsScreen = ({
                                 key={cape.id}
                                 type="button"
                                 onClick={() => { setPendingCapeId(cape.id); setPendingCapeFile(cape.url); setSelectedCapeUrl(cape.url); }}
-                                className={['flex items-center gap-3 p-2.5 rounded-md border transition-all shadow-sm', pendingCapeId === cape.id ? 'border-primary bg-primary/15 ring-1 ring-primary/40' : 'border-zinc-800 bg-zinc-900/90 hover:border-zinc-700'].join(' ')}
+                                className={cn(
+                                  'flex items-center gap-2.5 p-2 rounded-lg border transition-all shadow-sm text-left',
+                                  pendingCapeId === cape.id
+                                    ? 'border-primary/60 bg-primary/10 ring-1 ring-primary/30'
+                                    : 'border-zinc-800/80 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/40'
+                                )}
                               >
-                                <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md" />
-                                <span className={['text-xs font-bold text-left truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground'].join(' ')}>
+                                <CapePreview capeUrl={cape.url} width={20} height={32} className="shrink-0 drop-shadow-md rounded-sm" />
+                                <span className={cn('text-xs font-bold truncate', pendingCapeId === cape.id ? 'text-primary' : 'text-foreground')}>
                                   {cape.alias || 'Cape Mojang'}
                                 </span>
                               </button>
                             ))}
+
                             {mojangProfile?.capes?.length === 0 && (
-                              <div className="col-span-2 p-3 text-center rounded-md border border-dashed border-border">
+                              <div className="col-span-2 p-3 text-center rounded-lg border border-dashed border-zinc-800">
                                 <span className="text-xs text-muted-foreground">Tài khoản này không sở hữu áo choàng nào trên Mojang.</span>
                               </div>
                             )}
