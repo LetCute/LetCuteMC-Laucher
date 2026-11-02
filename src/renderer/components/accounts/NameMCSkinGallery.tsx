@@ -228,7 +228,7 @@ export default function NameMCSkinGallery({
               key={skin.id}
               skin={skin}
               isSelected={pendingSkinFile === skin.url}
-              onSelect={() => onSelectSkin(skin.url, skin.model)}
+              onSelect={() => onSelectSkin(skin.url, skin.model === 'slim' ? 'slim' : 'classic')}
             />
           ))
         )}

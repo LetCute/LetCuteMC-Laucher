@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  Package,
   Box,
   Settings2,
   Sliders,

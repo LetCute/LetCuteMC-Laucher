@@ -147,6 +147,12 @@ const launcherApi = {
     return ipcRenderer.invoke('java:verify-path', javaPath, requiredMajor)
   },
 
+  autoInstallJava(
+    javaVersion: number
+  ): Promise<{ success: boolean; javaPath: string; message: string }> {
+    return ipcRenderer.invoke('java:auto-install', javaVersion)
+  },
+
 
 
   scanGameContent(gameDir: string): Promise<GameContentScanResult> {

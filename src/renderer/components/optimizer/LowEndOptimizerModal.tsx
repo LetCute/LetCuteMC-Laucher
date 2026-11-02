@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import {
-  Zap,
   Check,
   RefreshCw,
   Loader2,

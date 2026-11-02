@@ -443,12 +443,12 @@ export const AccountsScreen = ({
       try {
         const updated = await window.launcherApi.saveLocalSkin(skinModalTargetId, pendingSkinFile, pendingSkinModel, pendingCapeFile)
         onAccountStateChange(updated)
+        showToast('success', 'Đã cập nhật ngoại hình Local!')
+        closeSkinModal()
       } catch (e) {
         const message = e instanceof Error ? e.message : String(e)
         showToast('error', `Lỗi khi lưu skin local: ${message}`)
       }
-      showToast('success', 'Đã cập nhật ngoại hình Local!')
-      closeSkinModal()
     }
   }
 
@@ -570,25 +570,45 @@ export const AccountsScreen = ({
         maxWidth="max-w-3xl"
         footer={
           <>
-            <Button variant="outline" onClick={closeSkinModal} disabled={isSavingMojang || isFetchingMojang}>
+            <Button
+              variant="outline"
+              onClick={closeSkinModal}
+              disabled={isSavingMojang || isFetchingMojang || isSavingRename}
+            >
               Hủy
             </Button>
-            <Button
-              variant="primary"
-              onClick={handleSkinClick}
-              disabled={
-                isSavingMojang ||
-                isFetchingMojang ||
-                (!pendingSkinFile && !pendingCapeFile && skinModalTargetType === 'local')
-              }
-            >
-              {isSavingMojang ? (
-                <Loader2 size={14} className="mr-1.5 animate-spin" />
-              ) : (
-                <Check size={14} className="mr-1.5" />
-              )}
-              {isSavingMojang ? 'Đang lưu...' : 'Lưu thay đổi'}
-            </Button>
+            {skinTab === 'name' ? (
+              <Button
+                variant="primary"
+                onClick={handleRenameClick}
+                disabled={
+                  isSavingRename ||
+                  !renameAllowed ||
+                  newProfileName.trim() === '' ||
+                  newProfileName.trim() === accounts.find((a) => a.id === renameTargetId)?.username
+                }
+              >
+                {isSavingRename ? (
+                  <Loader2 size={14} className="mr-1.5 animate-spin" />
+                ) : (
+                  <Check size={14} className="mr-1.5" />
+                )}
+                {isSavingRename ? 'Đang đổi tên...' : 'Lưu tên'}
+              </Button>
+            ) : (
+              <Button
+                variant="primary"
+                onClick={handleSkinClick}
+                disabled={isSavingMojang || isFetchingMojang}
+              >
+                {isSavingMojang ? (
+                  <Loader2 size={14} className="mr-1.5 animate-spin" />
+                ) : (
+                  <Check size={14} className="mr-1.5" />
+                )}
+                {isSavingMojang ? 'Đang lưu...' : 'Lưu thay đổi'}
+              </Button>
+            )}
           </>
         }
       >
@@ -746,7 +766,7 @@ export const AccountsScreen = ({
                             <button
                               type="button"
                               className="text-xs text-zinc-400 hover:text-rose-400 transition-colors flex items-center justify-center p-1 rounded-md hover:bg-rose-500/10"
-                              onClick={() => { setPendingSkinFile(null); setSelectedSkinUrl(null); }}
+                              onClick={() => setPendingSkinFile(null)}
                               title="Gỡ bỏ"
                             >
                               <Trash2 size={14} />
