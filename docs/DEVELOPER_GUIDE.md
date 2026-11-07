@@ -52,7 +52,7 @@ Bảng tổng hợp tất cả các lệnh thao tác trong `package.json`:
 | `npm run verify:main` | Chạy script kiểm tra đầu ra biên dịch của Main Process (`scripts/verify-electron-build.mjs`). |
 | `npm run build` | Biên dịch toàn bộ dự án hoàn chỉnh (Renderer + Main + Verify). |
 | `npm run test:java` | Chạy kiểm tra bộ quét Java Scanner trên máy tính (`scripts/test-java-scanner.mjs`). |
-| `npm run dist` | Đóng gói ứng dụng thành phẩm cho Windows (Tạo installer `.exe` và bản portable). |
+| `npm run dist` | Đóng gói ứng dụng thành installer NSIS `.exe` cho Windows. |
 | `npm run dist:portable` | Đóng gói riêng bản Portable duy nhất cho Windows. |
 | `npm run clean` | Xóa các thư mục build tạm (`dist`, `dist-electron`, `release`). |
 
@@ -100,7 +100,7 @@ LetCuteMC/
 
 ## 5. Quy Trình Đóng Gói Thành Phẩm (Production Release Packaging)
 
-Dự án sử dụng **`electron-builder`** để tạo bộ cài đặt chuyên nghiệp trên Windows.
+Dự án sử dụng **`electron-builder`** để tạo installer NSIS cài theo user trên Windows. Cấu hình one-click không hiển thị wizard; gỡ cài đặt giữ lại dữ liệu ứng dụng của user.
 
 ### Các bước đóng gói:
 1. Đảm bảo ứng dụng biên dịch thành công mà không có lỗi:
@@ -112,8 +112,8 @@ Dự án sử dụng **`electron-builder`** để tạo bộ cài đặt chuyên
    npm run dist
    ```
 3. Kết quả đầu ra sẽ nằm trong thư mục `release/`:
-   - `LetCuteMC-Setup-1.0.0-x64.exe`: Bộ cài đặt NSIS tiêu chuẩn với giao diện cài đặt thân thiện.
-   - `LetCuteMC-1.0.0-x64.exe`: Bản chạy nhanh không cần cài đặt (Portable Edition).
+   - `LetCuteMC-<version>-windows-x64.exe`: Installer NSIS.
+   - Chạy `npm run dist:portable` riêng để tạo bản Portable không cần cài đặt.
 
 ---
 
