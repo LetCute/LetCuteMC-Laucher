@@ -16,7 +16,12 @@ if (process.platform === 'linux') {
 }
 
 // Giới hạn RAM V8 và tối ưu Chromium Process
-app.commandLine.appendSwitch('js-flags', '--max-old-space-size=256')
+app.commandLine.appendSwitch('js-flags', '--expose-gc --max-old-space-size=128')
+app.commandLine.appendSwitch('renderer-process-limit', '1')
+app.commandLine.appendSwitch('disable-features', 'SpareRendererForSitePerProcess,CalculateNativeWinOcclusion')
+app.commandLine.appendSwitch('disable-gpu-shader-disk-cache')
+app.commandLine.appendSwitch('disable-component-update')
+app.commandLine.appendSwitch('disable-domain-reliability')
 app.commandLine.appendSwitch('disable-gpu-process-crash-limit')
 
 let mainWindow: BrowserWindow | null = null
@@ -39,7 +44,12 @@ export function trimLauncherMemory(): void {
   if (global.gc) {
     try {
       global.gc()
-    } catch { }
+    } catch {}
+  }
+  if (process.platform === 'win32' && typeof (process as any).trimWorkingSet === 'function') {
+    try {
+      ;(process as any).trimWorkingSet()
+    } catch {}
   }
 }
 
@@ -64,12 +74,17 @@ function createWindow(): void {
       preload: getPreloadPath(),
       nodeIntegration: false,
       contextIsolation: true,
-      sandbox: true
+      sandbox: true,
+      spellcheck: false,
+      backgroundThrottling: true
     }
   })
 
   mainWindow.once('ready-to-show', () => {
     mainWindow?.show()
+    setTimeout(() => {
+      trimLauncherMemory()
+    }, 4000)
   })
 
   // Chặn điều hướng hoặc mở popup trái phép, chỉ mở link ngoài bằng trình duyệt hệ thống nếu là https/http

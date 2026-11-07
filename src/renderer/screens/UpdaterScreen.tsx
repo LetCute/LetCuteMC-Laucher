@@ -12,6 +12,9 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
   const [errorInfo, setErrorInfo] = useState<string | null>(null);
   
   const hasFinishedRef = useRef(false);
+  const quitTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const fallbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const isSkippedRef = useRef(false);
 
   // Helper to safely complete the splash screen
   const completeAndProceed = (delayMs = 250) => {
@@ -21,6 +24,20 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
     setTimeout(() => {
       onComplete();
     }, delayMs);
+  };
+
+  const handleSkipOrProceed = () => {
+    isSkippedRef.current = true;
+    if (quitTimerRef.current) {
+      clearTimeout(quitTimerRef.current);
+      quitTimerRef.current = null;
+    }
+    if (fallbackTimerRef.current) {
+      clearTimeout(fallbackTimerRef.current);
+      fallbackTimerRef.current = null;
+    }
+    hasFinishedRef.current = false;
+    completeAndProceed(0);
   };
 
   useEffect(() => {
@@ -53,14 +70,36 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
           break;
         case 'update-downloaded':
           clearTimeout(timeoutId);
+          if (isSkippedRef.current) return;
           setPhase('ready');
           setMessage(status.message);
           setProgress(100);
-          hasFinishedRef.current = true; // Block completeAndProceed, we are quitting
-          // Wait 2 seconds before quitting so user can see it's done
-          setTimeout(() => {
-            window.launcherApi.quitAndInstallUpdate();
-          }, 2000);
+
+          // Dự phòng nếu installer bị lỗi hoặc quitAndInstall không phản hồi sau 6s
+          fallbackTimerRef.current = setTimeout(() => {
+            if (isSkippedRef.current) return;
+            hasFinishedRef.current = false;
+            completeAndProceed(0);
+          }, 6000);
+
+          quitTimerRef.current = setTimeout(() => {
+            if (isSkippedRef.current) return;
+            try {
+              window.launcherApi.quitAndInstallUpdate().catch(() => {
+                if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+                if (!isSkippedRef.current) {
+                  hasFinishedRef.current = false;
+                  completeAndProceed(0);
+                }
+              });
+            } catch {
+              if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
+              if (!isSkippedRef.current) {
+                hasFinishedRef.current = false;
+                completeAndProceed(0);
+              }
+            }
+          }, 1500);
           break;
         case 'update-error':
           clearTimeout(timeoutId);
@@ -98,6 +137,8 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
     return () => {
       unsubscribe();
       clearTimeout(timeoutId);
+      if (quitTimerRef.current) clearTimeout(quitTimerRef.current);
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current);
     };
   }, []);
 
@@ -162,6 +203,14 @@ export function UpdaterScreen({ onComplete }: UpdaterScreenProps) {
             {errorInfo}
           </p>
         )}
+
+        <button
+          type="button"
+          onClick={handleSkipOrProceed}
+          className="mt-5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors underline cursor-pointer"
+        >
+          {phase === 'error' ? 'Tiếp tục vào Launcher' : 'Bỏ qua cập nhật & vào Launcher'}
+        </button>
       </div>
 
       <style>{`
