@@ -163,13 +163,19 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       }
     }
 
-    // 2b. Setup CustomSkinLoader & Local Skins for offline / cracked servers
+    // 2b. Install or remove CustomSkinLoader based on the user's setting
     assertNotCancelled()
     try {
       const { setupCustomSkinLoaderForLaunch } = await import('../services/content/skinIntegrationService')
-      await setupCustomSkinLoaderForLaunch(input.gameDir, input.version, auth, (level, msg) => postLog(jobId, level, msg))
+      await setupCustomSkinLoaderForLaunch(
+        input.gameDir,
+        input.version,
+        auth,
+        settings.enableCustomSkinLoader,
+        (level, msg) => postLog(jobId, level, msg)
+      )
     } catch (skinErr) {
-      postLog(jobId, 'warn', `Bỏ qua nạp skin offline: ${skinErr instanceof Error ? skinErr.message : String(skinErr)}`)
+      postLog(jobId, 'warn', `Không thể cập nhật cấu hình skin: ${skinErr instanceof Error ? skinErr.message : String(skinErr)}`)
     }
 
     // 3. Resolve Version & JVM flags (Auto-repair if files are missing or deleted)

@@ -1,13 +1,13 @@
 # Backend Services & Workers Reference (`src/main/services/`)
 
-Tài liệu tra cứu nhanh 44 backend services và 2 utility workers của LetCuteMC Launcher.
+Tài liệu tra cứu nhanh 43 backend services và 2 utility workers của LetCuteMC Launcher.
 
 ---
 
 ## Mục Lục Nhanh (Quick Index)
 
 - [1. Auth Services](#1-auth-services-srcmainservicesauth) (3)
-- [2. Content Services](#2-content-services-srcmainservicescontent) (8)
+- [2. Content Services](#2-content-services-srcmainservicescontent) (7)
 - [3. Launcher Services](#3-launcher-services-srcmainserviceslauncher) (11)
 - [4. Media Services](#4-media-services-srcmainservicesmedia) (7)
 - [5. Profile Services](#5-profile-services-srcmainservicesprofile) (2)
@@ -103,11 +103,9 @@ Tài liệu tra cứu nhanh 44 backend services và 2 utility workers của LetC
   - `runPreLaunchIntegrityCheck(input, profile)`: Kiểm tra file jar phiên bản, libraries cốt lõi, classpath và xung đột mod nghiêm trọng để ngăn chặn crash ngay từ đầu.
 
 ### `skinIntegrationService.ts`
-- **Nhiệm vụ**: Tích hợp CustomSkinLoader vào phiên bản game để hiển thị skin cho tài khoản offline và skin custom.
+- **Nhiệm vụ**: Cài hoặc gỡ CustomSkinLoader theo tùy chọn của người dùng trong Settings.
 - **Hàm chính**:
-  - `setupCustomSkinLoaderForLaunch(gameDir, account, loader)`: Chuẩn bị file cấu hình CSL (`CustomSkinLoader.json`), đảm bảo skin CDN được định tuyến chính xác trong runtime game.
-
----
+  - `setupCustomSkinLoaderForLaunch(gameDir, mcVersion, auth, enabled)`: Khi bật, cấu hình skin và cài mod tương thích nếu chưa có; khi tắt, gỡ các file CustomSkinLoader khỏi thư mục `mods`.
 
 ## 3. Launcher Services (`src/main/services/launcher/`)
 
@@ -366,6 +364,6 @@ Cả 2 worker đều chạy dưới **Electron `utilityProcess`** (forked qua `w
 - **Luồng xử lý**:
   1. Nhận thông điệp `launch` qua `parentPort`.
   2. Giải nén các thư viện native (`.dll`, `.so`, `.dylib`) vào thư mục tạm.
-  3. Xây dựng JVM arguments hoàn chỉnh (Classpath, RAM flags, Auth session tokens, CustomSkinLoader flags).
+  3. Xây dựng JVM arguments hoàn chỉnh (Classpath, RAM flags, Auth session tokens).
   4. Kích hoạt tiến trình Java: `child_process.spawn(javaPath, args)`.
   5. Pipe luồng `stdout`/`stderr` từ game, phân tích dòng log, phát hiện exit code và gửi về `launchManager`.

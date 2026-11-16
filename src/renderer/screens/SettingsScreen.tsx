@@ -86,6 +86,7 @@ export const SettingsScreen = ({
     jvmPreset: settings.jvmPreset ?? 'aikar',
     customJvmArgs: settings.customJvmArgs ?? '',
     enableDedicatedGpu: settings.enableDedicatedGpu ?? true,
+    enableCustomSkinLoader: settings.enableCustomSkinLoader ?? true,
     uiGraphicQuality: settings.uiGraphicQuality ?? 'auto',
   })
 
@@ -620,6 +621,45 @@ export const SettingsScreen = ({
               >
                 {formData.enableDedicatedGpu && <Check size={11} strokeWidth={3} />}
               </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-zinc-800/60 bg-zinc-950/45 shadow-xs rounded-md">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base font-bold text-foreground">
+              <Sparkles className="h-5 w-5 text-primary" />
+              Skin trong game
+            </CardTitle>
+            <p className="text-[11px] text-muted-foreground mt-0.5">
+              Tự cài CustomSkinLoader để dùng skin offline/custom. Mod có thể không tương thích với một số server.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center justify-between gap-4 rounded-md border border-zinc-800 bg-zinc-900/60 p-3">
+              <div>
+                <p className="text-xs font-semibold text-foreground">Tự động cài CustomSkinLoader</p>
+                <p className="text-[10px] text-zinc-400">
+                  Tắt sẽ gỡ mod khỏi thư mục mods ở lần khởi chạy tiếp theo.
+                </p>
+              </div>
+              <button
+                type="button"
+                role="switch"
+                aria-checked={formData.enableCustomSkinLoader}
+                onClick={() => handleChange('enableCustomSkinLoader', !formData.enableCustomSkinLoader)}
+                className={cn(
+                  'relative h-6 w-11 shrink-0 rounded-full transition-colors',
+                  formData.enableCustomSkinLoader ? 'bg-primary' : 'bg-zinc-700'
+                )}
+              >
+                <span
+                  className={cn(
+                    'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
+                    formData.enableCustomSkinLoader ? 'translate-x-5' : 'translate-x-0.5'
+                  )}
+                />
+              </button>
             </div>
           </CardContent>
         </Card>

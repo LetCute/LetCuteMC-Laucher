@@ -82,7 +82,7 @@ Tất cả logic nghiệp vụ backend được đặt tại `src/main/services/
 | `modrinthService.ts` | Tìm kiếm Modrinth API, tải modpack (`.mrpack`), quản lý cài đặt mod từ kho Modrinth. |
 | `modUpdaterService.ts` | Kiểm tra phiên bản mới của các mod đã cài đặt qua Modrinth API và cập nhật tự động. |
 | `preLaunchIntegrityService.ts` | Kiểm tra tính toàn vẹn cấu trúc phiên bản, file jar và dependency mod trước khi kích hoạt launch. |
-| `skinIntegrationService.ts` | Tự động inject CustomSkinLoader vào game khi cần hiển thị skin cho tài khoản offline/custom. |
+| `skinIntegrationService.ts` | Cài hoặc gỡ CustomSkinLoader khi khởi chạy theo tùy chọn skin của người dùng. |
 
 ### 2.3 Launcher (`src/main/services/launcher/`)
 | Service | Chức năng chính |

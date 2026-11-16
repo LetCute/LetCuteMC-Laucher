@@ -4,35 +4,45 @@ import type { AccountItem, AuthSession } from '../../../shared/types'
 import { getAccountState } from '../auth/accountService'
 import { resolveMissingDependencyOnModrinth, detectLoaderFromVersion } from './modDependencyService'
 
-/**
- * Ensures CustomSkinLoader mod is present and configures LocalSkin + Mojang skin sources.
- * This ensures:
- * 1. Custom offline/local skins saved in launcher render in-game (LocalSkin).
- * 2. Premium/Mojang accounts and other players' skins render correctly on cracked/offline servers.
- */
 export async function setupCustomSkinLoaderForLaunch(
   gameDir: string,
   mcVersion: string,
-  auth?: AuthSession | null,
+  auth: AuthSession | null | undefined,
+  enabled: boolean,
   log?: (level: 'info' | 'warn' | 'error', msg: string) => void
 ): Promise<void> {
+  const modsDir = path.join(gameDir, 'mods')
+
+  if (!enabled) {
+    const files = await fs.readdir(modsDir).catch((err: NodeJS.ErrnoException) => {
+      if (err.code === 'ENOENT') return []
+      throw err
+    })
+    const cslJars = files.filter(
+      (file) => file.toLowerCase().includes('customskinloader') && file.toLowerCase().endsWith('.jar')
+    )
+    await Promise.all(cslJars.map((file) => fs.unlink(path.join(modsDir, file))))
+    if (cslJars.length > 0) {
+      log?.('info', 'Đã gỡ CustomSkinLoader theo cài đặt skin.')
+    }
+    return
+  }
+
   const loader = detectLoaderFromVersion(mcVersion)
-  // Only inject mod for modded loaders (fabric, quilt, forge, neoforge)
-  if (loader === 'unknown' || loader === ('vanilla' as any)) {
+  if (loader === 'unknown') {
+    log?.('info', 'CustomSkinLoader chỉ được cài cho phiên bản game có mod loader.')
     return
   }
 
   const cslDir = path.join(gameDir, 'CustomSkinLoader')
   const localSkinDir = path.join(cslDir, 'LocalSkin', 'skins')
   const localCapeDir = path.join(cslDir, 'LocalSkin', 'capes')
-  const modsDir = path.join(gameDir, 'mods')
+  await Promise.all([
+    fs.mkdir(localSkinDir, { recursive: true }),
+    fs.mkdir(localCapeDir, { recursive: true }),
+    fs.mkdir(modsDir, { recursive: true }),
+  ])
 
-  await fs.mkdir(localSkinDir, { recursive: true }).catch(() => {})
-  await fs.mkdir(localCapeDir, { recursive: true }).catch(() => {})
-  await fs.mkdir(modsDir, { recursive: true }).catch(() => {})
-
-  // 1. Write CustomSkinLoader.json config if not present or ensure LocalSkin is top priority
-  const configPath = path.join(cslDir, 'CustomSkinLoader.json')
   const cslConfig = {
     version: '15.0',
     loadlist: [
@@ -44,14 +54,8 @@ export async function setupCustomSkinLoaderForLaunch(
         cape: 'LocalSkin/capes/{USERNAME}.png',
         elytra: 'LocalSkin/capes/{USERNAME}.png',
       },
-      {
-        name: 'Mojang',
-        type: 'Mojang',
-      },
-      {
-        name: 'Elyby',
-        type: 'Elyby',
-      },
+      { name: 'Mojang', type: 'Mojang' },
+      { name: 'Elyby', type: 'Elyby' },
       {
         name: 'LittleSkin',
         type: 'CustomSkinAPI',
@@ -59,88 +63,71 @@ export async function setupCustomSkinLoaderForLaunch(
       },
     ],
   }
+  await fs.writeFile(
+    path.join(cslDir, 'CustomSkinLoader.json'),
+    JSON.stringify(cslConfig, null, 2),
+    'utf-8'
+  )
 
-  try {
-    await fs.writeFile(configPath, JSON.stringify(cslConfig, null, 2), 'utf-8')
-  } catch (err) {
-    log?.('warn', `[SkinLoader] Không thể ghi config CSL: ${String(err)}`)
-  }
+  const accountState = await getAccountState()
+  const activeAcc: AccountItem | undefined = accountState.accounts.find(
+    (account) =>
+      account.id === accountState.activeAccountId ||
+      (!!auth?.username && account.username === auth.username)
+  )
 
-  // 2. Export local skin and cape for the active account
-  try {
-    const accountState = await getAccountState()
-    const activeAcc: AccountItem | undefined = accountState.accounts.find(
-      (a) => a.id === accountState.activeAccountId || (auth && a.username === auth.username)
-    )
-
-    if (activeAcc && activeAcc.username) {
-      const username = activeAcc.username
-      const targetSkinFile = path.join(localSkinDir, `${username}.png`)
-      const targetCapeFile = path.join(localCapeDir, `${username}.png`)
-
-      // Skin
-      if (activeAcc.skinUrl) {
-        const skinBuf = await resolveSkinBuffer(activeAcc.skinUrl)
-        if (skinBuf) {
-          await fs.writeFile(targetSkinFile, skinBuf)
-          log?.('info', `[SkinLoader] Đã áp dụng skin tùy chỉnh cho ${username}.`)
+  if (activeAcc?.username) {
+    for (const [url, destination, kind] of [
+      [activeAcc.skinUrl, path.join(localSkinDir, `${activeAcc.username}.png`), 'skin'],
+      [activeAcc.capeUrl, path.join(localCapeDir, `${activeAcc.username}.png`), 'cape'],
+    ] as const) {
+      if (!url) continue
+      try {
+        const image = await resolveSkinBuffer(url)
+        if (image) {
+          await fs.writeFile(destination, image)
+          if (kind === 'skin') {
+            log?.('info', `Đã áp dụng skin tùy chỉnh cho ${activeAcc.username}.`)
+          }
         }
-      }
-
-      // Cape
-      if (activeAcc.capeUrl) {
-        const capeBuf = await resolveSkinBuffer(activeAcc.capeUrl)
-        if (capeBuf) {
-          await fs.writeFile(targetCapeFile, capeBuf)
-        }
+      } catch (err) {
+        log?.('warn', `Không thể tải ${kind} của ${activeAcc.username}: ${String(err)}`)
       }
     }
-  } catch (err) {
-    log?.('warn', `[SkinLoader] Lỗi xuất skin local: ${String(err)}`)
   }
 
-  // 3. Ensure CustomSkinLoader JAR exists in mods/
-  try {
-    const files = await fs.readdir(modsDir).catch(() => [])
-    const hasCslJar = files.some(
-      (f) => f.toLowerCase().includes('customskinloader') && f.endsWith('.jar')
-    )
+  const files = await fs.readdir(modsDir)
+  const hasCslJar = files.some(
+    (file) => file.toLowerCase().includes('customskinloader') && file.toLowerCase().endsWith('.jar')
+  )
+  if (hasCslJar) return
 
-    if (!hasCslJar) {
-      log?.('info', '[SkinLoader] Đang tự tải CustomSkinLoader để hỗ trợ skin server crack...')
-      const resolved = await resolveMissingDependencyOnModrinth('customskinloader', mcVersion, loader)
-      if (resolved && resolved.downloadUrl) {
-        const dest = path.join(modsDir, resolved.fileName)
-        const res = await fetch(resolved.downloadUrl, {
-          headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
-        })
-        if (res.ok) {
-          const buf = Buffer.from(await res.arrayBuffer())
-          await fs.writeFile(dest, buf)
-          log?.('info', `[SkinLoader] Đã cài đặt ${resolved.fileName} thành công.`)
-        }
-      }
-    }
-  } catch (err) {
-    log?.('warn', `[SkinLoader] Không thể tải CustomSkinLoader: ${String(err)}`)
+  const resolved = await resolveMissingDependencyOnModrinth('customskinloader', mcVersion, loader)
+  if (!resolved?.downloadUrl) {
+    throw new Error(`Không tìm thấy bản CustomSkinLoader tương thích với Minecraft ${mcVersion} (${loader}).`)
   }
+
+  const response = await fetch(resolved.downloadUrl, {
+    headers: { 'User-Agent': 'LetCuteMC-Launcher/1.0' },
+  })
+  if (!response.ok) {
+    throw new Error(`Tải CustomSkinLoader thất bại: HTTP ${response.status}.`)
+  }
+  const buffer = Buffer.from(await response.arrayBuffer())
+  await fs.writeFile(path.join(modsDir, resolved.fileName), buffer)
+  log?.('info', `Đã cài đặt ${resolved.fileName}.`)
 }
 
 async function resolveSkinBuffer(skinUrlOrData: string): Promise<Buffer | null> {
-  try {
-    if (skinUrlOrData.startsWith('data:image/')) {
-      const base64Data = skinUrlOrData.replace(/^data:image\/\w+;base64,/, '')
-      return Buffer.from(base64Data, 'base64')
-    }
-
-    let url = skinUrlOrData
-    if (url.startsWith('//')) url = 'https:' + url
-    const res = await fetch(url)
-    if (res.ok) {
-      return Buffer.from(await res.arrayBuffer())
-    }
-    return null
-  } catch {
-    return null
+  if (skinUrlOrData.startsWith('data:image/')) {
+    const base64Data = skinUrlOrData.replace(/^data:image\/\w+;base64,/, '')
+    return Buffer.from(base64Data, 'base64')
   }
+
+  const url = skinUrlOrData.startsWith('//') ? `https:${skinUrlOrData}` : skinUrlOrData
+  const response = await fetch(url)
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}.`)
+  }
+  return Buffer.from(await response.arrayBuffer())
 }

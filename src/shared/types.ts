@@ -388,6 +388,7 @@ export interface LauncherSettings {
   performanceMode: PerformanceMode
   // Integrations
   enableDiscordRpc: boolean
+  enableCustomSkinLoader: boolean
   // JVM Presets & Optimization
   jvmPreset?: JvmPresetType
   customJvmArgs?: string
