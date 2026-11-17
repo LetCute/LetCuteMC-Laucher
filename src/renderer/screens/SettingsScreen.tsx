@@ -655,7 +655,7 @@ export const SettingsScreen = ({
               >
                 <span
                   className={cn(
-                    'absolute top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
+                    'absolute left-0 top-0.5 h-5 w-5 rounded-full bg-white transition-transform',
                     formData.enableCustomSkinLoader ? 'translate-x-5' : 'translate-x-0.5'
                   )}
                 />
