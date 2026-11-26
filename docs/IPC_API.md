@@ -14,7 +14,6 @@ Tài liệu này cung cấp bảng tra cứu toàn bộ các kênh IPC (Inter-Pr
 ### `settings:update`
 - **Phương thức Frontend**: `window.launcherApi.updateSettings(input: Partial<LauncherSettings>)`
 - **Mô tả**: Cập nhật một phần hoặc toàn bộ cài đặt ứng dụng.
-- **Cài đặt skin**: `enableCustomSkinLoader` bật/tắt tự động cài CustomSkinLoader; khi tắt, mod được gỡ ở lần khởi chạy game tiếp theo.
 - **Trả về**: `Promise<LauncherSettings>`
 
 ### `system:performance-info`

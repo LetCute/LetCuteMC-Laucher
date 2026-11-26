@@ -27,7 +27,6 @@ const DEFAULT_SETTINGS: LauncherSettings = {
   enableOptimizedJvmArgs: true,
   performanceMode: 'auto',
   enableDiscordRpc: true,
-  enableCustomSkinLoader: true,
   uiGraphicQuality: 'auto',
 }
 

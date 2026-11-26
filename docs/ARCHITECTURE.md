@@ -68,7 +68,7 @@ Tất cả logic nghiệp vụ backend được đặt tại `src/main/services/
 ### 2.1 Auth (`src/main/services/auth/`)
 | Service | Chức năng chính |
 |---|---|
-| `accountService.ts` | Quản lý state tài khoản, lưu trữ `accounts.json`, chọn tài khoản active, thêm/xóa tài khoản offline, đổi tên local, lưu skin local. |
+| `accountService.ts` | Quản lý state tài khoản, lưu trữ `accounts.json`, chọn tài khoản active, thêm/xóa tài khoản offline và đổi tên local. |
 | `microsoftAuthService.ts` | Xác thực tài khoản Microsoft qua luồng OAuth2 PKCE với local HTTP server tạm (port 53248), refresh token. |
 | `mojangApiService.ts` | Giao tiếp API Mojang chính thức: lấy profile, upload skin, đổi cape, kiểm tra/thực hiện đổi tên. |
 
@@ -82,7 +82,6 @@ Tất cả logic nghiệp vụ backend được đặt tại `src/main/services/
 | `modrinthService.ts` | Tìm kiếm Modrinth API, tải modpack (`.mrpack`), quản lý cài đặt mod từ kho Modrinth. |
 | `modUpdaterService.ts` | Kiểm tra phiên bản mới của các mod đã cài đặt qua Modrinth API và cập nhật tự động. |
 | `preLaunchIntegrityService.ts` | Kiểm tra tính toàn vẹn cấu trúc phiên bản, file jar và dependency mod trước khi kích hoạt launch. |
-| `skinIntegrationService.ts` | Cài hoặc gỡ CustomSkinLoader khi khởi chạy theo tùy chọn skin của người dùng. |
 
 ### 2.3 Launcher (`src/main/services/launcher/`)
 | Service | Chức năng chính |

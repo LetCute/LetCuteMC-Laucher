@@ -163,21 +163,6 @@ async function startLaunch(jobId: string, input: LaunchInput): Promise<void> {
       }
     }
 
-    // 2b. Install or remove CustomSkinLoader based on the user's setting
-    assertNotCancelled()
-    try {
-      const { setupCustomSkinLoaderForLaunch } = await import('../services/content/skinIntegrationService')
-      await setupCustomSkinLoaderForLaunch(
-        input.gameDir,
-        input.version,
-        auth,
-        settings.enableCustomSkinLoader,
-        (level, msg) => postLog(jobId, level, msg)
-      )
-    } catch (skinErr) {
-      postLog(jobId, 'warn', `Không thể cập nhật cấu hình skin: ${skinErr instanceof Error ? skinErr.message : String(skinErr)}`)
-    }
-
     // 3. Resolve Version & JVM flags (Auto-repair if files are missing or deleted)
     assertNotCancelled()
     const versionInGameDir = path.join(input.gameDir, 'versions', input.version, `${input.version}.json`)

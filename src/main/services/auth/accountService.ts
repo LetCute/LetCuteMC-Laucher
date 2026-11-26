@@ -315,6 +315,9 @@ export async function saveLocalSkin(accountId: string, skinUrl: string | null, s
   if (!acc) {
     throw new Error('Không tìm thấy tài khoản để lưu skin.')
   }
+  if (acc.type !== 'microsoft') {
+    throw new Error('Chỉnh sửa Skin/Cape chỉ được hỗ trợ cho tài khoản Premium.')
+  }
   if (skinUrl !== undefined) acc.skinUrl = skinUrl || undefined
   if (skinModel !== undefined) {
     acc.skinModel = skinModel === 'slim' ? 'slim' : skinModel === 'default' ? 'default' : undefined

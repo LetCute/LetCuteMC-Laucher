@@ -131,8 +131,7 @@ services/content/
 ├── modDependencyService
 ├── modConflictService
 ├── modUpdaterService
-├── preLaunchIntegrityService
-└── skinIntegrationService
+└── preLaunchIntegrityService
 ```
 
 Hỗ trợ:

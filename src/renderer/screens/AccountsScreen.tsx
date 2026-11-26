@@ -22,6 +22,7 @@ import {
   Shirt,
   Shield,
   Box,
+  Lock,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
@@ -146,6 +147,7 @@ export const AccountsScreen = ({
     setRenameTargetType(accountType)
     setShowSkinModal(true)
     setMojangProfile(null)
+    setSkinTab(accountType === 'microsoft' ? 'skin' : 'name')
 
     if (accountType === 'microsoft') {
       setIsFetchingMojang(true)
@@ -207,11 +209,10 @@ export const AccountsScreen = ({
       }
     } else {
       setRenameAllowed(true)
-      const acc = accountState.accounts.find(a => a.id === accountId)
-      setPendingSkinModel((acc?.skinModel as SkinModel) || 'default')
-      setPendingSkinFile(acc?.skinUrl || null)
-      setPendingCapeFile(acc?.capeUrl || null)
-      setSelectedCapeUrl(acc?.capeUrl || null)
+      setPendingSkinModel('default')
+      setPendingSkinFile(null)
+      setPendingCapeFile(null)
+      setSelectedCapeUrl(null)
     }
   }
 
@@ -391,6 +392,11 @@ export const AccountsScreen = ({
   }
 
   const handleSkinClick = async () => {
+    if (skinModalTargetType === 'local') {
+      showToast('error', 'Chỉnh sửa Skin/Cape chỉ được hỗ trợ cho tài khoản Premium.')
+      return
+    }
+
     const message = skinModalTargetType === 'microsoft'
       ? `Bạn có chắc muốn lưu thay đổi ngoại hình cho tài khoản ${skinModalTargetName} không?\n\nLưu ý: Ngoại hình mới sẽ được cập nhật trực tiếp lên hệ thống Mojang và có thể mất một ít thời gian để hiển thị trong game.`
       : `Bạn có chắc muốn lưu thay đổi ngoại hình cho tài khoản ${skinModalTargetName} không?`
@@ -440,15 +446,7 @@ export const AccountsScreen = ({
         setIsSavingMojang(false)
       }
     } else {
-      try {
-        const updated = await window.launcherApi.saveLocalSkin(skinModalTargetId, pendingSkinFile, pendingSkinModel, pendingCapeFile)
-        onAccountStateChange(updated)
-        showToast('success', 'Đã cập nhật ngoại hình Local!')
-        closeSkinModal()
-      } catch (e) {
-        const message = e instanceof Error ? e.message : String(e)
-        showToast('error', `Lỗi khi lưu skin local: ${message}`)
-      }
+      showToast('error', 'Chỉnh sửa Skin/Cape chỉ được hỗ trợ cho tài khoản Premium.')
     }
   }
 
@@ -480,9 +478,11 @@ export const AccountsScreen = ({
             {accounts.map(acc => {
               const isActive = acc.id === activeAccountId
               const isLocal = acc.type === 'local'
-              const skinData = { url: acc.skinUrl || '', model: (acc.skinModel as SkinModel) || 'default' }
-              const capeData = acc.capeUrl || ''
-              const accModel = (acc.skinModel as SkinModel) || 'default'
+              const skinData = isLocal
+                ? { url: '', model: 'default' as SkinModel }
+                : { url: acc.skinUrl || '', model: (acc.skinModel as SkinModel) || 'default' }
+              const capeData = isLocal ? '' : acc.capeUrl || ''
+              const accModel = isLocal ? 'default' : (acc.skinModel as SkinModel) || 'default'
 
               return (
                 <div
@@ -565,7 +565,7 @@ export const AccountsScreen = ({
         description={
           skinModalTargetType === 'microsoft'
             ? 'Chỉnh sửa Skin & Cape trực tiếp trên máy chủ Mojang'
-            : 'Tùy chỉnh Skin & Cape cá nhân (Local)'
+            : 'Tài khoản Local chỉ hỗ trợ đổi tên. Skin & Cape chỉ dành cho tài khoản Premium.'
         }
         maxWidth="max-w-3xl"
         footer={
@@ -590,6 +590,11 @@ export const AccountsScreen = ({
               >
                 {isSavingRename ? (
                   <Loader2 size={14} className="mr-1.5 animate-spin" />
+                ) : skinModalTargetType === 'local' ? (
+                  <Button variant="primary" disabled className="opacity-50">
+                    <Lock size={14} className="mr-1.5" />
+                    Chỉ hỗ trợ tài khoản Premium
+                  </Button>
                 ) : (
                   <Check size={14} className="mr-1.5" />
                 )}
@@ -670,9 +675,11 @@ export const AccountsScreen = ({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSkinTab('skin')}
+                      disabled={skinModalTargetType === 'local'}
+                      onClick={() => skinModalTargetType === 'microsoft' && setSkinTab('skin')}
                       className={cn(
                         'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all',
+                        skinModalTargetType === 'local' && 'opacity-40 cursor-not-allowed',
                         skinTab === 'skin'
                           ? 'bg-zinc-800 text-foreground shadow-sm border border-zinc-700/60'
                           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
@@ -680,12 +687,15 @@ export const AccountsScreen = ({
                     >
                       <Shirt size={13} className={skinTab === 'skin' ? 'text-primary' : ''} />
                       <span>Skin (Trang phục)</span>
+                      {skinModalTargetType === 'local' && <Lock size={11} />}
                     </button>
                     <button
                       type="button"
-                      onClick={() => setSkinTab('cape')}
+                      disabled={skinModalTargetType === 'local'}
+                      onClick={() => skinModalTargetType === 'microsoft' && setSkinTab('cape')}
                       className={cn(
                         'flex-1 flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-all',
+                        skinModalTargetType === 'local' && 'opacity-40 cursor-not-allowed',
                         skinTab === 'cape'
                           ? 'bg-zinc-800 text-foreground shadow-sm border border-zinc-700/60'
                           : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/50'
@@ -693,6 +703,7 @@ export const AccountsScreen = ({
                     >
                       <Shield size={13} className={skinTab === 'cape' ? 'text-primary' : ''} />
                       <span>Cape (Áo choàng)</span>
+                      {skinModalTargetType === 'local' && <Lock size={11} />}
                     </button>
                   </div>
 

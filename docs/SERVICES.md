@@ -27,7 +27,6 @@ Tài liệu tra cứu nhanh 43 backend services và 2 utility workers của LetC
   - `addLocalAccount(username)`: Tạo tài khoản offline, sinh UUID v3 offline chuẩn Mojang.
   - `removeAccount(accountId)`: Xóa tài khoản.
   - `renameAccountLocally(accountId, newName)`: Đổi tên hiển thị local.
-  - `saveLocalSkin(accountId, skinUrl, skinModel, capeUrl)`: Lưu custom skin/cape offline.
   - `saveMicrosoftAccount(account)`: Lưu thông tin Microsoft OAuth.
   - `refreshMicrosoftAccountToken(accountId)`: Refresh token khi hết hạn.
   - `generateOfflineUuid(username)`: Tạo UUID offline deterministically (`OfflinePlayer:<username>`).
@@ -101,11 +100,6 @@ Tài liệu tra cứu nhanh 43 backend services và 2 utility workers của LetC
 - **Nhiệm vụ**: Kiểm tra tính toàn vẹn trước khi cho phép khởi chạy game.
 - **Hàm chính**:
   - `runPreLaunchIntegrityCheck(input, profile)`: Kiểm tra file jar phiên bản, libraries cốt lõi, classpath và xung đột mod nghiêm trọng để ngăn chặn crash ngay từ đầu.
-
-### `skinIntegrationService.ts`
-- **Nhiệm vụ**: Cài hoặc gỡ CustomSkinLoader theo tùy chọn của người dùng trong Settings.
-- **Hàm chính**:
-  - `setupCustomSkinLoaderForLaunch(gameDir, mcVersion, auth, enabled)`: Khi bật, cấu hình skin và cài mod tương thích nếu chưa có; khi tắt, gỡ các file CustomSkinLoader khỏi thư mục `mods`.
 
 ## 3. Launcher Services (`src/main/services/launcher/`)
 
